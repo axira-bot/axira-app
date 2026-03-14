@@ -519,21 +519,21 @@ export default function EmployeesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <div className="border-b border-[#222222] bg-[#111111] px-4 py-4">
-        <h1 className="text-xl font-semibold text-white">Employee & Commission Management</h1>
-        <p className="mt-1 text-xs text-zinc-400">Manage staff and track commissions.</p>
+    <div className="min-h-screen bg-app text-app">
+      <div className="border-b border-app surface px-4 py-4">
+        <h1 className="text-xl font-semibold text-app">Employee & Commission Management</h1>
+        <p className="mt-1 text-xs text-muted">Manage staff and track commissions.</p>
       </div>
 
-      <div className="flex border-b border-[#222222] bg-[#111111] px-4">
+      <div className="flex border-b border-app surface px-4">
         {(["Employees", "Commissions"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`border-b-2 px-4 py-3 text-sm font-medium transition ${
               activeTab === tab
-                ? "border-[#c0392b] text-[#c0392b]"
-                : "border-transparent text-zinc-400 hover:text-zinc-200"
+                ? "border-[var(--color-accent)] text-[var(--color-accent)]"
+                : "border-transparent text-muted hover:text-app"
             }`}
           >
             {tab}
@@ -554,20 +554,20 @@ export default function EmployeesPage() {
               <button
                 type="button"
                 onClick={openAdd}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a03020]"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:bg-[#a03020]"
               >
                 Add Employee
               </button>
             </div>
             {isLoading ? (
-              <div className="rounded-lg border border-[#222222] bg-[#111111] p-6 text-center text-zinc-400">
+              <div className="rounded-lg border border-app surface p-6 text-center text-muted">
                 Loading...
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-[#222222] bg-[#111111]">
+              <div className="overflow-x-auto rounded-lg border border-app surface">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-[#222222] text-zinc-400">
+                    <tr className="border-b border-app text-muted">
                       <th className="px-4 py-3 font-semibold">Name</th>
                       <th className="px-4 py-3 font-semibold">Role</th>
                       <th className="px-4 py-3 font-semibold">Salary</th>
@@ -578,11 +578,11 @@ export default function EmployeesPage() {
                   </thead>
                   <tbody>
                     {employees.map((e) => (
-                      <tr key={e.id} className="border-b border-[#222222] last:border-0">
-                        <td className="px-4 py-3 text-white">{e.name ?? "—"}</td>
-                        <td className="px-4 py-3 text-zinc-300">{e.role ?? "—"}</td>
-                        <td className="px-4 py-3 text-zinc-300">{formatMoney(e.base_salary, e.salary_currency ?? "DZD")}</td>
-                        <td className="px-4 py-3 text-zinc-300">
+                      <tr key={e.id} className="border-b border-app last:border-0">
+                        <td className="px-4 py-3 text-app">{e.name ?? "—"}</td>
+                        <td className="px-4 py-3 text-app">{e.role ?? "—"}</td>
+                        <td className="px-4 py-3 text-app">{formatMoney(e.base_salary, e.salary_currency ?? "DZD")}</td>
+                        <td className="px-4 py-3 text-app">
                           {e.role === "Manager" && e.commission_per_managed_deal != null
                             ? `${formatNumber(e.commission_per_deal ?? 0)} / ${formatNumber(e.commission_per_managed_deal)} (managed)`
                             : formatMoney(e.commission_per_deal, "AED") + " / deal"}
@@ -603,14 +603,14 @@ export default function EmployeesPage() {
                             <button
                               type="button"
                               onClick={() => openEdit(e)}
-                              className="text-[#c0392b] hover:underline"
+                              className="text-[var(--color-accent)] hover:underline"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
                               onClick={() => setViewEmployee(e)}
-                              className="text-zinc-300 hover:underline"
+                              className="text-app hover:underline"
                             >
                               View
                             </button>
@@ -657,7 +657,7 @@ export default function EmployeesPage() {
               <select
                 value={commissionEmployeeFilter}
                 onChange={(e) => setCommissionEmployeeFilter(e.target.value)}
-                className="rounded-md border border-[#222222] bg-[#111111] px-3 py-2 text-sm text-white"
+                className="rounded-md border border-app surface px-3 py-2 text-sm text-app"
               >
                 <option value="">All employees</option>
                 {employees.map((e) => (
@@ -669,7 +669,7 @@ export default function EmployeesPage() {
               <select
                 value={commissionMonthFilter}
                 onChange={(e) => setCommissionMonthFilter(e.target.value)}
-                className="rounded-md border border-[#222222] bg-[#111111] px-3 py-2 text-sm text-white"
+                className="rounded-md border border-app surface px-3 py-2 text-sm text-app"
               >
                 <option value="">All months</option>
                 {monthsOptions.map((m) => (
@@ -680,22 +680,22 @@ export default function EmployeesPage() {
               </select>
             </div>
 
-            <div className="mb-4 rounded-lg border border-[#222222] bg-[#111111] p-4">
-              <h3 className="mb-2 text-sm font-semibold text-zinc-300">Monthly summary – Pending per employee</h3>
+            <div className="mb-4 rounded-lg border border-app surface p-4">
+              <h3 className="mb-2 text-sm font-semibold text-app">Monthly summary – Pending per employee</h3>
               <ul className="space-y-1 text-sm">
                 {employees.map((e) => {
                   const pending = pendingByEmployee[e.id] ?? 0;
                   if (pending <= 0) return null;
                   return (
                     <li key={e.id} className="flex items-center justify-between gap-4">
-                      <span className="text-zinc-200">{e.name ?? "—"}</span>
-                      <span className="text-[#c0392b]">{formatMoney(pending, "DZD")}</span>
+                      <span className="text-app">{e.name ?? "—"}</span>
+                      <span className="text-[var(--color-accent)]">{formatMoney(pending, "DZD")}</span>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => openPayAllModal(e.id)}
                           disabled={payAllSaving && payAllEmployeeId === e.id}
-                          className="rounded bg-[#c0392b] px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
+                          className="rounded bg-[var(--color-accent)] px-2 py-1 text-xs font-medium text-app disabled:opacity-50"
                         >
                           {payAllSaving && payAllEmployeeId === e.id ? "Paying..." : "Pay All Pending"}
                         </button>
@@ -709,10 +709,10 @@ export default function EmployeesPage() {
               )}
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-[#222222] bg-[#111111]">
+            <div className="overflow-x-auto rounded-lg border border-app surface">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#222222] text-zinc-400">
+                  <tr className="border-b border-app text-muted">
                     <th className="px-4 py-3 font-semibold">Employee</th>
                     <th className="px-4 py-3 font-semibold">Deal</th>
                     <th className="px-4 py-3 font-semibold">Date</th>
@@ -723,16 +723,16 @@ export default function EmployeesPage() {
                 </thead>
                 <tbody>
                   {filteredCommissions.map((c) => (
-                    <tr key={c.id} className="border-b border-[#222222] last:border-0">
-                      <td className="px-4 py-3 text-white">{getEmployeeName(c.employee_id)}</td>
-                      <td className="px-4 py-3 text-zinc-300">
+                    <tr key={c.id} className="border-b border-app last:border-0">
+                      <td className="px-4 py-3 text-app">{getEmployeeName(c.employee_id)}</td>
+                      <td className="px-4 py-3 text-app">
                         {c.deal
                           ? `${c.deal.car_label ?? "—"} – ${c.deal.client_name ?? ""}`
                           : c.deal_id}
                       </td>
-                      <td className="px-4 py-3 text-zinc-300">{formatDate(c.deal?.date ?? null)}</td>
-                      <td className="px-4 py-3 font-semibold text-[#c0392b]">{formatMoney(c.amount, "DZD")}</td>
-                      <td className="px-4 py-3 text-zinc-300">DZD</td>
+                      <td className="px-4 py-3 text-app">{formatDate(c.deal?.date ?? null)}</td>
+                      <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(c.amount, "DZD")}</td>
+                      <td className="px-4 py-3 text-app">DZD</td>
                       <td className="px-4 py-3">
                         <span
                           className={
@@ -758,27 +758,27 @@ export default function EmployeesPage() {
       {viewEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setViewEmployee(null)} />
-          <div className="relative max-w-lg rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-white">Employee details</h2>
+          <div className="relative max-w-lg rounded-lg border border-app surface p-4 shadow-xl">
+            <h2 className="text-lg font-semibold text-app">Employee details</h2>
             <dl className="mt-4 space-y-2 text-sm">
-              <div><dt className="text-zinc-500">Name</dt><dd className="text-white">{viewEmployee.name ?? "—"}</dd></div>
-              <div><dt className="text-zinc-500">Role</dt><dd className="text-white">{viewEmployee.role ?? "—"}</dd></div>
-              <div><dt className="text-zinc-500">Phone</dt><dd className="text-white">{viewEmployee.phone ?? "—"}</dd></div>
-              <div><dt className="text-zinc-500">Email</dt><dd className="text-white">{viewEmployee.email ?? "—"}</dd></div>
-              <div><dt className="text-zinc-500">Base salary</dt><dd className="text-white">{formatMoney(viewEmployee.base_salary, viewEmployee.salary_currency ?? "DZD")}</dd></div>
-              <div><dt className="text-zinc-500">Commission per deal</dt><dd className="text-white">{formatMoney(viewEmployee.commission_per_deal, "AED")}</dd></div>
+              <div><dt className="text-zinc-500">Name</dt><dd className="text-app">{viewEmployee.name ?? "—"}</dd></div>
+              <div><dt className="text-zinc-500">Role</dt><dd className="text-app">{viewEmployee.role ?? "—"}</dd></div>
+              <div><dt className="text-zinc-500">Phone</dt><dd className="text-app">{viewEmployee.phone ?? "—"}</dd></div>
+              <div><dt className="text-zinc-500">Email</dt><dd className="text-app">{viewEmployee.email ?? "—"}</dd></div>
+              <div><dt className="text-zinc-500">Base salary</dt><dd className="text-app">{formatMoney(viewEmployee.base_salary, viewEmployee.salary_currency ?? "DZD")}</dd></div>
+              <div><dt className="text-zinc-500">Commission per deal</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_deal, "AED")}</dd></div>
               {viewEmployee.role === "Manager" && (
-                <div><dt className="text-zinc-500">Commission (managed)</dt><dd className="text-white">{formatMoney(viewEmployee.commission_per_managed_deal, "AED")}</dd></div>
+                <div><dt className="text-zinc-500">Commission (managed)</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_managed_deal, "AED")}</dd></div>
               )}
-              <div><dt className="text-zinc-500">Start date</dt><dd className="text-white">{formatDate(viewEmployee.start_date)}</dd></div>
-              <div><dt className="text-zinc-500">Status</dt><dd className="text-white">{viewEmployee.status ?? "—"}</dd></div>
-              {viewEmployee.notes && <div><dt className="text-zinc-500">Notes</dt><dd className="text-white whitespace-pre-wrap">{viewEmployee.notes}</dd></div>}
+              <div><dt className="text-zinc-500">Start date</dt><dd className="text-app">{formatDate(viewEmployee.start_date)}</dd></div>
+              <div><dt className="text-zinc-500">Status</dt><dd className="text-app">{viewEmployee.status ?? "—"}</dd></div>
+              {viewEmployee.notes && <div><dt className="text-zinc-500">Notes</dt><dd className="text-app whitespace-pre-wrap">{viewEmployee.notes}</dd></div>}
             </dl>
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
                 onClick={() => setViewEmployee(null)}
-                className="rounded-md border border-[#222222] px-4 py-2 text-sm font-medium text-zinc-200"
+                className="rounded-md border border-app px-4 py-2 text-sm font-medium text-app"
               >
                 Close
               </button>
@@ -796,15 +796,15 @@ export default function EmployeesPage() {
               if (!isSavingSalary) setPaySalaryEmployee(null);
             }}
           />
-          <div className="relative max-w-lg w-full max-h-[90vh] overflow-y-auto rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-white">Pay Salary</h2>
-            <p className="mt-1 text-xs text-zinc-400">
+          <div className="relative max-w-lg w-full max-h-[90vh] overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
+            <h2 className="text-lg font-semibold text-app">Pay Salary</h2>
+            <p className="mt-1 text-xs text-muted">
               Pay base salary and pending commissions for this employee.
             </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 text-xs text-zinc-300">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 text-xs text-app">
               <div className="sm:col-span-2">
-                <div className="font-semibold text-zinc-200">Employee</div>
-                <div className="mt-1 text-sm text-white">
+                <div className="font-semibold text-app">Employee</div>
+                <div className="mt-1 text-sm text-app">
                   {paySalaryEmployee.name ?? "—"}
                 </div>
               </div>
@@ -813,7 +813,7 @@ export default function EmployeesPage() {
                 <select
                   value={paySalaryMonth}
                   onChange={(e) => setPaySalaryMonth(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
                 >
                   {monthsForSelect.map((m) => (
                     <option key={m} value={m}>
@@ -824,25 +824,25 @@ export default function EmployeesPage() {
               </label>
               <div className="space-y-1">
                 <span className="font-semibold">Base salary</span>
-                <div className="mt-1 text-sm text-white">
+                <div className="mt-1 text-sm text-app">
                   {formatMoney(paySalaryEmployee.base_salary ?? 0, paySalaryEmployee.salary_currency ?? "DZD")}
                 </div>
               </div>
               <div className="space-y-1">
                 <span className="font-semibold">Currency</span>
-                <div className="mt-1 text-sm text-white">
+                <div className="mt-1 text-sm text-app">
                   {paySalaryEmployee.salary_currency ?? "DZD"}
                 </div>
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <span className="font-semibold">Pending commissions this month</span>
-                <div className="mt-1 text-sm text-white">
+                <div className="mt-1 text-sm text-app">
                   {formatMoney(pendingForSalary, "DZD")}
                 </div>
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <span className="font-semibold">Total to pay</span>
-                <div className="mt-1 text-sm text-[#c0392b] font-semibold">
+                <div className="mt-1 text-sm text-[var(--color-accent)] font-semibold">
                   {formatMoney(
                     (paySalaryEmployee.base_salary ?? 0) + pendingForSalary,
                     paySalaryEmployee.salary_currency ?? "DZD"
@@ -854,7 +854,7 @@ export default function EmployeesPage() {
                 <select
                   value={paySalaryPocket}
                   onChange={(e) => setPaySalaryPocket(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
                 >
                   {COMMISSION_POCKETS.map((p) => (
                     <option key={p} value={p}>
@@ -869,7 +869,7 @@ export default function EmployeesPage() {
                   type="date"
                   value={paySalaryDate}
                   onChange={(e) => setPaySalaryDate(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
                 />
               </label>
               <label className="space-y-1 sm:col-span-2">
@@ -878,7 +878,7 @@ export default function EmployeesPage() {
                   value={paySalaryNotes}
                   onChange={(e) => setPaySalaryNotes(e.target.value)}
                   rows={2}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
                 />
               </label>
             </div>
@@ -889,7 +889,7 @@ export default function EmployeesPage() {
                   if (!isSavingSalary) setPaySalaryEmployee(null);
                 }}
                 disabled={isSavingSalary}
-                className="rounded-md border border-[#222222] px-4 py-2 text-xs font-medium text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app px-4 py-2 text-xs font-medium text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -897,7 +897,7 @@ export default function EmployeesPage() {
                 type="button"
                 onClick={handlePaySalary}
                 disabled={isSavingSalary}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-app disabled:opacity-50"
               >
                 {isSavingSalary ? "Paying..." : "Pay Salary"}
               </button>
@@ -917,23 +917,23 @@ export default function EmployeesPage() {
               }
             }}
           />
-          <div className="relative w-full max-w-sm rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <h2 className="text-sm font-semibold text-white">Confirm commission payment</h2>
-            <p className="mt-1 text-xs text-zinc-400">
+          <div className="relative w-full max-w-sm rounded-lg border border-app surface p-4 shadow-xl">
+            <h2 className="text-sm font-semibold text-app">Confirm commission payment</h2>
+            <p className="mt-1 text-xs text-muted">
               This will mark all pending commissions for this employee as paid and create a DZD salary movement.
             </p>
             {(() => {
               const emp = employees.find((e) => e.id === payAllEmployeeId);
               const total = pendingByEmployee[payAllEmployeeId] ?? 0;
               return (
-                <div className="mt-3 space-y-3 text-xs text-zinc-300">
+                <div className="mt-3 space-y-3 text-xs text-app">
                   <div>
                     <div className="text-zinc-500">Employee</div>
-                    <div className="text-white font-medium">{emp?.name ?? "—"}</div>
+                    <div className="text-app font-medium">{emp?.name ?? "—"}</div>
                   </div>
                   <div>
                     <div className="text-zinc-500">Total pending commissions</div>
-                    <div className="text-[#c0392b] font-semibold">
+                    <div className="text-[var(--color-accent)] font-semibold">
                       {formatMoney(total, "DZD")}
                     </div>
                   </div>
@@ -944,7 +944,7 @@ export default function EmployeesPage() {
                         type="date"
                         value={payAllDate}
                         onChange={(e) => setPayAllDate(e.target.value)}
-                        className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white"
+                        className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
                       />
                     </label>
                     <label className="space-y-1">
@@ -952,7 +952,7 @@ export default function EmployeesPage() {
                       <select
                         value={payAllPocket}
                         onChange={(e) => setPayAllPocket(e.target.value)}
-                        className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white"
+                        className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
                       >
                         {COMMISSION_POCKETS.map((p) => (
                           <option key={p} value={p}>
@@ -974,7 +974,7 @@ export default function EmployeesPage() {
                     setPayAllEmployeeId(null);
                   }
                 }}
-                className="rounded-md border border-[#222222] px-4 py-2 text-xs font-medium text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app px-4 py-2 text-xs font-medium text-app disabled:opacity-50"
                 disabled={payAllSaving}
               >
                 Cancel
@@ -983,7 +983,7 @@ export default function EmployeesPage() {
                 type="button"
                 onClick={handlePayAllPending}
                 disabled={payAllSaving}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-app disabled:opacity-50"
               >
                 {payAllSaving ? "Paying..." : "Confirm payment"}
               </button>
@@ -996,24 +996,24 @@ export default function EmployeesPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={closeModal} />
-          <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-white">{editingId ? "Edit Employee" : "Add Employee"}</h2>
+          <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
+            <h2 className="text-lg font-semibold text-app">{editingId ? "Edit Employee" : "Add Employee"}</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Full name</span>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => updateField("name", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Role</span>
                 <select
                   value={form.role}
                   onChange={(e) => updateField("role", e.target.value as (typeof ROLES)[number])}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 >
                   {ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -1022,12 +1022,12 @@ export default function EmployeesPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Status</span>
                 <select
                   value={form.status}
                   onChange={(e) => updateField("status", e.target.value as (typeof STATUSES)[number])}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>
@@ -1036,25 +1036,25 @@ export default function EmployeesPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Phone</span>
                 <input
                   type="text"
                   value={form.phone}
                   onChange={(e) => updateField("phone", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Email</span>
                 <input
                   type="email"
                   value={form.email}
                   onChange={(e) => updateField("email", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Base salary (monthly)</span>
                 <div className="flex gap-2">
                   <input
@@ -1063,12 +1063,12 @@ export default function EmployeesPage() {
                     step="1"
                     value={form.baseSalary}
                     onChange={(e) => updateField("baseSalary", e.target.value)}
-                    className="flex-1 rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                    className="flex-1 rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                   />
                   <select
                     value={form.salaryCurrency}
                     onChange={(e) => updateField("salaryCurrency", e.target.value as (typeof SALARY_CURRENCIES)[number])}
-                    className="w-20 rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                    className="w-20 rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                   >
                     {SALARY_CURRENCIES.map((c) => (
                       <option key={c} value={c}>{c}</option>
@@ -1076,7 +1076,7 @@ export default function EmployeesPage() {
                   </select>
                 </div>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Commission per deal as staff (AED)</span>
                 <input
                   type="number"
@@ -1084,11 +1084,11 @@ export default function EmployeesPage() {
                   step="1"
                   value={form.commissionPerDeal}
                   onChange={(e) => updateField("commissionPerDeal", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
               {form.role === "Manager" && (
-                <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+                <label className="space-y-1 text-xs text-app sm:col-span-2">
                   <span className="font-semibold">Commission per deal as manager/fully managed (AED)</span>
                   <input
                     type="number"
@@ -1096,26 +1096,26 @@ export default function EmployeesPage() {
                     step="1"
                     value={form.commissionPerManagedDeal}
                     onChange={(e) => updateField("commissionPerManagedDeal", e.target.value)}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                   />
                 </label>
               )}
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Start date</span>
                 <input
                   type="date"
                   value={form.startDate}
                   onChange={(e) => updateField("startDate", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Notes</span>
                 <textarea
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
                   rows={2}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
             </div>
@@ -1124,7 +1124,7 @@ export default function EmployeesPage() {
                 type="button"
                 onClick={closeModal}
                 disabled={isSaving}
-                className="rounded-md border border-[#222222] px-4 py-2 text-sm font-medium text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app px-4 py-2 text-sm font-medium text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1132,7 +1132,7 @@ export default function EmployeesPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>

@@ -805,18 +805,18 @@ export default function ReportsPage() {
   const tabs = ["P&L", "Inventory", "Deals", "Cash Flow"] as const;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-app text-app">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Reports
           </h1>
-          <p className="text-sm font-medium text-[#c0392b]">
+          <p className="text-sm font-medium text-[var(--color-accent)]">
             P&L, Inventory, Deals &amp; Cash Flow
           </p>
         </header>
 
-        <div className="flex flex-wrap gap-2 border-b border-[#222222] pb-2">
+        <div className="flex flex-wrap gap-2 border-b border-app pb-2">
           {tabs.map((tab) => (
             <button
               key={tab}
@@ -824,8 +824,8 @@ export default function ReportsPage() {
               onClick={() => setActiveTab(tab)}
               className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                 activeTab === tab
-                  ? "border-[#c0392b] bg-[#c0392b]/15 text-white"
-                  : "border-[#222222] bg-[#111111] text-zinc-300 hover:border-[#c0392b]/70"
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-app"
+                  : "border-app surface text-app hover:border-[var(--color-accent)]/70"
               }`}
             >
               {tab}
@@ -840,7 +840,7 @@ export default function ReportsPage() {
         )}
 
         {isLoading ? (
-          <div className="rounded-lg border border-[#222222] bg-[#111111] p-8 text-center text-zinc-400">
+          <div className="rounded-lg border border-app surface p-8 text-center text-muted">
             Loading reports...
           </div>
         ) : (
@@ -848,65 +848,65 @@ export default function ReportsPage() {
             {activeTab === "P&L" && (
               <div className="space-y-6">
                 <div className="flex flex-wrap items-end gap-4">
-                  <label className="flex flex-col gap-1 text-xs text-zinc-400">
+                  <label className="flex flex-col gap-1 text-xs text-muted">
                     From
                     <input
                       type="date"
                       value={plFrom}
                       onChange={(e) => setPlFrom(e.target.value)}
-                      className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                     />
                   </label>
-                  <label className="flex flex-col gap-1 text-xs text-zinc-400">
+                  <label className="flex flex-col gap-1 text-xs text-muted">
                     To
                     <input
                       type="date"
                       value={plTo}
                       onChange={(e) => setPlTo(e.target.value)}
-                      className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                     />
                   </label>
                   <button
                     type="button"
                     onClick={exportPl}
-                    className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
                   >
                     Export to Excel
                   </button>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Total Revenue AED</div>
-                    <div className="mt-1 text-xl font-semibold text-white">
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Total Revenue AED</div>
+                    <div className="mt-1 text-xl font-semibold text-app">
                       {formatNumber(plRevenue)}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Total Expenses AED</div>
-                    <div className="mt-1 text-xl font-semibold text-white">
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Total Expenses AED</div>
+                    <div className="mt-1 text-xl font-semibold text-app">
                       {formatNumber(plTotalExpensesWithRent)}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Gross Profit AED</div>
-                    <div className="mt-1 text-xl font-semibold text-[#c0392b]">
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Gross Profit AED</div>
+                    <div className="mt-1 text-xl font-semibold text-[var(--color-accent)]">
                       {formatNumber(plGrossProfitWithRent)}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Profit Margin %</div>
-                    <div className="mt-1 text-xl font-semibold text-white">
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Profit Margin %</div>
+                    <div className="mt-1 text-xl font-semibold text-app">
                       {plMargin.toFixed(1)}%
                     </div>
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] overflow-hidden">
-                  <h3 className="border-b border-[#222222] px-4 py-3 text-sm font-semibold text-zinc-200">
+                <div className="rounded-lg border border-app surface overflow-hidden">
+                  <h3 className="border-b border-app px-4 py-3 text-sm font-semibold text-app">
                     Expenses breakdown (AED)
                   </h3>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="border-b border-[#222222] text-zinc-400">
+                      <thead className="border-b border-app text-muted">
                         <tr>
                           <th className="px-4 py-3">Category</th>
                           <th className="px-4 py-3 text-right">Amount</th>
@@ -914,9 +914,9 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {PL_EXPENSE_BREAKDOWN.map(({ label }) => (
-                          <tr key={label} className="border-b border-[#222222] last:border-b-0">
-                            <td className="px-4 py-3 text-zinc-200">{label}</td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                          <tr key={label} className="border-b border-app last:border-b-0">
+                            <td className="px-4 py-3 text-app">{label}</td>
+                            <td className="px-4 py-3 text-right text-app">
                               {formatNumber(plExpensesByCategory[label] ?? 0)}
                             </td>
                           </tr>
@@ -948,9 +948,9 @@ export default function ReportsPage() {
                           const periodAmountAed = monthlyAed * plMonthsInPeriod;
 
                           return (
-                            <tr key={r.id} className="border-b border-[#222222] last:border-b-0">
-                              <td className="px-4 py-3 text-zinc-200">{label}</td>
-                              <td className="px-4 py-3 text-right text-zinc-200">
+                            <tr key={r.id} className="border-b border-app last:border-b-0">
+                              <td className="px-4 py-3 text-app">{label}</td>
+                              <td className="px-4 py-3 text-right text-app">
                                 {formatNumber(periodAmountAed)}
                               </td>
                             </tr>
@@ -960,13 +960,13 @@ export default function ReportsPage() {
                     </table>
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] overflow-hidden">
-                  <h3 className="border-b border-[#222222] px-4 py-3 text-sm font-semibold text-zinc-200">
+                <div className="rounded-lg border border-app surface overflow-hidden">
+                  <h3 className="border-b border-app px-4 py-3 text-sm font-semibold text-app">
                     Deals with profit
                   </h3>
                   <div className="overflow-x-auto">
                     <table className="min-w-[700px] w-full text-left text-xs">
-                      <thead className="border-b border-[#222222] text-zinc-400">
+                      <thead className="border-b border-app text-muted">
                         <tr>
                           <th className="px-4 py-3">Client</th>
                           <th className="px-4 py-3">Car</th>
@@ -977,14 +977,14 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {plFilteredDeals.map((d) => (
-                          <tr key={d.id} className="border-b border-[#222222] last:border-b-0">
-                            <td className="px-4 py-3 text-zinc-200">{d.client_name ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200">{d.car_label ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200">{formatDate(d.date)}</td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                          <tr key={d.id} className="border-b border-app last:border-b-0">
+                            <td className="px-4 py-3 text-app">{d.client_name ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{d.car_label ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{formatDate(d.date)}</td>
+                            <td className="px-4 py-3 text-right text-app">
                               {formatNumber(d.sale_aed ?? 0)}
                             </td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                            <td className="px-4 py-3 text-right text-app">
                               {formatNumber(d.profit ?? 0)}
                             </td>
                           </tr>
@@ -1002,7 +1002,7 @@ export default function ReportsPage() {
                   <select
                     value={invLocation}
                     onChange={(e) => setInvLocation(e.target.value)}
-                    className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                    className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                   >
                     <option value="All">All locations</option>
                     <option value="Dubai Showroom">Dubai Showroom</option>
@@ -1012,7 +1012,7 @@ export default function ReportsPage() {
                   <select
                     value={invStatus}
                     onChange={(e) => setInvStatus(e.target.value)}
-                    className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                    className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                   >
                     <option value="All">All statuses</option>
                     <option value="available">Available</option>
@@ -1021,39 +1021,39 @@ export default function ReportsPage() {
                   <button
                     type="button"
                     onClick={exportInventory}
-                    className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
                   >
                     Export to Excel
                   </button>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Total cars</div>
-                    <div className="mt-1 text-xl font-semibold text-white">{invSummary.total}</div>
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Total cars</div>
+                    <div className="mt-1 text-xl font-semibold text-app">{invSummary.total}</div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Available</div>
-                    <div className="mt-1 text-xl font-semibold text-white">{invSummary.available}</div>
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Available</div>
+                    <div className="mt-1 text-xl font-semibold text-app">{invSummary.available}</div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Sold</div>
-                    <div className="mt-1 text-xl font-semibold text-white">{invSummary.sold}</div>
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Sold</div>
+                    <div className="mt-1 text-xl font-semibold text-app">{invSummary.sold}</div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">In Transit</div>
-                    <div className="mt-1 text-xl font-semibold text-white">{invSummary.inTransit}</div>
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">In Transit</div>
+                    <div className="mt-1 text-xl font-semibold text-app">{invSummary.inTransit}</div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Total inventory value AED</div>
-                    <div className="mt-1 text-xl font-semibold text-[#c0392b]">
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Total inventory value AED</div>
+                    <div className="mt-1 text-xl font-semibold text-[var(--color-accent)]">
                       {formatNumber(invSummary.totalValue)}
                     </div>
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] overflow-hidden">
+                <div className="rounded-lg border border-app surface overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="min-w-[900px] w-full text-left text-xs">
-                      <thead className="border-b border-[#222222] text-zinc-400">
+                      <thead className="border-b border-app text-muted">
                         <tr>
                           <th className="px-4 py-3">Brand</th>
                           <th className="px-4 py-3">Model</th>
@@ -1066,16 +1066,16 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {invFilteredCars.map((c) => (
-                          <tr key={c.id} className="border-b border-[#222222] last:border-b-0">
-                            <td className="px-4 py-3 text-zinc-200">{c.brand ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200">{c.model ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200">{c.year ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200">
+                          <tr key={c.id} className="border-b border-app last:border-b-0">
+                            <td className="px-4 py-3 text-app">{c.brand ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{c.model ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{c.year ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">
                               {c.purchase_price != null ? formatNumber(c.purchase_price) : "-"}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">{c.location ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200">{c.status ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200">{c.client_name ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{c.location ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{c.status ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{c.client_name ?? "-"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1091,72 +1091,72 @@ export default function ReportsPage() {
                   <select
                     value={dealsStatus}
                     onChange={(e) => setDealsStatus(e.target.value)}
-                    className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                    className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                   >
                     <option value="All">All statuses</option>
                     <option value="pending">Pending</option>
                     <option value="closed">Closed</option>
                   </select>
-                  <label className="flex flex-col gap-1 text-xs text-zinc-400">
+                  <label className="flex flex-col gap-1 text-xs text-muted">
                     From
                     <input
                       type="date"
                       value={dealsFrom}
                       onChange={(e) => setDealsFrom(e.target.value)}
-                      className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                     />
                   </label>
-                  <label className="flex flex-col gap-1 text-xs text-zinc-400">
+                  <label className="flex flex-col gap-1 text-xs text-muted">
                     To
                     <input
                       type="date"
                       value={dealsTo}
                       onChange={(e) => setDealsTo(e.target.value)}
-                      className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                     />
                   </label>
                   <button
                     type="button"
                     onClick={exportDeals}
-                    className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
                   >
                     Export to Excel
                   </button>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Total deals</div>
-                    <div className="mt-1 text-xl font-semibold text-white">{dealsSummary.total}</div>
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Total deals</div>
+                    <div className="mt-1 text-xl font-semibold text-app">{dealsSummary.total}</div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Total revenue DZD</div>
-                    <div className="mt-1 text-xl font-semibold text-white">
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Total revenue DZD</div>
+                    <div className="mt-1 text-xl font-semibold text-app">
                       {formatNumber(dealsSummary.revenueDzd)}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Total revenue AED</div>
-                    <div className="mt-1 text-xl font-semibold text-white">
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Total revenue AED</div>
+                    <div className="mt-1 text-xl font-semibold text-app">
                       {formatNumber(dealsSummary.revenueAed)}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Total profit</div>
-                    <div className="mt-1 text-xl font-semibold text-[#c0392b]">
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Total profit</div>
+                    <div className="mt-1 text-xl font-semibold text-[var(--color-accent)]">
                       {formatNumber(dealsSummary.totalProfit)}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <div className="text-xs uppercase text-zinc-400">Avg profit per deal</div>
-                    <div className="mt-1 text-xl font-semibold text-white">
+                  <div className="rounded-lg border border-app surface p-4">
+                    <div className="text-xs uppercase text-muted">Avg profit per deal</div>
+                    <div className="mt-1 text-xl font-semibold text-app">
                       {formatNumber(dealsSummary.avgProfit)}
                     </div>
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] overflow-hidden">
+                <div className="rounded-lg border border-app surface overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="min-w-[1000px] w-full text-left text-xs">
-                      <thead className="border-b border-[#222222] text-zinc-400">
+                      <thead className="border-b border-app text-muted">
                         <tr>
                           <th className="px-4 py-3">Client</th>
                           <th className="px-4 py-3">Car</th>
@@ -1173,32 +1173,32 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {dealsFiltered.map((d) => (
-                          <tr key={d.id} className="border-b border-[#222222] last:border-b-0">
-                            <td className="px-4 py-3 text-zinc-200">{d.client_name ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200">{d.car_label ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200">{formatDate(d.date)}</td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                          <tr key={d.id} className="border-b border-app last:border-b-0">
+                            <td className="px-4 py-3 text-app">{d.client_name ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{d.car_label ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{formatDate(d.date)}</td>
+                            <td className="px-4 py-3 text-right text-app">
                               {formatNumber(d.sale_dzd ?? 0)}
                             </td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                            <td className="px-4 py-3 text-right text-app">
                               {d.rate ?? "-"}
                             </td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                            <td className="px-4 py-3 text-right text-app">
                               {formatNumber(d.sale_aed ?? 0)}
                             </td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                            <td className="px-4 py-3 text-right text-app">
                               {formatNumber(d.total_expenses ?? 0)}
                             </td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                            <td className="px-4 py-3 text-right text-app">
                               {formatNumber(d.profit ?? 0)}
                             </td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                            <td className="px-4 py-3 text-right text-app">
                               {formatNumber(d.collected_dzd ?? 0)}
                             </td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                            <td className="px-4 py-3 text-right text-app">
                               {formatNumber(d.pending_dzd ?? 0)}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">{d.status ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{d.status ?? "-"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1211,28 +1211,28 @@ export default function ReportsPage() {
             {activeTab === "Cash Flow" && (
               <div className="space-y-6">
                 <div className="flex flex-wrap items-end gap-4">
-                  <label className="flex flex-col gap-1 text-xs text-zinc-400">
+                  <label className="flex flex-col gap-1 text-xs text-muted">
                     From
                     <input
                       type="date"
                       value={cfFrom}
                       onChange={(e) => setCfFrom(e.target.value)}
-                      className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                     />
                   </label>
-                  <label className="flex flex-col gap-1 text-xs text-zinc-400">
+                  <label className="flex flex-col gap-1 text-xs text-muted">
                     To
                     <input
                       type="date"
                       value={cfTo}
                       onChange={(e) => setCfTo(e.target.value)}
-                      className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                     />
                   </label>
                   <button
                     type="button"
                     onClick={exportCashFlow}
-                    className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
                   >
                     Export to Excel
                   </button>
@@ -1241,18 +1241,18 @@ export default function ReportsPage() {
                   {POCKETS.map((p) => (
                     <div
                       key={p}
-                      className="rounded-lg border border-[#222222] bg-[#111111] p-4"
+                      className="rounded-lg border border-app surface p-4"
                     >
-                      <div className="text-xs uppercase text-zinc-400">{p}</div>
-                      <div className="mt-1 text-lg font-semibold text-white">
+                      <div className="text-xs uppercase text-muted">{p}</div>
+                      <div className="mt-1 text-lg font-semibold text-app">
                         {formatMoney(pocketBalances[p]?.amount ?? 0, pocketBalances[p]?.currency ?? "AED")}
                       </div>
                     </div>
                   ))}
                 </div>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                  <div className="rounded-lg border border-app surface p-4">
+                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
                       AED Cash Flow
                     </h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -1268,16 +1268,16 @@ export default function ReportsPage() {
                           {formatMoney(cfByCurrency.aed.expenses, "AED")}
                         </div>
                       </div>
-                      <div className="col-span-2 border-t border-[#222222] pt-2">
+                      <div className="col-span-2 border-t border-app pt-2">
                         <div className="text-xs uppercase text-zinc-500">Net AED</div>
-                        <div className="mt-1 text-lg font-semibold text-white">
+                        <div className="mt-1 text-lg font-semibold text-app">
                           {formatMoney(cfByCurrency.aed.income - cfByCurrency.aed.expenses, "AED")}
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                  <div className="rounded-lg border border-app surface p-4">
+                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
                       DZD Cash Flow
                     </h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -1293,22 +1293,22 @@ export default function ReportsPage() {
                           {formatMoney(cfByCurrency.dzd.expenses, "DZD")}
                         </div>
                       </div>
-                      <div className="col-span-2 border-t border-[#222222] pt-2">
+                      <div className="col-span-2 border-t border-app pt-2">
                         <div className="text-xs uppercase text-zinc-500">Net DZD</div>
-                        <div className="mt-1 text-lg font-semibold text-white">
+                        <div className="mt-1 text-lg font-semibold text-app">
                           {formatMoney(cfByCurrency.dzd.income - cfByCurrency.dzd.expenses, "DZD")}
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] overflow-hidden">
-                  <h3 className="border-b border-[#222222] px-4 py-3 text-sm font-semibold text-zinc-200">
+                <div className="rounded-lg border border-app surface overflow-hidden">
+                  <h3 className="border-b border-app px-4 py-3 text-sm font-semibold text-app">
                     Movements
                   </h3>
                   <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                     <table className="min-w-[800px] w-full text-left text-xs">
-                      <thead className="border-b border-[#222222] text-zinc-400 sticky top-0 bg-[#111111]">
+                      <thead className="border-b border-app text-muted sticky top-0 surface">
                         <tr>
                           <th className="px-4 py-3">Date</th>
                           <th className="px-4 py-3">Type</th>
@@ -1320,8 +1320,8 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {cfFilteredMovements.map((m) => (
-                          <tr key={m.id} className="border-b border-[#222222] last:border-b-0">
-                            <td className="px-4 py-3 text-zinc-200">{formatDate(m.date)}</td>
+                          <tr key={m.id} className="border-b border-app last:border-b-0">
+                            <td className="px-4 py-3 text-app">{formatDate(m.date)}</td>
                             <td className="px-4 py-3">
                               <span
                                 className={
@@ -1333,12 +1333,12 @@ export default function ReportsPage() {
                                 {m.type ?? "-"}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">{m.category ?? "-"}</td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                            <td className="px-4 py-3 text-app">{m.category ?? "-"}</td>
+                            <td className="px-4 py-3 text-right text-app">
                               {formatMoney(m.amount ?? 0, m.currency ?? "")}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">{m.pocket ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200 max-w-[200px] truncate">
+                            <td className="px-4 py-3 text-app">{m.pocket ?? "-"}</td>
+                            <td className="px-4 py-3 text-app max-w-[200px] truncate">
                               {m.description ?? "-"}
                             </td>
                           </tr>

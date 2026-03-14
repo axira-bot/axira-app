@@ -78,7 +78,7 @@ function DriveLinkIcon({ href }: { href: string }) {
       target="_blank"
       rel="noopener noreferrer"
       title="Open Google Drive folder"
-      className="inline-flex items-center justify-center rounded border border-[#222222] bg-[#0a0a0a] p-1.5 text-zinc-400 transition hover:border-[#c0392b]/70 hover:text-white"
+      className="inline-flex items-center justify-center rounded border border-app bg-[#0a0a0a] p-1.5 text-muted transition hover:border-[var(--color-accent)]/70 hover:text-app"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -1097,17 +1097,17 @@ export default function DealsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-app text-app">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Deals</h1>
-            <p className="text-sm font-medium text-[#c0392b]">Sales & Profit</p>
+            <p className="text-sm font-medium text-[var(--color-accent)]">Sales & Profit</p>
           </div>
           <button
             type="button"
             onClick={openAddModal}
-            className="inline-flex items-center justify-center rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+            className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
           >
             Add Deal
           </button>
@@ -1122,8 +1122,8 @@ export default function DealsPage() {
               className={[
                 "rounded-full border px-3 py-1 text-xs font-semibold transition",
                 activeTab === tab
-                  ? "border-[#c0392b] bg-[#c0392b]/15 text-white"
-                  : "border-[#222222] bg-[#111111] text-zinc-300 hover:border-[#c0392b]/70",
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-app"
+                  : "border-app surface text-app hover:border-[var(--color-accent)]/70",
               ].join(" ")}
             >
               {tab}
@@ -1137,15 +1137,15 @@ export default function DealsPage() {
           </div>
         )}
 
-        <div className="rounded-lg border border-[#222222] bg-[#111111]">
+        <div className="rounded-lg border border-app surface">
           {isLoading ? (
-            <div className="p-4 text-sm text-zinc-400">Loading deals...</div>
+            <div className="p-4 text-sm text-muted">Loading deals...</div>
           ) : filteredDeals.length === 0 ? (
-            <div className="p-4 text-sm text-zinc-400">No deals found.</div>
+            <div className="p-4 text-sm text-muted">No deals found.</div>
           ) : (
             <div className="w-full overflow-x-auto">
               <table className="min-w-[1120px] w-full text-left text-xs">
-                <thead className="border-b border-[#222222] text-[11px] uppercase tracking-wide text-zinc-400">
+                <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3">Client</th>
                     <th className="px-4 py-3">Car</th>
@@ -1171,26 +1171,26 @@ export default function DealsPage() {
                       (d.cost_maintenance || 0) +
                       (d.cost_other || 0);
                     return (
-                      <tr key={d.id} className="border-b border-[#222222] last:border-b-0">
-                        <td className="px-4 py-3 font-semibold text-white">
+                      <tr key={d.id} className="border-b border-app last:border-b-0">
+                        <td className="px-4 py-3 font-semibold text-app">
                           {d.client_name || "-"}
                         </td>
-                        <td className="px-4 py-3 text-zinc-200">
+                        <td className="px-4 py-3 text-app">
                           {d.car_label || "-"}
                         </td>
-                        <td className="px-4 py-3 text-zinc-200">{formatDate(d.date ?? d.created_at)}</td>
-                        <td className="px-4 py-3 text-zinc-200">{formatMoney(d.sale_dzd, "DZD")}</td>
-                        <td className="px-4 py-3 text-zinc-200">{d.rate != null ? formatNumber(d.rate) : "-"}</td>
-                        <td className="px-4 py-3 text-zinc-200">{formatMoney(d.sale_aed, "AED")}</td>
-                        <td className="px-4 py-3 text-zinc-200">{formatMoney(total, "AED")}</td>
-                        <td className="px-4 py-3 font-semibold text-[#c0392b]">{formatMoney(d.profit, "AED")}</td>
+                        <td className="px-4 py-3 text-app">{formatDate(d.date ?? d.created_at)}</td>
+                        <td className="px-4 py-3 text-app">{formatMoney(d.sale_dzd, "DZD")}</td>
+                        <td className="px-4 py-3 text-app">{d.rate != null ? formatNumber(d.rate) : "-"}</td>
+                        <td className="px-4 py-3 text-app">{formatMoney(d.sale_aed, "AED")}</td>
+                        <td className="px-4 py-3 text-app">{formatMoney(total, "AED")}</td>
+                        <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(d.profit, "AED")}</td>
                         <td className="px-4 py-3">
                           <span
                             className={[
                               "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
                               status === "closed"
-                                ? "border-[#222222] bg-black text-zinc-300"
-                                : "border-[#c0392b]/60 bg-[#c0392b]/10 text-white",
+                                ? "border-app bg-black text-app"
+                                : "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 text-app",
                             ].join(" ")}
                           >
                             {status === "closed" ? "closed" : "pending"}
@@ -1204,7 +1204,7 @@ export default function DealsPage() {
                             <button
                               type="button"
                               onClick={() => openEditModal(d)}
-                              className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-[#c0392b]/70"
+                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                             >
                               Edit
                             </button>
@@ -1212,14 +1212,14 @@ export default function DealsPage() {
                               type="button"
                               onClick={() => handleDelete(d)}
                               disabled={isDeletingId === d.id}
-                              className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-red-700 disabled:opacity-50"
+                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700 disabled:opacity-50"
                             >
                               {isDeletingId === d.id ? "Deleting..." : "Delete"}
                             </button>
                             <button
                               type="button"
                               onClick={() => openView(d)}
-                              className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-[#c0392b]/70"
+                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                             >
                               View
                             </button>
@@ -1239,13 +1239,13 @@ export default function DealsPage() {
       {isModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={closeModal} />
-          <div className="relative flex w-full max-w-3xl max-h-screen flex-col overflow-y-auto rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <div className="flex items-start justify-between gap-4 border-b border-[#222222] pb-3">
+          <div className="relative flex w-full max-w-3xl max-h-screen flex-col overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
+            <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
-                <div className="text-lg font-semibold text-white">
+                <div className="text-lg font-semibold text-app">
                   {editingDealId ? "Edit Deal" : "Add Deal"}
                 </div>
-                <div className="text-xs text-zinc-400">
+                <div className="text-xs text-muted">
                   Sale AED and Profit update automatically as you type.
                 </div>
               </div>
@@ -1253,24 +1253,24 @@ export default function DealsPage() {
                 type="button"
                 onClick={closeModal}
                 disabled={isSaving}
-                className="rounded-md border border-[#222222] px-3 py-1 text-xs font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app disabled:opacity-50"
               >
                 Close
               </button>
             </div>
 
             <div className="mt-4 grid max-h-[70vh] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Date</span>
                 <input
                   type="date"
                   value={form.date}
                   onChange={(e) => updateField("date", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Client</span>
                 <div className="relative">
                   <input
@@ -1283,10 +1283,10 @@ export default function DealsPage() {
                     onFocus={() => setClientDropdownOpen(true)}
                     onBlur={() => setTimeout(() => setClientDropdownOpen(false), 200)}
                     placeholder="Search or select client..."
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                   {clientDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-48 overflow-y-auto rounded-md border border-[#222222] bg-[#111111] py-1 shadow-lg">
+                    <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-48 overflow-y-auto rounded-md border border-app surface py-1 shadow-lg">
                       {filteredClientsForDropdown.length === 0 ? (
                         <div className="px-3 py-2 text-xs text-zinc-500">No clients match</div>
                       ) : (
@@ -1300,7 +1300,7 @@ export default function DealsPage() {
                               setClientSearchQuery("");
                               setClientDropdownOpen(false);
                             }}
-                            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-white hover:bg-[#222222]"
+                            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-app hover:bg-[#222222]"
                           >
                             <span>{c.name || "—"}</span>
                             {c.phone ? <span className="text-zinc-500 text-xs">{c.phone}</span> : null}
@@ -1316,7 +1316,7 @@ export default function DealsPage() {
                           setQuickAddPhone("");
                           setQuickAddClientOpen(true);
                         }}
-                        className="flex w-full items-center gap-2 border-t border-[#222222] px-3 py-2 text-left text-sm text-[#c0392b] hover:bg-[#222222]"
+                        className="flex w-full items-center gap-2 border-t border-app px-3 py-2 text-left text-sm text-[var(--color-accent)] hover:bg-[#222222]"
                       >
                         + Add new client
                       </button>
@@ -1325,12 +1325,12 @@ export default function DealsPage() {
                 </div>
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Car</span>
                 <select
                   value={form.carId}
                   onChange={(e) => updateField("carId", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="">Select a car (available)</option>
                   {availableCars.map((c) => (
@@ -1341,12 +1341,12 @@ export default function DealsPage() {
                 </select>
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Handled by</span>
                 <select
                   value={form.employeeId}
                   onChange={(e) => updateField("employeeId", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="">No employee</option>
                   {employees.map((e) => (
@@ -1356,129 +1356,129 @@ export default function DealsPage() {
                   ))}
                 </select>
                 {form.employeeId && employees.find((e) => e.id === form.employeeId)?.role === "Manager" && (
-                  <label className="mt-2 flex items-center gap-2 text-zinc-400">
+                  <label className="mt-2 flex items-center gap-2 text-muted">
                     <input
                       type="checkbox"
                       checked={form.isManagedDeal}
                       onChange={(e) => updateField("isManagedDeal", e.target.checked)}
-                      className="rounded border-[#222222] bg-[#0a0a0a] text-[#c0392b] focus:ring-[#c0392b]"
+                      className="rounded border-app bg-[#0a0a0a] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                     />
                     <span>Fully managed (use manager commission rate)</span>
                   </label>
                 )}
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Sale Price DZD</span>
                 <input
                   type="number"
                   value={form.saleDzd}
                   onChange={(e) => updateField("saleDzd", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Amount Received DZD</span>
                 <input
                   type="number"
                   value={form.amountReceivedDzd}
                   onChange={(e) => updateField("amountReceivedDzd", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <div className="rounded-md border border-[#222222] bg-black px-3 py-2 text-xs text-zinc-300">
+              <div className="rounded-md border border-app bg-black px-3 py-2 text-xs text-app">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-zinc-200">Pending DZD</span>
-                  <span className="text-white">{formatMoney(pendingDzd, "DZD")}</span>
+                  <span className="font-semibold text-app">Pending DZD</span>
+                  <span className="text-app">{formatMoney(pendingDzd, "DZD")}</span>
                 </div>
               </div>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Rate at Deal (DZD/AED)</span>
                 <input
                   type="number"
                   value={form.rate}
                   onChange={(e) => updateField("rate", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <div className="rounded-md border border-[#222222] bg-black px-3 py-2 text-xs text-zinc-300 sm:col-span-2">
+              <div className="rounded-md border border-app bg-black px-3 py-2 text-xs text-app sm:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="font-semibold text-zinc-200">Sale AED</span>
-                  <span className="text-white">{formatMoney(saleAed, "AED")}</span>
+                  <span className="font-semibold text-app">Sale AED</span>
+                  <span className="text-app">{formatMoney(saleAed, "AED")}</span>
                 </div>
               </div>
 
               <div className="sm:col-span-2">
-                <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted">
                   Expenses (AED)
                 </div>
               </div>
 
-              <div className="rounded-md border border-[#222222] bg-black px-3 py-2 text-xs text-zinc-300 sm:col-span-2">
+              <div className="rounded-md border border-app bg-black px-3 py-2 text-xs text-app sm:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="font-semibold text-zinc-200">Car Cost AED</span>
-                  <span className="text-white">{formatMoney(carCostAed, "AED")}</span>
+                  <span className="font-semibold text-app">Car Cost AED</span>
+                  <span className="text-app">{formatMoney(carCostAed, "AED")}</span>
                 </div>
                 <div className="mt-1 text-[11px] text-zinc-500">
                   Auto-filled from selected car purchase price.
                 </div>
               </div>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Shipping AED</span>
                 <input
                   type="number"
                   value={form.shippingAed}
                   onChange={(e) => updateField("shippingAed", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Inspection AED</span>
                 <input
                   type="number"
                   value={form.inspectionAed}
                   onChange={(e) => updateField("inspectionAed", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Recovery AED</span>
                 <input
                   type="number"
                   value={form.recoveryAed}
                   onChange={(e) => updateField("recoveryAed", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Maintenance AED</span>
                 <input
                   type="number"
                   value={form.maintenanceAed}
                   onChange={(e) => updateField("maintenanceAed", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Other AED</span>
                 <input
                   type="number"
                   value={form.otherAed}
                   onChange={(e) => updateField("otherAed", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <label className="flex items-center justify-between gap-3 rounded-md border border-[#222222] bg-black px-3 py-2 text-xs text-zinc-200 sm:col-span-2">
+              <label className="flex items-center justify-between gap-3 rounded-md border border-app bg-black px-3 py-2 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Shipping Paid</span>
                 <button
                   type="button"
@@ -1486,18 +1486,18 @@ export default function DealsPage() {
                   className={[
                     "rounded-full border px-3 py-1 text-[11px] font-semibold transition",
                     form.shippingPaid
-                      ? "border-[#c0392b] bg-[#c0392b]/15 text-white"
-                      : "border-[#222222] bg-[#111111] text-zinc-300",
+                      ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-app"
+                      : "border-app surface text-app",
                   ].join(" ")}
                 >
                   {form.shippingPaid ? "Yes" : "No"}
                 </button>
               </label>
 
-              <div className="rounded-md border border-[#222222] bg-black px-3 py-2 text-xs text-zinc-300 sm:col-span-2">
+              <div className="rounded-md border border-app bg-black px-3 py-2 text-xs text-app sm:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="font-semibold text-zinc-200">Live Profit Preview</span>
-                  <span className="text-[#c0392b]">{formatMoney(profitPreview, "AED")}</span>
+                  <span className="font-semibold text-app">Live Profit Preview</span>
+                  <span className="text-[var(--color-accent)]">{formatMoney(profitPreview, "AED")}</span>
                 </div>
                 <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-500">
                   <span>Total expenses</span>
@@ -1505,12 +1505,12 @@ export default function DealsPage() {
                 </div>
               </div>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Status</span>
                 <select
                   value={form.status}
                   onChange={(e) => updateField("status", e.target.value as "pending" | "closed")}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="pending">pending</option>
                   <option value="closed">closed</option>
@@ -1519,33 +1519,33 @@ export default function DealsPage() {
 
               <div className="hidden sm:block" />
 
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Google Drive Folder Link</span>
                 <input
                   type="text"
                   value={form.driveLink}
                   onChange={(e) => updateField("driveLink", e.target.value)}
                   placeholder="https://drive.google.com/..."
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Notes</span>
                 <textarea
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
                   rows={3}
-                  className="w-full resize-none rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full resize-none rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
 
-            <div className="mt-4 flex flex-col-reverse gap-2 border-t border-[#222222] bg-[#111111] pt-3 sm:flex-row sm:justify-end">
+            <div className="mt-4 flex flex-col-reverse gap-2 border-t border-app surface pt-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={closeModal}
                 disabled={isSaving}
-                className="rounded-md border border-[#222222] bg-black px-4 py-2 text-sm font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1553,7 +1553,7 @@ export default function DealsPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
@@ -1566,11 +1566,11 @@ export default function DealsPage() {
       {viewDeal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={closeView} />
-          <div className="relative w-full max-w-3xl rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <div className="flex items-start justify-between gap-4 border-b border-[#222222] pb-3">
+          <div className="relative w-full max-w-3xl rounded-lg border border-app surface p-4 shadow-xl">
+            <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
-                <div className="text-lg font-semibold text-white">Deal Details</div>
-                <div className="text-xs text-zinc-400">
+                <div className="text-lg font-semibold text-app">Deal Details</div>
+                <div className="text-xs text-muted">
                   {viewDeal.client_name || "-"} • {viewDeal.car_label || "-"} •{" "}
                   {formatDate(viewDeal.date ?? viewDeal.created_at)}
                 </div>
@@ -1578,17 +1578,17 @@ export default function DealsPage() {
               <button
                 type="button"
                 onClick={closeView}
-                className="rounded-md border border-[#222222] px-3 py-1 text-xs font-semibold text-zinc-200"
+                className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app"
               >
                 Close
               </button>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-md border border-[#222222] bg-black p-3 text-xs text-zinc-300">
+              <div className="rounded-md border border-app bg-black p-3 text-xs text-app">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-zinc-200">Sale</span>
-                  <span className="text-white">{formatMoney(viewDeal.sale_dzd, "DZD")}</span>
+                  <span className="font-semibold text-app">Sale</span>
+                  <span className="text-app">{formatMoney(viewDeal.sale_dzd, "DZD")}</span>
                 </div>
                 <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500">
                   <span>Rate</span>
@@ -1600,56 +1600,56 @@ export default function DealsPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-[#222222] bg-black p-3 text-xs text-zinc-300">
+              <div className="rounded-md border border-app bg-black p-3 text-xs text-app">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-zinc-200">Profit</span>
-                  <span className="text-[#c0392b]">{formatMoney(viewDeal.profit, "AED")}</span>
+                  <span className="font-semibold text-app">Profit</span>
+                  <span className="text-[var(--color-accent)]">{formatMoney(viewDeal.profit, "AED")}</span>
                 </div>
                 <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500">
                   <span>Status</span>
-                  <span className="text-zinc-200">{(viewDeal.status || "pending").toLowerCase()}</span>
+                  <span className="text-app">{(viewDeal.status || "pending").toLowerCase()}</span>
                 </div>
                 <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500">
                   <span>Shipping Paid</span>
-                  <span className="text-zinc-200">{viewDeal.shipping_paid ? "Yes" : "No"}</span>
+                  <span className="text-app">{viewDeal.shipping_paid ? "Yes" : "No"}</span>
                 </div>
               </div>
 
-              <div className="rounded-md border border-[#222222] bg-black p-3 text-xs text-zinc-300 sm:col-span-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              <div className="rounded-md border border-app bg-black p-3 text-xs text-app sm:col-span-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                   Expenses (AED)
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="flex items-center justify-between gap-2 text-zinc-200">
-                    <span className="text-zinc-400">Car Cost</span>
+                  <div className="flex items-center justify-between gap-2 text-app">
+                    <span className="text-muted">Car Cost</span>
                     <span>{formatMoney(viewDeal.cost_car, "AED")}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-2 text-zinc-200">
-                    <span className="text-zinc-400">Shipping</span>
+                  <div className="flex items-center justify-between gap-2 text-app">
+                    <span className="text-muted">Shipping</span>
                     <span>{formatMoney(viewDeal.cost_shipping, "AED")}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-2 text-zinc-200">
-                    <span className="text-zinc-400">Inspection</span>
+                  <div className="flex items-center justify-between gap-2 text-app">
+                    <span className="text-muted">Inspection</span>
                     <span>{formatMoney(viewDeal.cost_inspection, "AED")}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-2 text-zinc-200">
-                    <span className="text-zinc-400">Recovery</span>
+                  <div className="flex items-center justify-between gap-2 text-app">
+                    <span className="text-muted">Recovery</span>
                     <span>{formatMoney(viewDeal.cost_recovery, "AED")}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-2 text-zinc-200">
-                    <span className="text-zinc-400">Maintenance</span>
+                  <div className="flex items-center justify-between gap-2 text-app">
+                    <span className="text-muted">Maintenance</span>
                     <span>{formatMoney(viewDeal.cost_maintenance, "AED")}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-2 text-zinc-200">
-                    <span className="text-zinc-400">Other</span>
+                  <div className="flex items-center justify-between gap-2 text-app">
+                    <span className="text-muted">Other</span>
                     <span>{formatMoney(viewDeal.cost_other, "AED")}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-md border border-[#222222] bg-black p-3 text-xs text-zinc-300 sm:col-span-2">
+              <div className="rounded-md border border-app bg-black p-3 text-xs text-app sm:col-span-2">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                     Payment history
                   </div>
                   {(viewDeal.pending_dzd ?? 0) <= 0 ? (
@@ -1660,30 +1660,30 @@ export default function DealsPage() {
                     <button
                       type="button"
                       onClick={() => setIsPaymentFormOpen((prev) => !prev)}
-                      className="rounded-md border border-[#222222] bg-[#111111] px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-[#c0392b]/70"
+                      className="rounded-md border border-app surface px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                     >
                       {isPaymentFormOpen ? "Cancel" : "Add Payment"}
                     </button>
                   )}
                 </div>
-                <div className="mt-2 rounded-md border border-[#222222] bg-[#0a0a0a] p-2 text-[11px] text-zinc-300">
+                <div className="mt-2 rounded-md border border-app bg-[#0a0a0a] p-2 text-[11px] text-app">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex flex-col">
-                      <span className="text-xs font-semibold text-zinc-200">Collected DZD</span>
-                      <span className="mt-0.5 text-sm text-white">
+                      <span className="text-xs font-semibold text-app">Collected DZD</span>
+                      <span className="mt-0.5 text-sm text-app">
                         {formatMoney(viewDeal.collected_dzd, "DZD")}
                       </span>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-xs font-semibold text-zinc-200">Pending DZD</span>
-                      <span className="mt-0.5 text-sm text-[#c0392b]">
+                      <span className="text-xs font-semibold text-app">Pending DZD</span>
+                      <span className="mt-0.5 text-sm text-[var(--color-accent)]">
                         {formatMoney(viewDeal.pending_dzd, "DZD")}
                       </span>
                     </div>
                   </div>
                 </div>
                 {isPaymentFormOpen && (
-                  <div className="mt-2 flex flex-col gap-2 rounded-md border border-[#222222] bg-[#0a0a0a] p-2 text-[11px] text-zinc-300">
+                  <div className="mt-2 flex flex-col gap-2 rounded-md border border-app bg-[#0a0a0a] p-2 text-[11px] text-app">
                     {(() => {
                       const pendingDzd = viewDeal.pending_dzd ?? 0;
                       const paymentAmount = parseNum(newPaymentAmount);
@@ -1696,12 +1696,12 @@ export default function DealsPage() {
                         <>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                       <label className="flex-1 space-y-1">
-                        <span className="font-semibold text-zinc-200">Amount DZD</span>
+                        <span className="font-semibold text-app">Amount DZD</span>
                         <input
                           type="number"
                           value={newPaymentAmount}
                           onChange={(e) => setNewPaymentAmount(e.target.value)}
-                          className="w-full rounded-md border border-[#222222] bg-black px-2 py-1 text-xs text-white outline-none focus:border-[#c0392b]"
+                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                         />
                         {exceedsPending && (
                           <p className="mt-1 text-red-300">
@@ -1711,21 +1711,21 @@ export default function DealsPage() {
                         )}
                       </label>
                       <label className="space-y-1">
-                        <span className="font-semibold text-zinc-200">Date</span>
+                        <span className="font-semibold text-app">Date</span>
                         <input
                           type="date"
                           value={newPaymentDate}
                           onChange={(e) => setNewPaymentDate(e.target.value)}
-                          className="w-full rounded-md border border-[#222222] bg-black px-2 py-1 text-xs text-white outline-none focus:border-[#c0392b]"
+                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                         />
                       </label>
                     </div>
                     <label className="space-y-1">
-                      <span className="font-semibold text-zinc-200">Notes</span>
+                      <span className="font-semibold text-app">Notes</span>
                       <input
                         value={newPaymentNote}
                         onChange={(e) => setNewPaymentNote(e.target.value)}
-                        className="w-full rounded-md border border-[#222222] bg-black px-2 py-1 text-xs text-white outline-none focus:border-[#c0392b]"
+                        className="w-full rounded-md border border-app bg-black px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                       />
                     </label>
                     <div className="flex justify-end">
@@ -1733,7 +1733,7 @@ export default function DealsPage() {
                         type="button"
                         onClick={handleAddPayment}
                         disabled={saveDisabled}
-                        className="rounded-md bg-[#c0392b] px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                        className="rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-app disabled:opacity-50"
                       >
                         {isAddingPayment ? "Saving..." : "Save Payment"}
                       </button>
@@ -1744,21 +1744,21 @@ export default function DealsPage() {
                   </div>
                 )}
                 {paymentsLoading ? (
-                  <div className="mt-2 text-sm text-zinc-400">Loading payments...</div>
+                  <div className="mt-2 text-sm text-muted">Loading payments...</div>
                 ) : paymentsError ? (
                   <div className="mt-2 text-xs text-red-300">{paymentsError}</div>
                 ) : payments.length === 0 ? (
-                  <div className="mt-2 text-sm text-zinc-400">No payments yet.</div>
+                  <div className="mt-2 text-sm text-muted">No payments yet.</div>
                 ) : (
                   <div className="mt-2 space-y-2">
                     {payments.map((p) => (
                       <div
                         key={p.id}
-                        className="flex flex-wrap items-center justify-between gap-2 border-b border-[#222222] pb-2 text-[11px] last:border-b-0 last:pb-0"
+                        className="flex flex-wrap items-center justify-between gap-2 border-b border-app pb-2 text-[11px] last:border-b-0 last:pb-0"
                       >
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-zinc-200">{formatDate(p.date ?? p.created_at)}</span>
-                          <span className="text-white">
+                          <span className="font-semibold text-app">{formatDate(p.date ?? p.created_at)}</span>
+                          <span className="text-app">
                             {formatMoney(p.dzd, "DZD")}
                           </span>
                           {p.notes ? <span className="text-zinc-500">{p.notes}</span> : null}
@@ -1767,7 +1767,7 @@ export default function DealsPage() {
                           type="button"
                           onClick={() => handleDeletePayment(p)}
                           disabled={deletingPaymentId === p.id}
-                          className="rounded border border-[#222222] bg-black px-2 py-0.5 text-[10px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
+                          className="rounded border border-app bg-black px-2 py-0.5 text-[10px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
                         >
                           {deletingPaymentId === p.id ? "Removing..." : "Delete"}
                         </button>
@@ -1778,8 +1778,8 @@ export default function DealsPage() {
               </div>
 
               {(viewDeal as Deal & { drive_link?: string | null }).drive_link ? (
-                <div className="rounded-md border border-[#222222] bg-black p-3 text-xs text-zinc-300 sm:col-span-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                <div className="rounded-md border border-app bg-black p-3 text-xs text-app sm:col-span-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                     Google Drive
                   </div>
                   <div className="mt-2">
@@ -1788,11 +1788,11 @@ export default function DealsPage() {
                 </div>
               ) : null}
               {viewDeal.notes ? (
-                <div className="rounded-md border border-[#222222] bg-black p-3 text-xs text-zinc-300 sm:col-span-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                <div className="rounded-md border border-app bg-black p-3 text-xs text-app sm:col-span-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                     Notes
                   </div>
-                  <div className="mt-2 text-sm text-zinc-200 whitespace-pre-wrap">
+                  <div className="mt-2 text-sm text-app whitespace-pre-wrap">
                     {viewDeal.notes}
                   </div>
                 </div>
@@ -1806,26 +1806,26 @@ export default function DealsPage() {
       {quickAddClientOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => !quickAddSaving && setQuickAddClientOpen(false)} />
-          <div className="relative w-full max-w-sm rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <h3 className="text-sm font-semibold text-white">Add new client</h3>
-            <p className="mt-1 text-xs text-zinc-400">Name and phone only. You can add more details later in Clients.</p>
+          <div className="relative w-full max-w-sm rounded-lg border border-app surface p-4 shadow-xl">
+            <h3 className="text-sm font-semibold text-app">Add new client</h3>
+            <p className="mt-1 text-xs text-muted">Name and phone only. You can add more details later in Clients.</p>
             <div className="mt-4 space-y-3">
-              <label className="block space-y-1 text-xs text-zinc-300">
+              <label className="block space-y-1 text-xs text-app">
                 <span className="font-semibold">Name</span>
                 <input
                   type="text"
                   value={quickAddName}
                   onChange={(e) => setQuickAddName(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="block space-y-1 text-xs text-zinc-300">
+              <label className="block space-y-1 text-xs text-app">
                 <span className="font-semibold">Phone</span>
                 <input
                   type="text"
                   value={quickAddPhone}
                   onChange={(e) => setQuickAddPhone(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
@@ -1833,7 +1833,7 @@ export default function DealsPage() {
               <button
                 type="button"
                 onClick={() => !quickAddSaving && setQuickAddClientOpen(false)}
-                className="rounded-md border border-[#222222] px-3 py-1.5 text-xs font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app px-3 py-1.5 text-xs font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1841,7 +1841,7 @@ export default function DealsPage() {
                 type="button"
                 onClick={handleQuickAddClient}
                 disabled={quickAddSaving}
-                className="rounded-md bg-[#c0392b] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-app disabled:opacity-50"
               >
                 {quickAddSaving ? "Saving..." : "Save"}
               </button>

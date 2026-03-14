@@ -116,7 +116,7 @@ export default function AdminUsersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] p-6 text-zinc-400">
+      <div className="min-h-screen bg-app p-6 text-muted">
         Loading users…
       </div>
     );
@@ -124,16 +124,16 @@ export default function AdminUsersPage() {
 
   if (error && users.length === 0) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] p-6">
+      <div className="min-h-screen bg-app p-6">
         <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-sm text-red-200">
           {error}
         </div>
-        <p className="mt-4 text-sm text-zinc-400">
+        <p className="mt-4 text-sm text-muted">
           If you are not an owner, you do not have access to this page.
         </p>
         <Link
           href="/dashboard"
-          className="mt-4 inline-block text-sm font-medium text-[#c0392b] hover:underline"
+          className="mt-4 inline-block text-sm font-medium text-[var(--color-accent)] hover:underline"
         >
           Back to Dashboard
         </Link>
@@ -142,20 +142,20 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-app text-app">
       <div className="mx-auto max-w-4xl px-4 py-6 md:px-8">
         <header className="mb-6 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               User management
             </h1>
-            <p className="text-sm font-medium text-[#c0392b]">
+            <p className="text-sm font-medium text-[var(--color-accent)]">
               Owner only — add and remove users
             </p>
           </div>
           <Link
             href="/dashboard"
-            className="text-sm font-medium text-zinc-400 hover:text-[#c0392b]"
+            className="text-sm font-medium text-muted hover:text-[var(--color-accent)]"
           >
             Back to Dashboard
           </Link>
@@ -167,35 +167,35 @@ export default function AdminUsersPage() {
           </div>
         )}
 
-        <section className="mb-8 rounded-lg border border-[#222222] bg-[#111111] p-4">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+        <section className="mb-8 rounded-lg border border-app surface p-4">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
             Add user
           </h2>
           <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-4">
             <label className="min-w-[180px]">
-              <span className="mb-1 block text-xs text-zinc-400">Email</span>
+              <span className="mb-1 block text-xs text-muted">Email</span>
               <input
                 type="email"
                 value={addEmail}
                 onChange={(e) => setAddEmail(e.target.value)}
                 required
-                className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-app surface px-3 py-2 text-sm text-app"
                 placeholder="user@company.com"
               />
             </label>
             <label className="min-w-[180px]">
-              <span className="mb-1 block text-xs text-zinc-400">Full name (required)</span>
+              <span className="mb-1 block text-xs text-muted">Full name (required)</span>
               <input
                 type="text"
                 value={addName}
                 onChange={(e) => setAddName(e.target.value)}
                 required
-                className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-app surface px-3 py-2 text-sm text-app"
                 placeholder="Full name"
               />
             </label>
             <label>
-              <span className="mb-1 block text-xs text-zinc-400">Role</span>
+              <span className="mb-1 block text-xs text-muted">Role</span>
               <select
                 value={addRole}
                 onChange={(e) => {
@@ -203,7 +203,7 @@ export default function AdminUsersPage() {
                   setAddEmployeeId("");
                   setAddInvestorId("");
                 }}
-                className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                className="rounded-md border border-app surface px-3 py-2 text-sm text-app"
               >
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
@@ -214,11 +214,11 @@ export default function AdminUsersPage() {
             </label>
             {(addRole === "staff" || addRole === "manager") && (
               <label className="min-w-[180px]">
-                <span className="mb-1 block text-xs text-zinc-400">Employee (optional)</span>
+                <span className="mb-1 block text-xs text-muted">Employee (optional)</span>
                 <select
                   value={addEmployeeId}
                   onChange={(e) => setAddEmployeeId(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app surface px-3 py-2 text-sm text-app"
                 >
                   <option value="">— None</option>
                   {employees.map((e) => (
@@ -231,11 +231,11 @@ export default function AdminUsersPage() {
             )}
             {addRole === "investor" && (
               <label className="min-w-[180px]">
-                <span className="mb-1 block text-xs text-zinc-400">Investor (optional)</span>
+                <span className="mb-1 block text-xs text-muted">Investor (optional)</span>
                 <select
                   value={addInvestorId}
                   onChange={(e) => setAddInvestorId(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app surface px-3 py-2 text-sm text-app"
                 >
                   <option value="">— None</option>
                   {investors.map((i) => (
@@ -247,7 +247,7 @@ export default function AdminUsersPage() {
               </label>
             )}
             <label className="min-w-[160px]">
-              <span className="mb-1 block text-xs text-zinc-400">
+              <span className="mb-1 block text-xs text-muted">
                 Password (optional, min 6)
               </span>
               <input
@@ -255,14 +255,14 @@ export default function AdminUsersPage() {
                 value={addPassword}
                 onChange={(e) => setAddPassword(e.target.value)}
                 minLength={6}
-                className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                className="w-full rounded-md border border-app surface px-3 py-2 text-sm text-app"
                 placeholder="Leave blank for invite"
               />
             </label>
             <button
               type="submit"
               disabled={adding}
-              className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
             >
               {adding ? "Adding…" : "Add user"}
             </button>
@@ -272,8 +272,8 @@ export default function AdminUsersPage() {
           )}
         </section>
 
-        <section className="rounded-lg border border-[#222222] bg-[#111111] overflow-hidden">
-          <h2 className="border-b border-[#222222] px-4 py-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+        <section className="rounded-lg border border-app surface overflow-hidden">
+          <h2 className="border-b border-app px-4 py-3 text-sm font-semibold uppercase tracking-wide text-muted">
             All users
           </h2>
           {users.length === 0 ? (
@@ -281,7 +281,7 @@ export default function AdminUsersPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-[#222222] text-xs uppercase text-zinc-400">
+                <thead className="border-b border-app text-xs uppercase text-muted">
                   <tr>
                     <th className="px-4 py-3">Email</th>
                     <th className="px-4 py-3">Name</th>
@@ -293,14 +293,14 @@ export default function AdminUsersPage() {
                   {users.map((u) => (
                     <tr
                       key={u.id}
-                      className="border-b border-[#222222] last:border-b-0"
+                      className="border-b border-app last:border-b-0"
                     >
-                      <td className="px-4 py-3 text-zinc-200">{u.email}</td>
-                      <td className="px-4 py-3 text-zinc-300">
+                      <td className="px-4 py-3 text-app">{u.email}</td>
+                      <td className="px-4 py-3 text-app">
                         {u.name ?? "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full border border-[#333] bg-[#1a1a1a] px-2 py-0.5 text-xs font-medium text-zinc-300">
+                        <span className="rounded-full border border-[#333] bg-[#1a1a1a] px-2 py-0.5 text-xs font-medium text-app">
                           {u.role}
                         </span>
                       </td>

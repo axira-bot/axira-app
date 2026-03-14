@@ -636,14 +636,14 @@ export default function TransfersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-app text-app">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               Transfers
             </h1>
-            <p className="text-sm font-medium text-[#c0392b]">
+            <p className="text-sm font-medium text-[var(--color-accent)]">
               Conversions &amp; cash exchange
             </p>
           </div>
@@ -655,17 +655,17 @@ export default function TransfersPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-red-300">
               Dashboard alert
             </h2>
-            <p className="mt-2 text-white">
+            <p className="mt-2 text-app">
               <span className="font-semibold">{dashboardAlert.count}</span> pending
               conversion{dashboardAlert.count !== 1 ? "s" : ""} — total expected:{" "}
-              <span className="font-semibold text-[#c0392b]">
+              <span className="font-semibold text-[var(--color-accent)]">
                 {formatMoney(dashboardAlert.totalExpected, dashboardAlert.toCurrency)}
               </span>
             </p>
           </section>
         )}
 
-        <div className="flex flex-wrap gap-2 border-b border-[#222222] pb-2">
+        <div className="flex flex-wrap gap-2 border-b border-app pb-2">
           {(["Conversions", "Cash Exchange"] as const).map((tab) => (
             <button
               key={tab}
@@ -673,8 +673,8 @@ export default function TransfersPage() {
               onClick={() => setActiveTab(tab)}
               className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                 activeTab === tab
-                  ? "border-[#c0392b] bg-[#c0392b]/15 text-white"
-                  : "border-[#222222] bg-[#111111] text-zinc-300 hover:border-[#c0392b]/70"
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-app"
+                  : "border-app surface text-app hover:border-[var(--color-accent)]/70"
               }`}
             >
               {tab}
@@ -698,7 +698,7 @@ export default function TransfersPage() {
                   setIsConversionModalOpen(true);
                   setError(null);
                 }}
-                className="inline-flex items-center justify-center rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
               >
                 Add Conversion
               </button>
@@ -706,13 +706,13 @@ export default function TransfersPage() {
 
             <div className="space-y-6">
               {pendingConversions.length > 0 && (
-                <div className="rounded-lg border border-[#222222] bg-[#111111]">
-                  <h3 className="border-b border-[#222222] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                <div className="rounded-lg border border-app surface">
+                  <h3 className="border-b border-app px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
                     Pending conversions
                   </h3>
                   <div className="w-full overflow-x-auto">
                     <table className="min-w-[900px] w-full text-left text-xs">
-                      <thead className="border-b border-[#222222] text-[11px] uppercase tracking-wide text-zinc-400">
+                      <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                         <tr>
                           <th className="px-4 py-3">Transaction ID</th>
                           <th className="px-4 py-3">Date</th>
@@ -729,27 +729,27 @@ export default function TransfersPage() {
                         {pendingConversions.map(({ movement, meta, ref }) => (
                           <tr
                             key={ref}
-                            className="border-b border-[#222222] bg-red-950/30 last:border-b-0 border-l-4 border-l-red-600"
+                            className="border-b border-app bg-red-950/30 last:border-b-0 border-l-4 border-l-red-600"
                           >
-                            <td className="px-4 py-3 font-mono text-zinc-200">
+                            <td className="px-4 py-3 font-mono text-app">
                               {ref}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {formatDateTime(movement.date, meta.time)}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {meta.depositedBy}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {formatMoney(movement.amount, "DZD")}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {movement.rate}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {formatMoney(meta.expectedAmount, meta.toCurrency)}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {meta.receivingPocket}
                             </td>
                             <td className="px-4 py-3">
@@ -764,7 +764,7 @@ export default function TransfersPage() {
                                   openApprovalModal(movement, meta)
                                 }
                                 disabled={approvingRef === ref}
-                                className="rounded-md border border-[#222222] bg-[#c0392b] px-3 py-1 text-[11px] font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                                className="rounded-md border border-app bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-app hover:opacity-90 disabled:opacity-50"
                               >
                                 Approve
                               </button>
@@ -772,7 +772,7 @@ export default function TransfersPage() {
                                 type="button"
                                 onClick={() => handleDeleteConversion(ref)}
                                 disabled={deletingRef === ref}
-                                className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-red-700 disabled:opacity-50"
+                                className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700 disabled:opacity-50"
                               >
                                 {deletingRef === ref ? "Deleting..." : "Delete"}
                               </button>
@@ -785,18 +785,18 @@ export default function TransfersPage() {
                 </div>
               )}
 
-              <div className="rounded-lg border border-[#222222] bg-[#111111]">
-                <h3 className="border-b border-[#222222] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              <div className="rounded-lg border border-app surface">
+                <h3 className="border-b border-app px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
                   Approved conversions
                 </h3>
                 {approvedConversions.length === 0 ? (
-                  <div className="p-4 text-sm text-zinc-400">
+                  <div className="p-4 text-sm text-muted">
                     No approved conversions yet.
                   </div>
                 ) : (
                   <div className="w-full overflow-x-auto">
                     <table className="min-w-[900px] w-full text-left text-xs">
-                      <thead className="border-b border-[#222222] text-[11px] uppercase tracking-wide text-zinc-400">
+                      <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                         <tr>
                           <th className="px-4 py-3">Transaction ID</th>
                           <th className="px-4 py-3">Date</th>
@@ -814,12 +814,12 @@ export default function TransfersPage() {
                         {approvedConversions.map(({ movement, meta, ref }) => (
                           <tr
                             key={ref}
-                            className="border-b border-[#222222] last:border-b-0"
+                            className="border-b border-app last:border-b-0"
                           >
-                            <td className="px-4 py-3 font-mono text-zinc-200">
+                            <td className="px-4 py-3 font-mono text-app">
                               {ref}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {formatDateTime(movement.date, meta.time)}
                               {meta.approvedAt && (
                                 <span className="ml-1 text-zinc-500">
@@ -828,25 +828,25 @@ export default function TransfersPage() {
                                 </span>
                               )}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {meta.depositedBy}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {movement.pocket}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {formatMoney(movement.amount, "DZD")}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {movement.rate}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {formatMoney(
                                 meta.actualAmount ?? meta.expectedAmount,
                                 meta.toCurrency
                               )}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {meta.receivingPocket}
                             </td>
                             <td className="px-4 py-3">
@@ -859,7 +859,7 @@ export default function TransfersPage() {
                                 type="button"
                                 onClick={() => handleDeleteConversion(ref)}
                                 disabled={deletingRef === ref}
-                                className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-red-700 disabled:opacity-50"
+                                className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700 disabled:opacity-50"
                               >
                                 {deletingRef === ref ? "Deleting..." : "Delete"}
                               </button>
@@ -886,24 +886,24 @@ export default function TransfersPage() {
                   setIsExchangeModalOpen(true);
                   setError(null);
                 }}
-                className="inline-flex items-center justify-center rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
               >
                 Add Exchange
               </button>
             </div>
-            <div className="rounded-lg border border-[#222222] bg-[#111111]">
+            <div className="rounded-lg border border-app surface">
               {isLoading ? (
-                <div className="p-4 text-sm text-zinc-400">
+                <div className="p-4 text-sm text-muted">
                   Loading exchanges...
                 </div>
               ) : exchanges.length === 0 ? (
-                <div className="p-4 text-sm text-zinc-400">
+                <div className="p-4 text-sm text-muted">
                   No cash exchanges yet.
                 </div>
               ) : (
                 <div className="w-full overflow-x-auto">
                   <table className="min-w-[900px] w-full text-left text-xs">
-                    <thead className="border-b border-[#222222] text-[11px] uppercase tracking-wide text-zinc-400">
+                    <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                       <tr>
                         <th className="px-4 py-3">Reference ID</th>
                         <th className="px-4 py-3">Date</th>
@@ -941,24 +941,24 @@ export default function TransfersPage() {
                         return (
                           <tr
                             key={ex.ref}
-                            className="border-b border-[#222222] last:border-b-0"
+                            className="border-b border-app last:border-b-0"
                           >
-                            <td className="px-4 py-3 font-mono text-zinc-200">
+                            <td className="px-4 py-3 font-mono text-app">
                               {ex.ref}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {formatDate(ex.date)}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {doneBy}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {fromStr}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {toStr}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">
+                            <td className="px-4 py-3 text-app">
                               {rate.toFixed(4)}
                             </td>
                             <td className="px-4 py-3">
@@ -966,7 +966,7 @@ export default function TransfersPage() {
                                 type="button"
                                 onClick={() => handleDeleteExchange(ex.ref)}
                                 disabled={deletingRef === ex.ref}
-                                className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-red-700 disabled:opacity-50"
+                                className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700 disabled:opacity-50"
                               >
                                 {deletingRef === ex.ref
                                   ? "Deleting..."
@@ -992,13 +992,13 @@ export default function TransfersPage() {
             className="absolute inset-0 bg-black/70"
             onClick={() => !isSaving && setIsConversionModalOpen(false)}
           />
-          <div className="relative flex w-full max-w-2xl flex-col overflow-y-auto rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <div className="flex items-start justify-between gap-4 border-b border-[#222222] pb-3">
+          <div className="relative flex w-full max-w-2xl flex-col overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
+            <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
-                <div className="text-lg font-semibold text-white">
+                <div className="text-lg font-semibold text-app">
                   Add Conversion
                 </div>
-                <div className="text-xs text-zinc-400">
+                <div className="text-xs text-muted">
                   Cross-border: DZD deposited in Algeria, received in UAE.
                 </div>
               </div>
@@ -1006,13 +1006,13 @@ export default function TransfersPage() {
                 type="button"
                 onClick={() => !isSaving && setIsConversionModalOpen(false)}
                 disabled={isSaving}
-                className="rounded-md border border-[#222222] px-3 py-1 text-xs font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app disabled:opacity-50"
               >
                 Close
               </button>
             </div>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Transaction ID (auto)</span>
                 <input
                   type="text"
@@ -1021,10 +1021,10 @@ export default function TransfersPage() {
                     conversionForm.date,
                     conversionForm.time
                   )}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-zinc-400"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Date</span>
                 <input
                   type="date"
@@ -1032,10 +1032,10 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateConversionField("date", e.target.value)
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Time</span>
                 <input
                   type="time"
@@ -1043,10 +1043,10 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateConversionField("time", e.target.value)
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Deposited by (mandatory)</span>
                 <input
                   type="text"
@@ -1055,10 +1055,10 @@ export default function TransfersPage() {
                     updateConversionField("depositedBy", e.target.value)
                   }
                   placeholder="Who gave the cash to the dealer"
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">From pocket</span>
                 <select
                   value={conversionForm.fromPocket}
@@ -1068,7 +1068,7 @@ export default function TransfersPage() {
                       e.target.value as ConversionFormState["fromPocket"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CONVERSION_FROM_POCKETS.map((p) => (
                     <option key={p} value={p}>
@@ -1077,16 +1077,16 @@ export default function TransfersPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">From currency</span>
                 <input
                   type="text"
                   readOnly
                   value="DZD"
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-zinc-400"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Amount DZD (mandatory)</span>
                 <input
                   type="number"
@@ -1094,10 +1094,10 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateConversionField("amountDzd", e.target.value)
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">To currency</span>
                 <select
                   value={conversionForm.toCurrency}
@@ -1107,7 +1107,7 @@ export default function TransfersPage() {
                       e.target.value as ConversionFormState["toCurrency"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CONVERSION_TO_CURRENCIES.map((c) => (
                     <option key={c} value={c}>
@@ -1116,7 +1116,7 @@ export default function TransfersPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Rate (mandatory)</span>
                 <input
                   type="number"
@@ -1125,10 +1125,10 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateConversionField("rate", e.target.value)
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Expected amount to receive</span>
                 <input
                   type="text"
@@ -1138,10 +1138,10 @@ export default function TransfersPage() {
                       ? formatMoney(expectedAmount, conversionForm.toCurrency)
                       : "-"
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-zinc-400"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Receiving pocket</span>
                 <select
                   value={conversionForm.receivingPocket}
@@ -1151,7 +1151,7 @@ export default function TransfersPage() {
                       e.target.value as ConversionFormState["receivingPocket"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CONVERSION_RECEIVING_POCKETS.map((p) => (
                     <option key={p} value={p}>
@@ -1160,7 +1160,7 @@ export default function TransfersPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Notes</span>
                 <input
                   type="text"
@@ -1168,16 +1168,16 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateConversionField("notes", e.target.value)
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
-            <div className="mt-4 flex justify-end gap-2 border-t border-[#222222] pt-3">
+            <div className="mt-4 flex justify-end gap-2 border-t border-app pt-3">
               <button
                 type="button"
                 onClick={() => !isSaving && setIsConversionModalOpen(false)}
                 disabled={isSaving}
-                className="rounded-md border border-[#222222] bg-black px-4 py-2 text-sm font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1185,7 +1185,7 @@ export default function TransfersPage() {
                 type="button"
                 onClick={handleSaveConversion}
                 disabled={isSaving}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
@@ -1201,25 +1201,25 @@ export default function TransfersPage() {
             className="absolute inset-0 bg-black/70"
             onClick={() => !isApprovalSaving && setApprovalModal(null)}
           />
-          <div className="relative flex w-full max-w-md flex-col rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <div className="border-b border-[#222222] pb-3 text-lg font-semibold text-white">
+          <div className="relative flex w-full max-w-md flex-col rounded-lg border border-app surface p-4 shadow-xl">
+            <div className="border-b border-app pb-3 text-lg font-semibold text-app">
               Approve conversion
             </div>
-            <p className="mt-2 text-xs text-zinc-400">
+            <p className="mt-2 text-xs text-muted">
               Confirm actual amount received and date. DZD will be deducted from
               source pocket; received amount will be added to destination.
             </p>
             <div className="mt-4 space-y-3">
-              <label className="block text-xs text-zinc-300">
+              <label className="block text-xs text-app">
                 <span className="font-semibold">Receiving pocket (confirm)</span>
                 <input
                   type="text"
                   readOnly
                   value={approvalModal.meta.receivingPocket}
-                  className="mt-1 w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-zinc-400"
+                  className="mt-1 w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
                 />
               </label>
-              <label className="block text-xs text-zinc-300">
+              <label className="block text-xs text-app">
                 <span className="font-semibold">Actual amount received</span>
                 <input
                   type="number"
@@ -1230,10 +1230,10 @@ export default function TransfersPage() {
                       prev ? { ...prev, actualAmount: e.target.value } : null
                     )
                   }
-                  className="mt-1 w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="mt-1 w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="block text-xs text-zinc-300">
+              <label className="block text-xs text-app">
                 <span className="font-semibold">Date received</span>
                 <input
                   type="date"
@@ -1243,16 +1243,16 @@ export default function TransfersPage() {
                       prev ? { ...prev, dateReceived: e.target.value } : null
                     )
                   }
-                  className="mt-1 w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="mt-1 w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
-            <div className="mt-4 flex justify-end gap-2 border-t border-[#222222] pt-3">
+            <div className="mt-4 flex justify-end gap-2 border-t border-app pt-3">
               <button
                 type="button"
                 onClick={() => !isApprovalSaving && setApprovalModal(null)}
                 disabled={isApprovalSaving}
-                className="rounded-md border border-[#222222] bg-black px-4 py-2 text-sm font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1260,7 +1260,7 @@ export default function TransfersPage() {
                 type="button"
                 onClick={handleConfirmApproval}
                 disabled={isApprovalSaving}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 {isApprovalSaving ? "Confirming..." : "Confirm"}
               </button>
@@ -1276,13 +1276,13 @@ export default function TransfersPage() {
             className="absolute inset-0 bg-black/70"
             onClick={() => !isSaving && setIsExchangeModalOpen(false)}
           />
-          <div className="relative flex w-full max-w-2xl flex-col overflow-y-auto rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <div className="flex items-start justify-between gap-4 border-b border-[#222222] pb-3">
+          <div className="relative flex w-full max-w-2xl flex-col overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
+            <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
-                <div className="text-lg font-semibold text-white">
+                <div className="text-lg font-semibold text-app">
                   Add Cash Exchange
                 </div>
-                <div className="text-xs text-zinc-400">
+                <div className="text-xs text-muted">
                   Physical cash exchange, single step.
                 </div>
               </div>
@@ -1290,22 +1290,22 @@ export default function TransfersPage() {
                 type="button"
                 onClick={() => !isSaving && setIsExchangeModalOpen(false)}
                 disabled={isSaving}
-                className="rounded-md border border-[#222222] px-3 py-1 text-xs font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app disabled:opacity-50"
               >
                 Close
               </button>
             </div>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Reference ID (auto)</span>
                 <input
                   type="text"
                   readOnly
                   value={exchangeRefId ?? ""}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-zinc-400"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Date</span>
                 <input
                   type="date"
@@ -1313,10 +1313,10 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateExchangeField("date", e.target.value)
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Done by (mandatory)</span>
                 <input
                   type="text"
@@ -1325,10 +1325,10 @@ export default function TransfersPage() {
                     updateExchangeField("doneBy", e.target.value)
                   }
                   placeholder="Who did the exchange"
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">From currency</span>
                 <select
                   value={exchangeForm.fromCurrency}
@@ -1338,7 +1338,7 @@ export default function TransfersPage() {
                       e.target.value as ExchangeFormState["fromCurrency"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CURRENCIES.map((c) => (
                     <option key={c} value={c}>
@@ -1347,7 +1347,7 @@ export default function TransfersPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">From amount</span>
                 <input
                   type="number"
@@ -1355,10 +1355,10 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateExchangeField("fromAmount", e.target.value)
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">From pocket</span>
                 <select
                   value={exchangeForm.fromPocket}
@@ -1368,7 +1368,7 @@ export default function TransfersPage() {
                       e.target.value as ExchangeFormState["fromPocket"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {POCKETS_ALL.map((p) => (
                     <option key={p} value={p}>
@@ -1377,7 +1377,7 @@ export default function TransfersPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">To currency</span>
                 <select
                   value={exchangeForm.toCurrency}
@@ -1387,7 +1387,7 @@ export default function TransfersPage() {
                       e.target.value as ExchangeFormState["toCurrency"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CURRENCIES.filter((c) => c !== exchangeForm.fromCurrency).map(
                     (c) => (
@@ -1398,7 +1398,7 @@ export default function TransfersPage() {
                   )}
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">To amount</span>
                 <input
                   type="number"
@@ -1406,10 +1406,10 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateExchangeField("toAmount", e.target.value)
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Rate (auto)</span>
                 <input
                   type="text"
@@ -1417,10 +1417,10 @@ export default function TransfersPage() {
                   value={
                     exchangeRate > 0 ? exchangeRate.toFixed(4) : "-"
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-zinc-400"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">To pocket</span>
                 <select
                   value={exchangeForm.toPocket}
@@ -1430,7 +1430,7 @@ export default function TransfersPage() {
                       e.target.value as ExchangeFormState["toPocket"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {POCKETS_ALL.filter((p) => p !== exchangeForm.fromPocket).map(
                     (p) => (
@@ -1441,7 +1441,7 @@ export default function TransfersPage() {
                   )}
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Notes</span>
                 <input
                   type="text"
@@ -1449,16 +1449,16 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateExchangeField("notes", e.target.value)
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
-            <div className="mt-4 flex justify-end gap-2 border-t border-[#222222] pt-3">
+            <div className="mt-4 flex justify-end gap-2 border-t border-app pt-3">
               <button
                 type="button"
                 onClick={() => !isSaving && setIsExchangeModalOpen(false)}
                 disabled={isSaving}
-                className="rounded-md border border-[#222222] bg-black px-4 py-2 text-sm font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1466,7 +1466,7 @@ export default function TransfersPage() {
                 type="button"
                 onClick={handleSaveExchange}
                 disabled={isSaving}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>

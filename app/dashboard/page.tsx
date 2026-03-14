@@ -95,9 +95,15 @@ function StaffBlurGate({
   return (
     <div className="relative">
       <div className="pointer-events-none select-none blur-[6px]">{children}</div>
-      <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[#0a0a0a]/80">
-        <span className="text-sm font-medium text-zinc-400">
-          Managers &amp; Owners Only
+      <div
+        className="absolute inset-0 flex items-center justify-center rounded-lg"
+        style={{ background: "rgba(13,6,8,0.85)" }}
+      >
+        <span
+          className="text-sm font-medium"
+          style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}
+        >
+          Managers & Owners Only
         </span>
       </div>
     </div>
@@ -467,12 +473,18 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div
+      className="min-h-screen text-[var(--color-text)]"
+      style={{ background: "var(--color-bg)" }}
+    >
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-6 md:px-8">
         {/* Currency Rates */}
         <StaffBlurGate show={isStaff}>
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+            <h2
+              className="text-sm font-semibold uppercase tracking-wide"
+              style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
+            >
               Currency Rates (display only)
             </h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -488,14 +500,18 @@ export default function DashboardPage() {
               return (
                 <div
                   key={label}
-                  className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-sm"
+                  className="rounded-lg border p-4 text-sm card"
+                  style={{ borderColor: "var(--color-border)" }}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                    <div
+                      className="text-xs font-medium uppercase tracking-wide"
+                      style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}
+                    >
                       {label}
                     </div>
                     {justSaved && (
-                      <div className="text-[11px] text-emerald-400 font-medium">
+                      <div className="text-[11px] font-medium" style={{ color: "var(--color-accent)" }}>
                         Saved ✓
                       </div>
                     )}
@@ -509,10 +525,13 @@ export default function DashboardPage() {
                         autoFocus
                         value={editingRateValue}
                         onChange={(e) => setEditingRateValue(e.target.value)}
-                        className="mr-2 w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-2 py-1 text-sm text-white"
+                        className="input mr-2 w-full px-2 py-1 text-sm"
                       />
                     ) : (
-                      <span className="text-xl font-semibold text-white">
+                      <span
+                        className="text-xl font-semibold"
+                        style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}
+                      >
                         {info.value > 0 ? info.value : "—"}
                       </span>
                     )}
@@ -521,14 +540,14 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           onClick={handleSaveRate}
-                          className="rounded-md bg-[#c0392b] px-2 py-1 text-xs font-medium text-white"
+                          className="btn-primary px-2 py-1 text-xs"
                         >
                           Save
                         </button>
                         <button
                           type="button"
                           onClick={handleCancelEditRate}
-                          className="rounded-md border border-[#222222] px-2 py-1 text-xs font-medium text-zinc-200"
+                          className="btn-secondary px-2 py-1 text-xs"
                         >
                           Cancel
                         </button>
@@ -537,13 +556,14 @@ export default function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => handleStartEditRate(key)}
-                        className="rounded-md border border-[#222222] px-2 py-1 text-xs font-medium text-zinc-200 hover:border-[#c0392b] hover:text-[#c0392b]"
+                        className="rounded-md border px-2 py-1 text-xs font-medium transition hover:opacity-90"
+                        style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
                       >
                         Edit
                       </button>
                     )}
                   </div>
-                  <div className="mt-1 text-[11px] text-zinc-500">
+                  <div className="mt-1 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
                     Last updated:{" "}
                     {info.updatedAt ? formatDate(info.updatedAt) : "—"}
                   </div>
@@ -555,20 +575,29 @@ export default function DashboardPage() {
         </StaffBlurGate>
 
         <header className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+          <h1
+            className="text-2xl font-semibold tracking-tight md:text-3xl"
+            style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
+          >
             Axira Trading FZE
           </h1>
-          <p className="text-sm font-medium text-[#c0392b]">Dashboard</p>
+          <p className="text-sm font-medium" style={{ color: "var(--color-accent)" }}>Dashboard</p>
         </header>
 
         {error && (
-          <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+          <div
+            className="rounded-md border px-3 py-2 text-xs"
+            style={{ borderColor: "var(--color-primary)", background: "rgba(91,15,21,0.4)", color: "var(--color-text)" }}
+          >
             {error}
           </div>
         )}
 
         {isLoading ? (
-          <div className="rounded-lg border border-[#222222] bg-[#111111] p-6 text-sm text-zinc-400">
+          <div
+            className="rounded-lg border p-6 text-sm card"
+            style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
+          >
             Loading dashboard data...
           </div>
         ) : (
@@ -576,39 +605,42 @@ export default function DashboardPage() {
             {/* Section 1 - Top stats */}
             <StaffBlurGate show={isStaff}>
               <section className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                <h2
+                  className="text-sm font-semibold uppercase tracking-wide"
+                  style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
+                >
                   Overview
                 </h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                  <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
                     Total AED
                   </div>
-                  <div className="mt-2 text-2xl font-semibold">
+                  <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatCurrency(totalAed || 0, "AED")}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                  <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
                     Total DZD
                   </div>
-                  <div className="mt-2 text-2xl font-semibold">
+                  <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatCurrency(totalDzd || 0, "DZD")}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                  <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
                     Realised Profit AED
                   </div>
-                  <div className="mt-2 text-2xl font-semibold text-[#c0392b]">
+                  <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatCurrency(realisedProfitAed || 0, "AED")}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                  <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
                     Pending Revenue DZD
                   </div>
-                  <div className="mt-2 text-2xl font-semibold">
+                  <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatCurrency(pendingRevenueDzd || 0, "DZD")}
                   </div>
                 </div>
@@ -625,22 +657,26 @@ export default function DashboardPage() {
               nextRentDue) && (
               <StaffBlurGate show={isStaff}>
               <section className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                <h2
+                  className="text-sm font-semibold uppercase tracking-wide"
+                  style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
+                >
                   Pending Items
                 </h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {pendingClientPaymentsCount > 0 && (
                     <Link
                       href="/deals"
-                      className="rounded-lg border border-amber-800 bg-amber-950/50 p-4 text-left transition hover:border-amber-600 hover:bg-amber-950/70"
+                      className="rounded-lg border p-4 text-left transition hover:opacity-90"
+                      style={{ borderColor: "var(--color-accent)", background: "var(--color-primary)" }}
                     >
-                      <div className="text-xs font-medium uppercase tracking-wide text-amber-200">
+                      <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
                         Pending Client Payments
                       </div>
-                      <div className="mt-2 text-xl font-semibold text-amber-100">
+                      <div className="mt-2 text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
                         {pendingClientPaymentsCount} deal{pendingClientPaymentsCount !== 1 ? "s" : ""}
                       </div>
-                      <div className="mt-1 text-sm text-amber-200/90">
+                      <div className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
                         {formatCurrency(pendingClientPaymentsTotal, "DZD")} total
                       </div>
                     </Link>
@@ -648,12 +684,13 @@ export default function DashboardPage() {
                   {unpaidShippingCount > 0 && (
                     <Link
                       href="/containers"
-                      className="rounded-lg border border-amber-800 bg-amber-950/50 p-4 text-left transition hover:border-amber-600 hover:bg-amber-950/70"
+                      className="rounded-lg border p-4 text-left transition hover:opacity-90"
+                      style={{ borderColor: "var(--color-accent)", background: "var(--color-primary)" }}
                     >
-                      <div className="text-xs font-medium uppercase tracking-wide text-amber-200">
+                      <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
                         Unpaid Shipping
                       </div>
-                      <div className="mt-2 text-xl font-semibold text-amber-100">
+                      <div className="mt-2 text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
                         {unpaidShippingCount} container{unpaidShippingCount !== 1 ? "s" : ""}
                       </div>
                     </Link>
@@ -661,12 +698,13 @@ export default function DashboardPage() {
                   {supplierDebtTotal > 0 && (
                     <Link
                       href="/inventory"
-                      className="rounded-lg border border-amber-800 bg-amber-950/50 p-4 text-left transition hover:border-amber-600 hover:bg-amber-950/70"
+                      className="rounded-lg border p-4 text-left transition hover:opacity-90"
+                      style={{ borderColor: "var(--color-accent)", background: "var(--color-primary)" }}
                     >
-                      <div className="text-xs font-medium uppercase tracking-wide text-amber-200">
+                      <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
                         Supplier Debt
                       </div>
-                      <div className="mt-2 text-xl font-semibold text-amber-100">
+                      <div className="mt-2 text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
                         {formatCurrency(supplierDebtTotal, "AED")}
                       </div>
                     </Link>
@@ -674,15 +712,16 @@ export default function DashboardPage() {
                   {pendingCommissionTotal > 0 && (
                     <Link
                       href="/employees"
-                      className="rounded-lg border border-amber-800 bg-amber-950/50 p-4 text-left transition hover:border-amber-600 hover:bg-amber-950/70"
+                      className="rounded-lg border p-4 text-left transition hover:opacity-90"
+                      style={{ borderColor: "var(--color-accent)", background: "var(--color-primary)" }}
                     >
-                      <div className="text-xs font-medium uppercase tracking-wide text-amber-200">
+                      <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
                         Unpaid Commissions
                       </div>
-                      <div className="mt-2 text-xl font-semibold text-amber-100">
+                      <div className="mt-2 text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
                         {formatCurrency(pendingCommissionTotal, "DZD")}
                       </div>
-                      <div className="mt-1 text-sm text-amber-200/90">
+                      <div className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
                         View employees &amp; commissions
                       </div>
                     </Link>
@@ -690,12 +729,13 @@ export default function DashboardPage() {
                   {pendingConversionsCount > 0 && (
                     <Link
                       href="/transfers"
-                      className="rounded-lg border border-amber-800 bg-amber-950/50 p-4 text-left transition hover:border-amber-600 hover:bg-amber-950/70"
+                      className="rounded-lg border p-4 text-left transition hover:opacity-90"
+                      style={{ borderColor: "var(--color-accent)", background: "var(--color-primary)" }}
                     >
-                      <div className="text-xs font-medium uppercase tracking-wide text-amber-200">
+                      <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
                         Pending Conversions
                       </div>
-                      <div className="mt-2 text-xl font-semibold text-amber-100">
+                      <div className="mt-2 text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
                         {pendingConversionsCount} conversion{pendingConversionsCount !== 1 ? "s" : ""}
                       </div>
                     </Link>
@@ -705,39 +745,32 @@ export default function DashboardPage() {
                       href="/movements"
                       className={
                         nextRentDue.paidThisYear
-                          ? "rounded-lg border border-[#222222] bg-[#111111] p-4 text-left transition hover:border-zinc-600"
-                          : "rounded-lg border border-amber-800 bg-amber-950/50 p-4 text-left transition hover:border-amber-600 hover:bg-amber-950/70"
+                          ? "card rounded-lg border p-4 text-left transition hover:opacity-90"
+                          : "rounded-lg border p-4 text-left transition hover:opacity-90"
+                      }
+                      style={
+                        nextRentDue.paidThisYear
+                          ? { borderColor: "var(--color-border)" }
+                          : { borderColor: "var(--color-accent)", background: "var(--color-primary)" }
                       }
                     >
                       <div
-                        className={
-                          nextRentDue.paidThisYear
-                            ? "text-xs font-medium uppercase tracking-wide text-zinc-400"
-                            : "text-xs font-medium uppercase tracking-wide text-amber-200"
-                        }
+                        className="text-xs font-medium uppercase tracking-wide"
+                        style={{ color: nextRentDue.paidThisYear ? "var(--color-text-muted)" : "var(--color-accent)" }}
                       >
                         {nextRentDue.paidThisYear
                           ? "Rent – Paid"
                           : "Next Rent Due"}
                       </div>
                       <div
-                        className={
-                          nextRentDue.paidThisYear
-                            ? "mt-2 text-xl font-semibold text-zinc-200"
-                            : "mt-2 text-xl font-semibold text-amber-100"
-                        }
+                        className="mt-2 text-xl font-semibold"
+                        style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
                       >
                         {nextRentDue.paidThisYear
                           ? `Next due: ${formatDate(nextRentDue.date.toISOString())}`
                           : formatCurrency(nextRentDue.amount, nextRentDue.currency)}
                       </div>
-                      <div
-                        className={
-                          nextRentDue.paidThisYear
-                            ? "mt-1 text-sm text-zinc-500"
-                            : "mt-1 text-sm text-amber-200/90"
-                        }
-                      >
+                      <div className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
                         {nextRentDue.paidThisYear
                           ? `${nextRentDue.description} · ${formatCurrency(nextRentDue.amount, nextRentDue.currency)}/year`
                           : `${nextRentDue.description} · ${formatDate(nextRentDue.date.toISOString())}`}
@@ -753,44 +786,52 @@ export default function DashboardPage() {
             <StaffBlurGate show={isStaff}>
               <section className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                  <h2
+                    className="text-sm font-semibold uppercase tracking-wide"
+                    style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
+                  >
                     Activity
                   </h2>
-                <Link
-                  href="/activity"
-                  className="text-xs font-medium text-[#c0392b] hover:underline"
-                >
-                  View All
-                </Link>
-              </div>
-              <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                {recentActivity.length === 0 ? (
-                  <div className="text-sm text-zinc-400">No recent activity.</div>
-                ) : (
-                  <ul className="space-y-3 text-xs">
-                    {recentActivity.map((a) => (
-                      <li
-                        key={a.id}
-                        className="flex items-center gap-3 border-b border-[#222222] pb-3 last:border-b-0 last:pb-0"
-                      >
-                        <span className="rounded-full border border-[#333] bg-[#1a1a1a] px-2 py-0.5 text-[11px] font-medium text-zinc-400 shrink-0">
-                          {a.entity}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <span className="font-medium text-zinc-200">{a.description}</span>
-                          {a.amount != null && a.currency && (
-                            <span className="ml-2 text-zinc-400">
-                              {formatCurrency(a.amount, a.currency)}
-                            </span>
-                          )}
-                        </div>
-                        <span className="shrink-0 text-[11px] text-zinc-500">
-                          {timeAgo(a.created_at)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                  <Link
+                    href="/activity"
+                    className="text-xs font-medium hover:underline"
+                    style={{ color: "var(--color-accent)" }}
+                  >
+                    View All
+                  </Link>
+                </div>
+                <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
+                  {recentActivity.length === 0 ? (
+                    <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>No recent activity.</div>
+                  ) : (
+                    <ul className="space-y-3 text-xs">
+                      {recentActivity.map((a) => (
+                        <li
+                          key={a.id}
+                          className="flex items-center gap-3 border-b pb-3 last:border-b-0 last:pb-0"
+                          style={{ borderColor: "var(--color-border)" }}
+                        >
+                          <span
+                            className="shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+                            style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-muted)" }}
+                          >
+                            {a.entity}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <span className="font-medium" style={{ color: "var(--color-text)" }}>{a.description}</span>
+                            {a.amount != null && a.currency && (
+                              <span className="ml-2" style={{ color: "var(--color-text-muted)" }}>
+                                {formatCurrency(a.amount, a.currency)}
+                              </span>
+                            )}
+                          </div>
+                          <span className="shrink-0 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                            {timeAgo(a.created_at)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </section>
             </StaffBlurGate>
@@ -799,130 +840,130 @@ export default function DashboardPage() {
             <StaffBlurGate show={isStaff}>
               <section className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                  <h2
+                    className="text-sm font-semibold uppercase tracking-wide"
+                    style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
+                  >
                     Cash Positions
                   </h2>
                 </div>
 
-              {cashPositions.length === 0 ? (
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-sm text-zinc-400">
-                  No cash positions yet.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                  {cashPositions.map((pocket) => (
-                    (() => {
-                      const pocketName =
-                        pocket.name ||
-                        pocket.pocket_name ||
-                        pocket.pocket ||
-                        pocket.label ||
-                        "Pocket";
+                {cashPositions.length === 0 ? (
+                  <div className="card rounded-lg border p-4 text-sm" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}>
+                    No cash positions yet.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                    {cashPositions.map((pocket) => (
+                      (() => {
+                        const pocketName =
+                          pocket.name ||
+                          pocket.pocket_name ||
+                          pocket.pocket ||
+                          pocket.label ||
+                          "Pocket";
 
-                      return (
-                    <div
-                      key={pocket.id}
-                      className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-sm transition hover:border-[#c0392b]/70"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleStartEdit(pocket)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          handleStartEdit(pocket);
-                        }
-                      }}
-                    >
-                      <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                        {pocketName}
-                      </div>
-
-                      {editingPocketId === pocket.id ? (
-                        <div className="mt-3 space-y-2">
-                          <input
-                            type="number"
-                            value={editingAmount}
-                            onChange={(e) =>
-                              setEditingAmount(e.target.value)
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-2 py-1 text-xs text-white outline-none focus:border-[#c0392b] focus:ring-1 focus:ring-[#c0392b]"
-                          />
+                        return (
                           <div
-                            className="flex items-center gap-2"
-                            onClick={(e) => e.stopPropagation()}
+                            key={pocket.id}
+                            className="card rounded-lg border p-4 text-sm transition hover:opacity-90"
+                            style={{ borderColor: "var(--color-border)" }}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => handleStartEdit(pocket)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleStartEdit(pocket);
+                              }
+                            }}
                           >
-                            <button
-                              type="button"
-                              onClick={handleSaveEdit}
-                              disabled={updatingPocketId === pocket.id}
-                              className="flex-1 rounded-md bg-[#c0392b] px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
-                            >
-                              {updatingPocketId === pocket.id
-                                ? "Saving..."
-                                : "Save"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleCancelEdit}
-                              className="flex-1 rounded-md border border-[#222222] px-2 py-1 text-xs font-medium text-zinc-300"
-                            >
-                              Cancel
-                            </button>
+                            <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
+                              {pocketName}
+                            </div>
+
+                            {editingPocketId === pocket.id ? (
+                              <div className="mt-3 space-y-2">
+                                <input
+                                  type="number"
+                                  value={editingAmount}
+                                  onChange={(e) => setEditingAmount(e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="input w-full px-2 py-1 text-xs"
+                                />
+                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    type="button"
+                                    onClick={handleSaveEdit}
+                                    disabled={updatingPocketId === pocket.id}
+                                    className="btn-primary flex-1 px-2 py-1 text-xs disabled:opacity-50"
+                                  >
+                                    {updatingPocketId === pocket.id ? "Saving..." : "Save"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleCancelEdit}
+                                    className="btn-secondary flex-1 px-2 py-1 text-xs"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="mt-3 text-lg font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
+                                {formatNumber(pocket.amount || 0)}{" "}
+                                <span className="text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>
+                                  {pocket.currency}
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ) : (
-                        <div className="mt-3 text-lg font-semibold">
-                          {formatNumber(pocket.amount || 0)}{" "}
-                          <span className="text-xs font-normal text-zinc-400">
-                            {pocket.currency}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                      );
-                    })()
-                  ))}
-                </div>
-              )}
+                        );
+                      })()
+                    ))}
+                  </div>
+                )}
               </section>
             </StaffBlurGate>
 
             {/* Section 3 - Inventory */}
             <section className="space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+              <h2
+                className="text-sm font-semibold uppercase tracking-wide"
+                style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
+              >
                 Inventory
               </h2>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                  <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
                     Cars in Dubai
                   </div>
-                  <div className="mt-2 text-2xl font-semibold">
+                  <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatNumber(carsInDubai || 0)}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                  <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
                     Cars in Algeria
                   </div>
-                  <div className="mt-2 text-2xl font-semibold">
+                  <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatNumber(carsInAlgeria || 0)}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                  <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
                     Cars in Transit
                   </div>
-                  <div className="mt-2 text-2xl font-semibold">
+                  <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatNumber(carsInTransit || 0)}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                  <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                    Total Cars (Available)
+                <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
+                    Total Cars
                   </div>
-                  <div className="mt-2 text-2xl font-semibold">
+                  <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatNumber(totalAvailableCars || 0)}
                   </div>
                 </div>
@@ -932,42 +973,38 @@ export default function DashboardPage() {
             {/* Section 4 - Recent Deals & Movements */}
             <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               <div className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                <h2
+                  className="text-sm font-semibold uppercase tracking-wide"
+                  style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
+                >
                   Recent Deals
                 </h2>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
+                <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   {recentDeals.length === 0 ? (
-                    <div className="text-sm text-zinc-400">
-                      No deals yet.
-                    </div>
+                    <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>No deals yet.</div>
                   ) : (
                     <div className="space-y-3 text-xs">
                       {recentDeals.map((deal) => (
                         <div
                           key={deal.id}
-                          className="flex flex-col gap-1 border-b border-[#222222] pb-3 last:border-b-0 last:pb-0"
+                          className="flex flex-col gap-1 border-b pb-3 last:border-b-0 last:pb-0"
+                          style={{ borderColor: "var(--color-border)" }}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium">
+                            <span className="font-medium" style={{ fontFamily: "var(--font-body)", color: "var(--color-text)" }}>
                               {deal.client_name ?? "Unknown client"}
                             </span>
-                            <span className="text-[10px] text-zinc-400">
+                            <span className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
                               {formatDate(deal.date ?? deal.created_at)}
                             </span>
                           </div>
-                          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-300">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
                             <span>{deal.car_label ?? "Car"}</span>
                             <span>
-                              Sale:{" "}
-                              <span className="font-semibold">
-                                {formatCurrency(deal.sale_dzd || 0, "DZD")}
-                              </span>
+                              Sale: <span className="font-semibold" style={{ color: "var(--color-text)" }}>{formatCurrency(deal.sale_dzd || 0, "DZD")}</span>
                             </span>
                             <span>
-                              Profit:{" "}
-                              <span className="font-semibold text-[#c0392b]">
-                                {formatCurrency(deal.profit || 0, "AED")}
-                              </span>
+                              Profit: <span className="font-semibold" style={{ color: "var(--color-accent)" }}>{formatCurrency(deal.profit || 0, "AED")}</span>
                             </span>
                           </div>
                         </div>
@@ -979,33 +1016,31 @@ export default function DashboardPage() {
 
               <StaffBlurGate show={isStaff}>
                 <div className="space-y-3">
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                  <h2
+                    className="text-sm font-semibold uppercase tracking-wide"
+                    style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
+                  >
                     Recent Movements
                   </h2>
-                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
+                  <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                     {movements.length === 0 ? (
-                      <div className="text-sm text-zinc-400">
-                        No movements yet.
-                      </div>
+                      <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>No movements yet.</div>
                     ) : (
                       <div className="space-y-3 text-xs">
                         {movements.map((movement) => (
                           <div
                             key={movement.id}
-                            className="flex flex-col gap-1 border-b border-[#222222] pb-3 last:border-b-0 last:pb-0"
+                            className="flex flex-col gap-1 border-b pb-3 last:border-b-0 last:pb-0"
+                            style={{ borderColor: "var(--color-border)" }}
                           >
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium">
-                                {movement.category}
-                              </span>
-                              <span className="text-[10px] text-zinc-400">
+                              <span className="font-medium" style={{ color: "var(--color-text)" }}>{movement.category}</span>
+                              <span className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
                                 {formatDate(movement.date ?? movement.created_at)}
                               </span>
                             </div>
-                            <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-300">
-                              <span>
-                                {formatCurrency(movement.amount || 0, movement.currency ?? "AED")}
-                              </span>
+                            <div className="flex items-center justify-between gap-2 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                              <span>{formatCurrency(movement.amount || 0, movement.currency ?? "AED")}</span>
                             </div>
                           </div>
                         ))}

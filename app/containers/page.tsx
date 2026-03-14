@@ -48,7 +48,7 @@ function DriveLinkIcon({ href }: { href: string }) {
       target="_blank"
       rel="noopener noreferrer"
       title="Open Google Drive folder"
-      className="inline-flex items-center justify-center rounded border border-[#222222] bg-[#0a0a0a] p-1.5 text-zinc-400 transition hover:border-[#c0392b]/70 hover:text-white"
+      className="inline-flex items-center justify-center rounded border border-app bg-[#0a0a0a] p-1.5 text-muted transition hover:border-[var(--color-accent)]/70 hover:text-app"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -919,14 +919,14 @@ export default function ContainersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-app text-app">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               Containers
             </h1>
-            <p className="text-sm font-medium text-[#c0392b]">
+            <p className="text-sm font-medium text-[var(--color-accent)]">
               Shipping & logistics
             </p>
           </div>
@@ -946,7 +946,7 @@ export default function ContainersPage() {
               setIsNewModalOpen(true);
               setError(null);
             }}
-            className="inline-flex items-center justify-center rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+            className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
           >
             New Container
           </button>
@@ -959,15 +959,15 @@ export default function ContainersPage() {
         )}
 
         {/* Containers list */}
-        <div className="rounded-lg border border-[#222222] bg-[#111111]">
+        <div className="rounded-lg border border-app surface">
           {isLoading ? (
-            <div className="p-4 text-sm text-zinc-400">Loading containers...</div>
+            <div className="p-4 text-sm text-muted">Loading containers...</div>
           ) : containers.length === 0 ? (
-            <div className="p-4 text-sm text-zinc-400">No containers yet.</div>
+            <div className="p-4 text-sm text-muted">No containers yet.</div>
           ) : (
             <div className="w-full overflow-x-auto">
               <table className="min-w-[960px] w-full text-left text-xs">
-                <thead className="border-b border-[#222222] text-[11px] uppercase tracking-wide text-zinc-400">
+                <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3">Ref</th>
                     <th className="px-4 py-3">Date</th>
@@ -987,16 +987,16 @@ export default function ContainersPage() {
                     const status = container.status || "Loading";
                     const badgeClass =
                       STATUS_BADGE[status] ||
-                      "bg-zinc-900/40 text-zinc-200 border-zinc-600/40";
+                      "bg-zinc-900/40 text-app border-zinc-600/40";
                     return (
                       <tr
                         key={container.id}
-                        className="border-b border-[#222222] last:border-b-0"
+                        className="border-b border-app last:border-b-0"
                       >
-                        <td className="px-4 py-3 font-semibold text-white">
+                        <td className="px-4 py-3 font-semibold text-app">
                           {container.ref || container.id}
                         </td>
-                        <td className="px-4 py-3 text-zinc-200">
+                        <td className="px-4 py-3 text-app">
                           {formatDate(container.date ?? container.created_at)}
                         </td>
                         <td className="px-4 py-3">
@@ -1006,11 +1006,11 @@ export default function ContainersPage() {
                             {status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-zinc-200">{carsCount}</td>
-                        <td className="px-4 py-3 text-zinc-200">
+                        <td className="px-4 py-3 text-app">{carsCount}</td>
+                        <td className="px-4 py-3 text-app">
                           {formatMoney(container.shipping_cost, "AED")}
                         </td>
-                        <td className="px-4 py-3 text-zinc-200">
+                        <td className="px-4 py-3 text-app">
                           {container.shipping_paid
                             ? formatMoney(container.shipping_cost, "AED")
                             : "-"}
@@ -1025,7 +1025,7 @@ export default function ContainersPage() {
                               onClick={() =>
                                 setSelectedContainerId(container.id)
                               }
-                              className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-[#c0392b]/70"
+                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                             >
                               View
                             </button>
@@ -1054,14 +1054,14 @@ export default function ContainersPage() {
                                 setIsNewModalOpen(true);
                                 setError(null);
                               }}
-                              className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-[#c0392b]/70"
+                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteContainer(container)}
-                              className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-red-700"
+                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700"
                             >
                               Delete
                             </button>
@@ -1078,13 +1078,13 @@ export default function ContainersPage() {
 
         {/* Container detail side panel */}
         {selectedContainer && (
-          <div className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-xs text-zinc-300">
-            <div className="flex items-start justify-between gap-4 border-b border-[#222222] pb-3">
+          <div className="rounded-lg border border-app surface p-4 text-xs text-app">
+            <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
-                <div className="text-sm font-semibold text-white">
+                <div className="text-sm font-semibold text-app">
                   Container {selectedContainer.ref || selectedContainer.id}
                 </div>
-                <div className="mt-1 text-[11px] text-zinc-400">
+                <div className="mt-1 text-[11px] text-muted">
                   {formatDate(selectedContainer.date ?? selectedContainer.created_at)}{" "}
                   • Status:{" "}
                   <span className="font-semibold">
@@ -1095,7 +1095,7 @@ export default function ContainersPage() {
               <button
                 type="button"
                 onClick={() => setSelectedContainerId(null)}
-                className="rounded-md border border-[#222222] px-3 py-1 text-[11px] font-semibold text-zinc-200"
+                className="rounded-md border border-app px-3 py-1 text-[11px] font-semibold text-app"
               >
                 Close
               </button>
@@ -1103,42 +1103,42 @@ export default function ContainersPage() {
 
             {/* Shipping summary */}
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-md border border-[#222222] bg-black p-3">
-                <div className="text-[11px] font-semibold text-zinc-400">
+              <div className="rounded-md border border-app bg-black p-3">
+                <div className="text-[11px] font-semibold text-muted">
                   Estimated Shipping
                 </div>
-                <div className="mt-1 text-lg font-semibold text-white">
+                <div className="mt-1 text-lg font-semibold text-app">
                   {formatMoney(selectedContainer.shipping_cost, "AED")}
                 </div>
               </div>
-              <div className="rounded-md border border-[#222222] bg-black p-3">
-                <div className="text-[11px] font-semibold text-zinc-400">
+              <div className="rounded-md border border-app bg-black p-3">
+                <div className="text-[11px] font-semibold text-muted">
                   Actual Shipping
                 </div>
-                <div className="mt-1 text-lg font-semibold text-white">
+                <div className="mt-1 text-lg font-semibold text-app">
                   {selectedContainer.shipping_paid
                     ? formatMoney(selectedContainer.shipping_cost, "AED")
                     : "-"}
                 </div>
                 {selectedContainer.invoice_ref && (
-                  <div className="mt-1 text-[11px] text-zinc-400">
+                  <div className="mt-1 text-[11px] text-muted">
                     Invoice: {selectedContainer.invoice_ref}
                   </div>
                 )}
               </div>
-              <div className="rounded-md border border-[#222222] bg-black p-3">
-                <div className="text-[11px] font-semibold text-zinc-400">
+              <div className="rounded-md border border-app bg-black p-3">
+                <div className="text-[11px] font-semibold text-muted">
                   Cars in container
                 </div>
-                <div className="mt-1 text-lg font-semibold text-white">
+                <div className="mt-1 text-lg font-semibold text-app">
                   {totalCarsInContainer}
                 </div>
               </div>
             </div>
 
             {selectedContainer.drive_link && (
-              <div className="mt-3 rounded-md border border-[#222222] bg-black p-3">
-                <div className="text-[11px] font-semibold text-zinc-400">
+              <div className="mt-3 rounded-md border border-app bg-black p-3">
+                <div className="text-[11px] font-semibold text-muted">
                   Google Drive
                 </div>
                 <div className="mt-2">
@@ -1150,14 +1150,14 @@ export default function ContainersPage() {
             {/* Cars section */}
             <div className="mt-6 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                <h2 className="text-[11px] font-semibold uppercase tracking-wide text-muted">
                   Cars
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 rounded-md border border-[#222222] bg-black p-3 text-[11px] sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 rounded-md border border-app bg-black p-3 text-[11px] sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-zinc-200">
+                  <label className="flex items-center gap-2 text-app">
                     <input
                       type="radio"
                       checked={addCarForm.mode === "inventory"}
@@ -1170,7 +1170,7 @@ export default function ContainersPage() {
                     onChange={(e) =>
                       updateAddCarField("inventoryCarId", e.target.value)
                     }
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-2 py-1 text-xs text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   >
                     <option value="">Select car from inventory</option>
                     {availableInventoryCars.map((c) => (
@@ -1187,7 +1187,7 @@ export default function ContainersPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-zinc-200">
+                  <label className="flex items-center gap-2 text-app">
                     <input
                       type="radio"
                       checked={addCarForm.mode === "manual"}
@@ -1202,7 +1202,7 @@ export default function ContainersPage() {
                       onChange={(e) =>
                         updateAddCarField("brand", e.target.value)
                       }
-                      className="rounded-md border border-[#222222] bg-[#0a0a0a] px-2 py-1 text-xs text-white outline-none focus:border-[#c0392b]"
+                      className="rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                     <input
                       placeholder="Model"
@@ -1210,7 +1210,7 @@ export default function ContainersPage() {
                       onChange={(e) =>
                         updateAddCarField("model", e.target.value)
                       }
-                      className="rounded-md border border-[#222222] bg-[#0a0a0a] px-2 py-1 text-xs text-white outline-none focus:border-[#c0392b]"
+                      className="rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                     <input
                       placeholder="Year"
@@ -1218,7 +1218,7 @@ export default function ContainersPage() {
                       onChange={(e) =>
                         updateAddCarField("year", e.target.value)
                       }
-                      className="rounded-md border border-[#222222] bg-[#0a0a0a] px-2 py-1 text-xs text-white outline-none focus:border-[#c0392b]"
+                      className="rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                     <input
                       placeholder="Color"
@@ -1226,13 +1226,13 @@ export default function ContainersPage() {
                       onChange={(e) =>
                         updateAddCarField("color", e.target.value)
                       }
-                      className="rounded-md border border-[#222222] bg-[#0a0a0a] px-2 py-1 text-xs text-white outline-none focus:border-[#c0392b]"
+                      className="rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-zinc-200">
+                  <label className="flex items-center gap-2 text-app">
                     <input
                       type="checkbox"
                       checked={addCarForm.isPartner}
@@ -1249,13 +1249,13 @@ export default function ContainersPage() {
                       onChange={(e) =>
                         updateAddCarField("partnerName", e.target.value)
                       }
-                      className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-2 py-1 text-xs text-white outline-none focus:border-[#c0392b]"
+                      className="w-full rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-zinc-200">
+                  <label className="text-app">
                     Shipping contribution (AED, optional)
                   </label>
                   <input
@@ -1264,22 +1264,22 @@ export default function ContainersPage() {
                     onChange={(e) =>
                       updateAddCarField("shippingContribution", e.target.value)
                     }
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-2 py-1 text-xs text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   />
                   <button
                     type="button"
                     onClick={handleAddCar}
                     disabled={isAddingCar}
-                    className="mt-1 inline-flex items-center justify-center rounded-md bg-[#c0392b] px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                    className="mt-1 inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-app disabled:opacity-50"
                   >
                     {isAddingCar ? "Adding..." : "Add Car to Container"}
                   </button>
                 </div>
               </div>
 
-              <div className="rounded-md border border-[#222222] bg-black">
+              <div className="rounded-md border border-app bg-black">
                 <table className="w-full text-left text-[11px]">
-                  <thead className="border-b border-[#222222] text-[10px] uppercase tracking-wide text-zinc-400">
+                  <thead className="border-b border-app text-[10px] uppercase tracking-wide text-muted">
                     <tr>
                       <th className="px-3 py-2">Car</th>
                       <th className="px-3 py-2">Owner</th>
@@ -1293,7 +1293,7 @@ export default function ContainersPage() {
                       <tr>
                         <td
                           colSpan={5}
-                          className="px-3 py-3 text-xs text-zinc-400"
+                          className="px-3 py-3 text-xs text-muted"
                         >
                           No cars yet.
                         </td>
@@ -1307,9 +1307,9 @@ export default function ContainersPage() {
                         return (
                           <tr
                             key={cc.id}
-                            className="border-b border-[#222222] last:border-b-0"
+                            className="border-b border-app last:border-b-0"
                           >
-                            <td className="px-3 py-2 text-zinc-200">
+                            <td className="px-3 py-2 text-app">
                               {cc.car_label ||
                                 (car
                                   ? `${car.brand || ""} ${car.model || ""} ${
@@ -1317,23 +1317,23 @@ export default function ContainersPage() {
                                     }`.trim()
                                   : "-")}
                             </td>
-                            <td className="px-3 py-2 text-zinc-200">
+                            <td className="px-3 py-2 text-app">
                               {owner}
                               {cc.is_partner && cc.partner_name && (
-                                <span className="block text-[10px] text-zinc-400">
+                                <span className="block text-[10px] text-muted">
                                   {cc.partner_name}
                                 </span>
                               )}
                             </td>
-                            <td className="px-3 py-2 text-zinc-200">
+                            <td className="px-3 py-2 text-app">
                               {cc.shipping_contribution != null
                                 ? formatMoney(cc.shipping_contribution, "AED")
                                 : "auto"}
                             </td>
-                            <td className="px-3 py-2 text-zinc-200">
+                            <td className="px-3 py-2 text-app">
                               {cc.customs_status || "pending"}
                               {cc.customs_paid_dzd != null && (
-                                <span className="block text-[10px] text-zinc-400">
+                                <span className="block text-[10px] text-muted">
                                   Paid:{" "}
                                   {formatMoney(
                                     cc.customs_paid_dzd,
@@ -1346,7 +1346,7 @@ export default function ContainersPage() {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveCar(cc)}
-                                className="rounded-md border border-[#222222] bg-black px-2 py-1 text-[10px] font-semibold text-zinc-200 hover:border-red-700"
+                                className="rounded-md border border-app bg-black px-2 py-1 text-[10px] font-semibold text-app hover:border-red-700"
                               >
                                 Remove
                               </button>
@@ -1362,11 +1362,11 @@ export default function ContainersPage() {
 
             {/* Shipping / invoice section */}
             <div className="mt-6 space-y-3">
-              <h2 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+              <h2 className="text-[11px] font-semibold uppercase tracking-wide text-muted">
                 Shipping invoice
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <label className="space-y-1 text-[11px] text-zinc-300">
+                <label className="space-y-1 text-[11px] text-app">
                   <span className="font-semibold">Actual invoice amount (AED)</span>
                   <input
                     type="number"
@@ -1374,10 +1374,10 @@ export default function ContainersPage() {
                     onChange={(e) =>
                       updatePayInvoiceField("amount", e.target.value)
                     }
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
-                <label className="space-y-1 text-[11px] text-zinc-300">
+                <label className="space-y-1 text-[11px] text-app">
                   <span className="font-semibold">Pocket</span>
                   <select
                     value={payInvoiceForm.pocket}
@@ -1387,7 +1387,7 @@ export default function ContainersPage() {
                         e.target.value as PayInvoiceForm["pocket"]
                       )
                     }
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   >
                     <option value="Dubai Cash">Dubai Cash</option>
                     <option value="Dubai Bank">Dubai Bank</option>
@@ -1401,7 +1401,7 @@ export default function ContainersPage() {
                     type="button"
                     onClick={handlePayInvoice}
                     disabled={isPayingInvoice || !!selectedContainer.shipping_paid}
-                    className="inline-flex w-full items-center justify-center rounded-md bg-[#c0392b] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center rounded-md bg-[var(--color-accent)] px-3 py-2 text-xs font-semibold text-app disabled:opacity-50"
                   >
                     {selectedContainer.shipping_paid
                       ? "Invoice Paid"
@@ -1423,20 +1423,20 @@ export default function ContainersPage() {
             className="absolute inset-0 bg-black/70"
             onClick={() => !isSavingNew && setIsNewModalOpen(false)}
           />
-          <div className="relative w-full max-w-xl rounded-lg border border-[#222222] bg-[#111111] p-4 text-xs text-zinc-300 shadow-xl">
-            <div className="flex items-start justify-between gap-4 border-b border-[#222222] pb-3">
+          <div className="relative w-full max-w-xl rounded-lg border border-app surface p-4 text-xs text-app shadow-xl">
+            <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
-                <div className="text-sm font-semibold text-white">
+                <div className="text-sm font-semibold text-app">
                   New Container
                 </div>
-                <div className="text-[11px] text-zinc-400">
+                <div className="text-[11px] text-muted">
                   Create a container with estimated shipping cost.
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => !isSavingNew && setIsNewModalOpen(false)}
-                className="rounded-md border border-[#222222] px-3 py-1 text-[11px] font-semibold text-zinc-200"
+                className="rounded-md border border-app px-3 py-1 text-[11px] font-semibold text-app"
               >
                 Close
               </button>
@@ -1444,28 +1444,28 @@ export default function ContainersPage() {
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1">
-                <span className="font-semibold text-zinc-200">
-                  Reference <span className="text-[#c0392b]">*</span>
+                <span className="font-semibold text-app">
+                  Reference <span className="text-[var(--color-accent)]">*</span>
                 </span>
                 <input
                   value={newForm.ref}
                   onChange={(e) => updateNewField("ref", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1">
-                <span className="font-semibold text-zinc-200">
-                  Date <span className="text-[#c0392b]">*</span>
+                <span className="font-semibold text-app">
+                  Date <span className="text-[var(--color-accent)]">*</span>
                 </span>
                 <input
                   type="date"
                   value={newForm.date}
                   onChange={(e) => updateNewField("date", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1">
-                <span className="font-semibold text-zinc-200">
+                <span className="font-semibold text-app">
                   Estimated shipping cost (AED)
                 </span>
                 <input
@@ -1474,11 +1474,11 @@ export default function ContainersPage() {
                   onChange={(e) =>
                     updateNewField("estimatedShipping", e.target.value)
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1">
-                <span className="font-semibold text-zinc-200">
+                <span className="font-semibold text-app">
                   Invoice reference (optional)
                 </span>
                 <input
@@ -1486,11 +1486,11 @@ export default function ContainersPage() {
                   onChange={(e) =>
                     updateNewField("invoiceRef", e.target.value)
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1">
-                <span className="font-semibold text-zinc-200">Status</span>
+                <span className="font-semibold text-app">Status</span>
                 <select
                   value={newForm.status}
                   onChange={(e) =>
@@ -1499,7 +1499,7 @@ export default function ContainersPage() {
                       e.target.value as NewContainerForm["status"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {STATUS_OPTIONS.map((s) => (
                     <option key={s} value={s}>
@@ -1509,7 +1509,7 @@ export default function ContainersPage() {
                 </select>
               </label>
               <label className="space-y-1 sm:col-span-2">
-                <span className="font-semibold text-zinc-200">Google Drive Folder Link</span>
+                <span className="font-semibold text-app">Google Drive Folder Link</span>
                 <input
                   type="text"
                   value={newForm.driveLink}
@@ -1517,19 +1517,19 @@ export default function ContainersPage() {
                     updateNewField("driveLink", e.target.value)
                   }
                   placeholder="https://drive.google.com/..."
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <div className="sm:col-span-2">
                 <label className="space-y-1">
-                  <span className="font-semibold text-zinc-200">Notes</span>
+                  <span className="font-semibold text-app">Notes</span>
                   <textarea
                     value={newForm.notes}
                     onChange={(e) =>
                       updateNewField("notes", e.target.value)
                     }
                     rows={3}
-                    className="w-full resize-none rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white outline-none focus:border-[#c0392b]"
+                    className="w-full resize-none rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
               </div>
@@ -1540,7 +1540,7 @@ export default function ContainersPage() {
                 type="button"
                 onClick={() => !isSavingNew && setIsNewModalOpen(false)}
                 disabled={isSavingNew}
-                className="rounded-md border border-[#222222] bg-black px-4 py-2 text-xs font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app bg-black px-4 py-2 text-xs font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1548,7 +1548,7 @@ export default function ContainersPage() {
                 type="button"
                 onClick={handleCreateContainer}
                 disabled={isSavingNew}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-app disabled:opacity-50"
               >
                 {isSavingNew ? "Saving..." : "Create"}
               </button>

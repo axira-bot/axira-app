@@ -118,13 +118,13 @@ export default function ActivityPage() {
   }, [fetchAll]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-app text-app">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Activity Log
           </h1>
-          <p className="text-sm font-medium text-[#c0392b]">
+          <p className="text-sm font-medium text-[var(--color-accent)]">
             System activity in chronological order
           </p>
         </header>
@@ -136,30 +136,30 @@ export default function ActivityPage() {
         )}
 
         <div className="flex flex-wrap items-center gap-4">
-          <label className="flex flex-col gap-1 text-xs text-zinc-400">
+          <label className="flex flex-col gap-1 text-xs text-muted">
             From
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+              className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs text-zinc-400">
+          <label className="flex flex-col gap-1 text-xs text-muted">
             To
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+              className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs text-zinc-400">
+          <label className="flex flex-col gap-1 text-xs text-muted">
             Type
             <select
               value={entityFilter}
               onChange={(e) => setEntityFilter(e.target.value as ActivityEntity | "")}
-              className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+              className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
             >
               {ENTITY_OPTIONS.map((o) => (
                 <option key={o.value || "all"} value={o.value}>
@@ -170,15 +170,15 @@ export default function ActivityPage() {
           </label>
         </div>
 
-        <div className="rounded-lg border border-[#222222] bg-[#111111] overflow-hidden">
+        <div className="rounded-lg border border-app surface overflow-hidden">
           {isLoading ? (
-            <div className="p-6 text-sm text-zinc-400">Loading activity...</div>
+            <div className="p-6 text-sm text-muted">Loading activity...</div>
           ) : rows.length === 0 ? (
-            <div className="p-6 text-sm text-zinc-400">No activity in this range.</div>
+            <div className="p-6 text-sm text-muted">No activity in this range.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="border-b border-[#222222] text-[11px] uppercase tracking-wide text-zinc-400">
+                <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3">Time</th>
                     <th className="px-4 py-3">Action</th>
@@ -189,23 +189,23 @@ export default function ActivityPage() {
                 </thead>
                 <tbody>
                   {rows.map((a) => (
-                    <tr key={a.id} className="border-b border-[#222222] last:border-b-0">
-                      <td className="px-4 py-3 text-zinc-300 whitespace-nowrap">
+                    <tr key={a.id} className="border-b border-app last:border-b-0">
+                      <td className="px-4 py-3 text-app whitespace-nowrap">
                         {formatDate(a.created_at)}
                         <span className="ml-2 text-zinc-500">({timeAgo(a.created_at)})</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full border border-[#333] bg-[#1a1a1a] px-2 py-0.5 text-[11px] font-medium text-zinc-300">
+                        <span className="rounded-full border border-[#333] bg-[#1a1a1a] px-2 py-0.5 text-[11px] font-medium text-app">
                           {a.action}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full border border-[#333] bg-[#1a1a1a] px-2 py-0.5 text-[11px] font-medium text-zinc-300">
+                        <span className="rounded-full border border-[#333] bg-[#1a1a1a] px-2 py-0.5 text-[11px] font-medium text-app">
                           {displayType(a.entity)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-zinc-200">{a.description}</td>
-                      <td className="px-4 py-3 text-right text-zinc-200">
+                      <td className="px-4 py-3 text-app">{a.description}</td>
+                      <td className="px-4 py-3 text-right text-app">
                         {a.amount != null && a.currency
                           ? formatMoney(a.amount, a.currency)
                           : "—"}

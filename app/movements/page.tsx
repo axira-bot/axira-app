@@ -876,21 +876,21 @@ export default function MovementsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-app text-app">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               Movements
             </h1>
-              <p className="text-sm font-medium text-[#c0392b]">
+              <p className="text-sm font-medium text-[var(--color-accent)]">
                 Cash flow & pockets
               </p>
             </div>
             <button
               type="button"
               onClick={openModal}
-              className="inline-flex items-center justify-center rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+              className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
             >
               Add Movement
             </button>
@@ -903,12 +903,12 @@ export default function MovementsPage() {
             return (
               <div
                 key={pocket}
-                className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-xs text-zinc-300"
+                className="rounded-lg border border-[#222222] surface p-4 text-xs text-app"
               >
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
                   {pocket}
                 </div>
-                <div className="mt-2 text-lg font-semibold text-white">
+                <div className="mt-2 text-lg font-semibold text-app">
                   {bal ? formatMoney(bal.amount, bal.currency) : "0"}
                 </div>
               </div>
@@ -939,8 +939,8 @@ export default function MovementsPage() {
               className={[
                 "rounded-full border px-3 py-1 text-xs font-semibold transition",
                 activeTab === tab
-                  ? "border-[#c0392b] bg-[#c0392b]/15 text-white"
-                  : "border-[#222222] bg-[#111111] text-zinc-300 hover:border-[#c0392b]/70",
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-app"
+                  : "border-[#222222] surface text-app hover:border-[var(--color-accent)]/70",
               ].join(" ")}
             >
               {tab}
@@ -957,7 +957,7 @@ export default function MovementsPage() {
         {/* Rent & Fixed Expenses */}
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
               Rent &amp; Fixed Expenses
             </h2>
             <button
@@ -976,7 +976,7 @@ export default function MovementsPage() {
                 });
                 setIsRentModalOpen(true);
               }}
-              className="inline-flex items-center justify-center rounded-md border border-[#c0392b] bg-[#c0392b]/10 px-3 py-1.5 text-xs font-semibold text-[#c0392b] hover:bg-[#c0392b]/20"
+              className="inline-flex items-center justify-center rounded-md border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20"
             >
               Add Rent
             </button>
@@ -988,24 +988,24 @@ export default function MovementsPage() {
               return (
                 <div
                   key={r.id}
-                  className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-xs"
+                  className="rounded-lg border border-[#222222] surface p-4 text-xs"
                 >
-                  <div className="font-semibold text-white">{r.description || "—"}</div>
-                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-zinc-400">
+                  <div className="font-semibold text-app">{r.description || "—"}</div>
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-muted">
                     <span>Annual</span>
-                    <span className="text-right text-zinc-200">
+                    <span className="text-right text-app">
                       {formatMoney(r.annual_amount, currency)}
                     </span>
                     <span>Monthly equiv.</span>
-                    <span className="text-right text-zinc-200">
+                    <span className="text-right text-app">
                       {formatMoney(info.monthly, currency)}
                     </span>
                     <span>Payment date</span>
-                    <span className="text-right text-zinc-200">
+                    <span className="text-right text-app">
                       {info.paymentDate ? formatDate(info.paymentDate) : "—"}
                     </span>
                     <span>Days left in contract</span>
-                    <span className="text-right text-zinc-200">
+                    <span className="text-right text-app">
                       {info.daysRemaining != null ? info.daysRemaining : "—"}
                     </span>
                   </div>
@@ -1014,7 +1014,7 @@ export default function MovementsPage() {
                       type="button"
                       onClick={() => handleLogAnnualPayment(r)}
                       disabled={!!loggingRentId}
-                      className="rounded border border-[#c0392b] bg-[#c0392b]/10 px-2 py-1 text-[11px] font-medium text-[#c0392b] hover:bg-[#c0392b]/20 disabled:opacity-50"
+                      className="rounded border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-2 py-1 text-[11px] font-medium text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20 disabled:opacity-50"
                     >
                       {loggingRentId === r.id ? "Logging…" : "Log Annual Payment"}
                     </button>
@@ -1022,7 +1022,7 @@ export default function MovementsPage() {
                       <button
                         type="button"
                         onClick={() => handleEditRent(r)}
-                        className="rounded border border-[#222222] px-2 py-1 text-[11px] text-zinc-300 hover:border-zinc-500 hover:text-white"
+                        className="rounded border border-[#222222] px-2 py-1 text-[11px] text-app hover:border-zinc-500 hover:text-app"
                       >
                         Edit
                       </button>
@@ -1041,22 +1041,22 @@ export default function MovementsPage() {
             })}
           </div>
           {rents.length === 0 && (
-            <div className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-sm text-zinc-500">
+            <div className="rounded-lg border border-[#222222] surface p-4 text-sm text-zinc-500">
               No rent or fixed expenses. Click &quot;Add Rent&quot; to add one.
             </div>
           )}
         </section>
 
         {/* Movements table */}
-        <div className="rounded-lg border border-[#222222] bg-[#111111]">
+        <div className="rounded-lg border border-[#222222] surface">
           {isLoading ? (
-            <div className="p-4 text-sm text-zinc-400">Loading movements...</div>
+            <div className="p-4 text-sm text-muted">Loading movements...</div>
           ) : filteredMovements.length === 0 ? (
-            <div className="p-4 text-sm text-zinc-400">No movements found.</div>
+            <div className="p-4 text-sm text-muted">No movements found.</div>
           ) : (
             <div className="w-full overflow-x-auto">
               <table className="min-w-[980px] w-full text-left text-xs">
-                <thead className="border-b border-[#222222] text-[11px] uppercase tracking-wide text-zinc-400">
+                <thead className="border-b border-[#222222] text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Type</th>
@@ -1076,7 +1076,7 @@ export default function MovementsPage() {
                         key={m.id}
                         className="border-b border-[#222222] last:border-b-0"
                       >
-                        <td className="px-4 py-3 text-zinc-200">
+                        <td className="px-4 py-3 text-app">
                           {formatDate(m.date ?? m.created_at)}
                         </td>
                         <td className="px-4 py-3">
@@ -1091,19 +1091,19 @@ export default function MovementsPage() {
                             {isIn ? "In" : "Out"}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-zinc-200">
+                        <td className="px-4 py-3 text-app">
                           {m.category || "-"}
                         </td>
-                        <td className="px-4 py-3 text-zinc-200">
+                        <td className="px-4 py-3 text-app">
                           {formatMoney(m.amount, m.currency)}
                         </td>
-                        <td className="px-4 py-3 text-zinc-200">
+                        <td className="px-4 py-3 text-app">
                           {m.pocket || "-"}
                         </td>
-                        <td className="px-4 py-3 text-zinc-200">
+                        <td className="px-4 py-3 text-app">
                           {dealLabel(m.deal_id ?? null)}
                         </td>
-                        <td className="px-4 py-3 text-zinc-200">
+                        <td className="px-4 py-3 text-app">
                           {formatDescription(m.description) ?? m.reference ?? "-"}
                         </td>
                         <td className="px-4 py-3">
@@ -1141,7 +1141,7 @@ export default function MovementsPage() {
                                   setIsModalOpen(true);
                                   setError(null);
                                 }}
-                                className="mr-2 rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-[#c0392b]/70"
+                                className="mr-2 rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                               >
                                 Edit
                               </button>
@@ -1149,7 +1149,7 @@ export default function MovementsPage() {
                                 type="button"
                                 onClick={() => handleDelete(m)}
                                 disabled={isDeletingId === m.id}
-                                className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-red-700 disabled:opacity-50"
+                                className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700 disabled:opacity-50"
                               >
                                 {isDeletingId === m.id ? "Deleting..." : "Delete"}
                               </button>
@@ -1172,13 +1172,13 @@ export default function MovementsPage() {
       {isModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={closeModal} />
-          <div className="relative flex w-full max-w-3xl max-h-screen flex-col overflow-y-auto rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
+          <div className="relative flex w-full max-w-3xl max-h-screen flex-col overflow-y-auto rounded-lg border border-[#222222] surface p-4 shadow-xl">
             <div className="flex items-start justify-between gap-4 border-b border-[#222222] pb-3">
               <div>
-                <div className="text-lg font-semibold text-white">
+                <div className="text-lg font-semibold text-app">
                   Add Movement
                 </div>
-                <div className="text-xs text-zinc-400">
+                <div className="text-xs text-muted">
                   Track cash in and out of each pocket.
                 </div>
               </div>
@@ -1186,36 +1186,36 @@ export default function MovementsPage() {
                 type="button"
                 onClick={closeModal}
                 disabled={isSaving}
-                className="rounded-md border border-[#222222] px-3 py-1 text-xs font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-[#222222] px-3 py-1 text-xs font-semibold text-app disabled:opacity-50"
               >
                 Close
               </button>
             </div>
 
             <div className="mt-4 grid max-h-[70vh] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Date</span>
                 <input
                   type="date"
                   value={form.date}
                   onChange={(e) => updateField("date", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Type</span>
                 <select
                   value={form.type}
                   onChange={(e) => updateField("type", e.target.value as "In" | "Out")}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="In">In</option>
                   <option value="Out">Out</option>
                 </select>
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Category</span>
                 <select
                   value={form.category}
@@ -1225,7 +1225,7 @@ export default function MovementsPage() {
                       e.target.value as MovementFormState["category"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
@@ -1235,17 +1235,17 @@ export default function MovementsPage() {
                 </select>
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Amount</span>
                 <input
                   type="number"
                   value={form.amount}
                   onChange={(e) => updateField("amount", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Currency</span>
                 <select
                   value={form.currency}
@@ -1257,7 +1257,7 @@ export default function MovementsPage() {
                       updateField("pocket", validPockets[0]);
                     }
                   }}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="AED">AED</option>
                   <option value="DZD">DZD</option>
@@ -1266,7 +1266,7 @@ export default function MovementsPage() {
                 </select>
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Pocket</span>
                 <select
                   value={form.pocket}
@@ -1276,7 +1276,7 @@ export default function MovementsPage() {
                       e.target.value as MovementFormState["pocket"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {(POCKETS_BY_CURRENCY[form.currency] ?? POCKETS).map((p) => (
                     <option key={p} value={p}>
@@ -1286,12 +1286,12 @@ export default function MovementsPage() {
                 </select>
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Deal (optional)</span>
                 <select
                   value={form.dealId}
                   onChange={(e) => updateField("dealId", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="">No deal linked</option>
                   {openDeals.map((d) => (
@@ -1302,31 +1302,31 @@ export default function MovementsPage() {
                 </select>
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Reference (optional)</span>
                 <input
                   value={form.reference}
                   onChange={(e) => updateField("reference", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Notes (optional)</span>
                 <input
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
 
-            <div className="mt-4 flex flex-col-reverse gap-2 border-t border-[#222222] bg-[#111111] pt-3 sm:flex-row sm:justify-end">
+            <div className="mt-4 flex flex-col-reverse gap-2 border-t border-[#222222] surface pt-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={closeModal}
                 disabled={isSaving}
-                className="rounded-md border border-[#222222] bg-black px-4 py-2 text-sm font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-[#222222] bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1334,7 +1334,7 @@ export default function MovementsPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
@@ -1350,11 +1350,11 @@ export default function MovementsPage() {
             className="absolute inset-0 bg-black/70"
             onClick={() => !isSavingRent && setIsRentModalOpen(false)}
           />
-          <div className="relative flex w-full max-w-lg flex-col overflow-y-auto rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
+          <div className="relative flex w-full max-w-lg flex-col overflow-y-auto rounded-lg border border-[#222222] surface p-4 shadow-xl">
             <div className="flex items-start justify-between gap-4 border-b border-[#222222] pb-3">
               <div>
-                <div className="text-lg font-semibold text-white">Add Rent / Fixed Expense</div>
-                <div className="text-xs text-zinc-400">
+                <div className="text-lg font-semibold text-app">Add Rent / Fixed Expense</div>
+                <div className="text-xs text-muted">
                   Property or fixed expense with annual amount and schedule.
                 </div>
               </div>
@@ -1362,7 +1362,7 @@ export default function MovementsPage() {
                 type="button"
                 onClick={() => !isSavingRent && setIsRentModalOpen(false)}
                 disabled={isSavingRent}
-                className="rounded-md border border-[#222222] px-3 py-1 text-xs font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-[#222222] px-3 py-1 text-xs font-semibold text-app disabled:opacity-50"
               >
                 Close
               </button>
@@ -1373,17 +1373,17 @@ export default function MovementsPage() {
               </div>
             )}
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Property / description</span>
                 <input
                   type="text"
                   value={rentForm.description}
                   onChange={(e) => setRentForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="e.g. Dubai warehouse"
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Annual amount</span>
                 <input
                   type="number"
@@ -1391,32 +1391,32 @@ export default function MovementsPage() {
                   step="any"
                   value={rentForm.annual_amount}
                   onChange={(e) => setRentForm((f) => ({ ...f, annual_amount: e.target.value }))}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Currency</span>
                 <select
                   value={rentForm.currency}
                   onChange={(e) =>
                     setRentForm((f) => ({ ...f, currency: e.target.value as "AED" | "DZD" }))
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="AED">AED</option>
                   <option value="DZD">DZD</option>
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Start date</span>
                 <input
                   type="date"
                   value={rentForm.start_date}
                   onChange={(e) => setRentForm((f) => ({ ...f, start_date: e.target.value }))}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Pocket paid from</span>
                 <select
                   value={rentForm.pocket}
@@ -1426,7 +1426,7 @@ export default function MovementsPage() {
                       pocket: e.target.value as MovementFormState["pocket"] | "",
                     }))
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="">—</option>
                   {POCKETS.map((p) => (
@@ -1436,14 +1436,14 @@ export default function MovementsPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Notes (optional)</span>
                 <input
                   type="text"
                   value={rentForm.notes}
                   onChange={(e) => setRentForm((f) => ({ ...f, notes: e.target.value }))}
                   placeholder="e.g. landlord, contract ref"
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
@@ -1452,7 +1452,7 @@ export default function MovementsPage() {
                 type="button"
                 onClick={() => !isSavingRent && setIsRentModalOpen(false)}
                 disabled={isSavingRent}
-                className="rounded-md border border-[#222222] bg-black px-4 py-2 text-sm font-semibold text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-[#222222] bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1460,7 +1460,7 @@ export default function MovementsPage() {
                 type="button"
                 onClick={handleSaveRent}
                 disabled={isSavingRent}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 {isSavingRent ? "Saving..." : "Save"}
               </button>

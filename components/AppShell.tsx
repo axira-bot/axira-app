@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
+import Header from "@/components/Header";
 import { useAuth } from "@/lib/context/AuthContext";
 
 export default function AppShell({
@@ -27,9 +28,12 @@ export default function AppShell({
     return (
       <div
         className="flex min-h-screen items-center justify-center"
-        style={{ backgroundColor: "#0a0a0a" }}
+        style={{ background: "var(--color-bg)" }}
       >
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#c0392b] border-t-transparent" />
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-transparent"
+          style={{ borderTopColor: "var(--color-accent)" }}
+        />
       </div>
     );
   }
@@ -43,12 +47,12 @@ export default function AppShell({
   }
 
   return (
-    <div
-      className="flex min-h-screen"
-      style={{ backgroundColor: "#0a0a0a" }}
-    >
+    <div className="flex min-h-screen" style={{ background: "var(--color-bg)" }}>
       <Sidebar />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <div className="flex flex-1 flex-col min-w-0 ml-[240px] rtl:ml-0 rtl:mr-[240px]">
+        <Header />
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
     </div>
   );
 }

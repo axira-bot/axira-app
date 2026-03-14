@@ -664,11 +664,11 @@ export default function DebtsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-app text-app">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Debts</h1>
-          <p className="text-sm font-medium text-[#c0392b]">Receivables & Payables</p>
+          <p className="text-sm font-medium text-[var(--color-accent)]">Receivables & Payables</p>
         </header>
 
         <div className="flex flex-wrap gap-2">
@@ -679,8 +679,8 @@ export default function DebtsPage() {
               onClick={() => setActiveTab(tab)}
               className={
                 activeTab === tab
-                  ? "rounded-full border border-[#c0392b] bg-[#c0392b]/15 px-4 py-1.5 text-sm font-semibold text-white"
-                  : "rounded-full border border-[#222222] bg-[#111111] px-4 py-1.5 text-sm font-semibold text-zinc-300 hover:border-[#c0392b]/70"
+                  ? "rounded-full border border-[var(--color-accent)] bg-[var(--color-accent)]/15 px-4 py-1.5 text-sm font-semibold text-app"
+                  : "rounded-full border border-app surface px-4 py-1.5 text-sm font-semibold text-app hover:border-[var(--color-accent)]/70"
               }
             >
               {tab === "receivables" ? "Receivables" : "Payables"}
@@ -694,8 +694,8 @@ export default function DebtsPage() {
 
         {activeTab === "receivables" && (
           <>
-            <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Total outstanding (receivables)</h2>
+            <div className="rounded-lg border border-app surface p-4">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Total outstanding (receivables)</h2>
               <div className="mt-2 flex flex-wrap gap-4">
                 {Object.entries(receivableTotalsByCurrency).length === 0 ? (
                   <span className="text-zinc-500">No outstanding</span>
@@ -709,24 +709,24 @@ export default function DebtsPage() {
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-zinc-200">Receivables</h2>
+              <h2 className="text-sm font-semibold text-app">Receivables</h2>
               <button
                 type="button"
                 onClick={openAdd}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
               >
                 Add Receivable
               </button>
             </div>
-            <div className="rounded-lg border border-[#222222] bg-[#111111] overflow-hidden">
+            <div className="rounded-lg border border-app surface overflow-hidden">
               {isLoading ? (
-                <div className="p-8 text-center text-zinc-400">Loading...</div>
+                <div className="p-8 text-center text-muted">Loading...</div>
               ) : listReceivables.length === 0 ? (
                 <div className="p-8 text-center text-zinc-500">No receivables yet.</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="border-b border-[#222222] text-zinc-400">
+                    <thead className="border-b border-app text-muted">
                       <tr>
                         <th className="px-4 py-3">Name</th>
                         <th className="px-4 py-3 text-right">Amount</th>
@@ -740,15 +740,15 @@ export default function DebtsPage() {
                     </thead>
                     <tbody>
                       {listReceivables.map((d) => (
-                        <tr key={d.id} className="border-b border-[#222222] last:border-b-0">
-                          <td className="px-4 py-3 font-medium text-white">{d.name ?? "-"}</td>
-                          <td className="px-4 py-3 text-right text-zinc-200">
+                        <tr key={d.id} className="border-b border-app last:border-b-0">
+                          <td className="px-4 py-3 font-medium text-app">{d.name ?? "-"}</td>
+                          <td className="px-4 py-3 text-right text-app">
                             {formatMoney(d.amount_remaining ?? d.original_amount, d.currency ?? "AED")}
                           </td>
-                          <td className="px-4 py-3 text-zinc-200">{d.currency ?? "-"}</td>
-                          <td className="px-4 py-3 text-zinc-200">{d.reason ?? "-"}</td>
-                          <td className="px-4 py-3 text-zinc-200">{formatDate(d.date)}</td>
-                          <td className="px-4 py-3 text-zinc-200">{formatDate(d.due_date)}</td>
+                          <td className="px-4 py-3 text-app">{d.currency ?? "-"}</td>
+                          <td className="px-4 py-3 text-app">{d.reason ?? "-"}</td>
+                          <td className="px-4 py-3 text-app">{formatDate(d.date)}</td>
+                          <td className="px-4 py-3 text-app">{formatDate(d.due_date)}</td>
                           <td className="px-4 py-3">
                             <span
                               className={
@@ -756,7 +756,7 @@ export default function DebtsPage() {
                                   ? "rounded bg-emerald-900/50 px-2 py-0.5 text-emerald-300"
                                   : (d.status || "").toLowerCase() === "partially_paid"
                                   ? "rounded bg-amber-900/50 px-2 py-0.5 text-amber-300"
-                                  : "rounded bg-zinc-700/50 px-2 py-0.5 text-zinc-300"
+                                  : "rounded bg-zinc-700/50 px-2 py-0.5 text-app"
                               }
                             >
                               {statusLabel(d.status)}
@@ -766,14 +766,14 @@ export default function DebtsPage() {
                             <button
                               type="button"
                               onClick={() => openView(d)}
-                              className="mr-2 rounded-md border border-[#222222] bg-black px-2 py-1 text-[11px] font-semibold text-zinc-200 hover:border-[#c0392b]/70"
+                              className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                             >
                               View
                             </button>
                             <button
                               type="button"
                               onClick={() => openEdit(d)}
-                              className="mr-2 rounded-md border border-[#222222] bg-black px-2 py-1 text-[11px] font-semibold text-zinc-200 hover:border-[#c0392b]/70"
+                              className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                             >
                               Edit
                             </button>
@@ -781,7 +781,7 @@ export default function DebtsPage() {
                               <button
                                 type="button"
                                 onClick={() => handleMarkSettled(d)}
-                                className="mr-2 rounded-md border border-[#222222] bg-black px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:border-emerald-600"
+                                className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:border-emerald-600"
                               >
                                 Mark settled
                               </button>
@@ -790,7 +790,7 @@ export default function DebtsPage() {
                               type="button"
                               onClick={() => handleDeleteDebt(d)}
                               disabled={deletingId === d.id}
-                              className="rounded-md border border-[#222222] bg-black px-2 py-1 text-[11px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
+                              className="rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
                             >
                               {deletingId === d.id ? "Deleting..." : "Delete"}
                             </button>
@@ -807,8 +807,8 @@ export default function DebtsPage() {
 
         {activeTab === "payables" && (
           <>
-            <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Total payable</h2>
+            <div className="rounded-lg border border-app surface p-4">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Total payable</h2>
               <div className="mt-2 flex flex-wrap gap-4">
                 {Object.entries(payableTotalsByCurrency).length === 0 ? (
                   <span className="text-zinc-500">No payables</span>
@@ -822,24 +822,24 @@ export default function DebtsPage() {
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-zinc-200">Payables</h2>
+              <h2 className="text-sm font-semibold text-app">Payables</h2>
               <button
                 type="button"
                 onClick={openAdd}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
               >
                 Add Payable
               </button>
             </div>
-            <div className="rounded-lg border border-[#222222] bg-[#111111] overflow-hidden">
+            <div className="rounded-lg border border-app surface overflow-hidden">
               {isLoading ? (
-                <div className="p-8 text-center text-zinc-400">Loading...</div>
+                <div className="p-8 text-center text-muted">Loading...</div>
               ) : listPayables.length === 0 ? (
                 <div className="p-8 text-center text-zinc-500">No payables yet.</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="border-b border-[#222222] text-zinc-400">
+                    <thead className="border-b border-app text-muted">
                       <tr>
                         <th className="px-4 py-3">Name</th>
                         <th className="px-4 py-3 text-right">Amount</th>
@@ -856,17 +856,17 @@ export default function DebtsPage() {
                         const isSupplier = "_isSupplier" in item && item._isSupplier;
                         const d = item as Debt & { _isSupplier?: boolean; _carId?: string };
                         return (
-                          <tr key={d.id} className="border-b border-[#222222] last:border-b-0">
-                            <td className="px-4 py-3 font-medium text-white">{d.name ?? "-"}</td>
-                            <td className="px-4 py-3 text-right text-zinc-200">
+                          <tr key={d.id} className="border-b border-app last:border-b-0">
+                            <td className="px-4 py-3 font-medium text-app">{d.name ?? "-"}</td>
+                            <td className="px-4 py-3 text-right text-app">
                               {formatMoney(d.amount_remaining ?? d.original_amount, d.currency ?? "AED")}
                             </td>
-                            <td className="px-4 py-3 text-zinc-200">{d.currency ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200">{d.reason ?? "-"}</td>
-                            <td className="px-4 py-3 text-zinc-200">{formatDate(d.date)}</td>
-                            <td className="px-4 py-3 text-zinc-200">{formatDate(d.due_date)}</td>
+                            <td className="px-4 py-3 text-app">{d.currency ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{d.reason ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{formatDate(d.date)}</td>
+                            <td className="px-4 py-3 text-app">{formatDate(d.due_date)}</td>
                             <td className="px-4 py-3">
-                              <span className="rounded bg-zinc-700/50 px-2 py-0.5 text-zinc-300">
+                              <span className="rounded bg-zinc-700/50 px-2 py-0.5 text-app">
                                 {statusLabel(d.status)}
                               </span>
                             </td>
@@ -876,14 +876,14 @@ export default function DebtsPage() {
                                   <button
                                     type="button"
                                     onClick={() => openView(d)}
-                                    className="mr-2 rounded-md border border-[#222222] bg-black px-2 py-1 text-[11px] font-semibold text-zinc-200 hover:border-[#c0392b]/70"
+                                    className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                                   >
                                     View
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => openEdit(d)}
-                                    className="mr-2 rounded-md border border-[#222222] bg-black px-2 py-1 text-[11px] font-semibold text-zinc-200 hover:border-[#c0392b]/70"
+                                    className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                                   >
                                     Edit
                                   </button>
@@ -891,7 +891,7 @@ export default function DebtsPage() {
                                     <button
                                       type="button"
                                       onClick={() => handleMarkSettled(d)}
-                                      className="mr-2 rounded-md border border-[#222222] bg-black px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:border-emerald-600"
+                                      className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:border-emerald-600"
                                     >
                                       Mark settled
                                     </button>
@@ -900,7 +900,7 @@ export default function DebtsPage() {
                                     type="button"
                                     onClick={() => handleDeleteDebt(d)}
                                     disabled={deletingId === d.id}
-                                    className="rounded-md border border-[#222222] bg-black px-2 py-1 text-[11px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
+                                    className="rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
                                   >
                                     {deletingId === d.id ? "Deleting..." : "Delete"}
                                   </button>
@@ -925,84 +925,84 @@ export default function DebtsPage() {
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
             <div className="absolute inset-0 bg-black/70" onClick={closeModal} />
-            <div className="relative w-full max-w-lg rounded-lg border border-[#222222] bg-[#111111] p-6 shadow-xl">
-              <h2 className="text-lg font-semibold text-white">
+            <div className="relative w-full max-w-lg rounded-lg border border-app surface p-6 shadow-xl">
+              <h2 className="text-lg font-semibold text-app">
                 {editingId ? "Edit" : "Add"} {activeTab === "receivables" ? "Receivable" : "Payable"}
               </h2>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="space-y-1 text-xs text-zinc-400 sm:col-span-2">
+                <label className="space-y-1 text-xs text-muted sm:col-span-2">
                   <span className="font-semibold">Name</span>
                   <input
                     type="text"
                     value={form.name}
                     onChange={(e) => updateField("name", e.target.value)}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
-                <label className="space-y-1 text-xs text-zinc-400">
+                <label className="space-y-1 text-xs text-muted">
                   <span className="font-semibold">Amount</span>
                   <input
                     type="number"
                     value={form.amount}
                     onChange={(e) => updateField("amount", e.target.value)}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
-                <label className="space-y-1 text-xs text-zinc-400">
+                <label className="space-y-1 text-xs text-muted">
                   <span className="font-semibold">Currency</span>
                   <select
                     value={form.currency}
                     onChange={(e) => updateField("currency", e.target.value as DebtFormState["currency"])}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   >
                     {CURRENCIES.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </label>
-                <label className="space-y-1 text-xs text-zinc-400 sm:col-span-2">
+                <label className="space-y-1 text-xs text-muted sm:col-span-2">
                   <span className="font-semibold">Reason</span>
                   <input
                     type="text"
                     value={form.reason}
                     onChange={(e) => updateField("reason", e.target.value)}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
-                <label className="space-y-1 text-xs text-zinc-400">
+                <label className="space-y-1 text-xs text-muted">
                   <span className="font-semibold">Date</span>
                   <input
                     type="date"
                     value={form.date}
                     onChange={(e) => updateField("date", e.target.value)}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
-                <label className="space-y-1 text-xs text-zinc-400">
+                <label className="space-y-1 text-xs text-muted">
                   <span className="font-semibold">Due date (optional)</span>
                   <input
                     type="date"
                     value={form.dueDate}
                     onChange={(e) => updateField("dueDate", e.target.value)}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
-                <label className="space-y-1 text-xs text-zinc-400 sm:col-span-2">
+                <label className="space-y-1 text-xs text-muted sm:col-span-2">
                   <span className="font-semibold">Notes</span>
                   <textarea
                     value={form.notes}
                     onChange={(e) => updateField("notes", e.target.value)}
                     rows={2}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
                 {editingId && (
-                  <label className="space-y-1 text-xs text-zinc-400 sm:col-span-2">
+                  <label className="space-y-1 text-xs text-muted sm:col-span-2">
                     <span className="font-semibold">Status</span>
                     <select
                       value={form.status}
                       onChange={(e) => updateField("status", e.target.value as DebtFormState["status"])}
-                      className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white outline-none focus:border-[#c0392b]"
+                      className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                     >
                       {STATUSES.map((s) => (
                         <option key={s} value={s}>{statusLabel(s)}</option>
@@ -1015,7 +1015,7 @@ export default function DebtsPage() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-md border border-[#222222] px-4 py-2 text-sm font-semibold text-zinc-300"
+                  className="rounded-md border border-app px-4 py-2 text-sm font-semibold text-app"
                 >
                   Cancel
                 </button>
@@ -1023,7 +1023,7 @@ export default function DebtsPage() {
                   type="button"
                   onClick={handleSaveDebt}
                   disabled={isSaving}
-                  className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
                 >
                   {isSaving ? "Saving..." : "Save"}
                 </button>
@@ -1036,38 +1036,38 @@ export default function DebtsPage() {
         {viewDebt && !("_isSupplier" in viewDebt) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
             <div className="absolute inset-0 bg-black/70" onClick={closeView} />
-            <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-[#222222] bg-[#111111] p-6 shadow-xl">
-              <h2 className="text-lg font-semibold text-white">{viewDebt.name ?? "Debt"}</h2>
-              <p className="mt-1 text-xs text-zinc-400">
+            <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-app surface p-6 shadow-xl">
+              <h2 className="text-lg font-semibold text-app">{viewDebt.name ?? "Debt"}</h2>
+              <p className="mt-1 text-xs text-muted">
                 {viewDebt.type === "receivable" ? "Receivable" : "Payable"} • {viewDebt.reason ?? "-"}
               </p>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-zinc-500">Original</span>
-                  <p className="font-semibold text-white">{formatMoney(viewDebt.original_amount, viewDebt.currency ?? "AED")}</p>
+                  <p className="font-semibold text-app">{formatMoney(viewDebt.original_amount, viewDebt.currency ?? "AED")}</p>
                 </div>
                 <div>
                   <span className="text-zinc-500">Paid</span>
-                  <p className="font-semibold text-white">{formatMoney(viewDebt.amount_paid, viewDebt.currency ?? "AED")}</p>
+                  <p className="font-semibold text-app">{formatMoney(viewDebt.amount_paid, viewDebt.currency ?? "AED")}</p>
                 </div>
                 <div>
                   <span className="text-zinc-500">Remaining</span>
-                  <p className="font-semibold text-[#c0392b]">{formatMoney(viewDebt.amount_remaining, viewDebt.currency ?? "AED")}</p>
+                  <p className="font-semibold text-[var(--color-accent)]">{formatMoney(viewDebt.amount_remaining, viewDebt.currency ?? "AED")}</p>
                 </div>
                 <div>
                   <span className="text-zinc-500">Status</span>
-                  <p className="font-semibold text-white">{statusLabel(viewDebt.status)}</p>
+                  <p className="font-semibold text-app">{statusLabel(viewDebt.status)}</p>
                 </div>
               </div>
 
-              <div className="mt-6 border-t border-[#222222] pt-4">
+              <div className="mt-6 border-t border-app pt-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Payment history</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Payment history</h3>
                   {(viewDebt.amount_remaining ?? 0) > 0 && (
                     <button
                       type="button"
                       onClick={() => setIsPaymentFormOpen((p) => !p)}
-                      className="rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:border-[#c0392b]/70"
+                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                     >
                       {isPaymentFormOpen ? "Cancel" : "Add Payment"}
                     </button>
@@ -1075,32 +1075,32 @@ export default function DebtsPage() {
                 </div>
 
                 {isPaymentFormOpen && (viewDebt.amount_remaining ?? 0) > 0 && (
-                  <div className="mt-3 rounded-md border border-[#222222] bg-[#0a0a0a] p-3 text-xs">
+                  <div className="mt-3 rounded-md border border-app bg-[#0a0a0a] p-3 text-xs">
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <label className="space-y-1">
-                        <span className="font-semibold text-zinc-200">Amount</span>
+                        <span className="font-semibold text-app">Amount</span>
                         <input
                           type="number"
                           value={newPaymentAmount}
                           onChange={(e) => setNewPaymentAmount(e.target.value)}
-                          className="w-full rounded-md border border-[#222222] bg-black px-2 py-1 text-white outline-none focus:border-[#c0392b]"
+                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
                         />
                       </label>
                       <label className="space-y-1">
-                        <span className="font-semibold text-zinc-200">Date</span>
+                        <span className="font-semibold text-app">Date</span>
                         <input
                           type="date"
                           value={newPaymentDate}
                           onChange={(e) => setNewPaymentDate(e.target.value)}
-                          className="w-full rounded-md border border-[#222222] bg-black px-2 py-1 text-white outline-none focus:border-[#c0392b]"
+                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
                         />
                       </label>
                       <label className="space-y-1 sm:col-span-2">
-                        <span className="font-semibold text-zinc-200">Pocket</span>
+                        <span className="font-semibold text-app">Pocket</span>
                         <select
                           value={newPaymentPocket}
                           onChange={(e) => setNewPaymentPocket(e.target.value)}
-                          className="w-full rounded-md border border-[#222222] bg-black px-2 py-1 text-white outline-none focus:border-[#c0392b]"
+                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
                         >
                           {(POCKETS_BY_CURRENCY[viewDebt.currency ?? "AED"] ?? []).map((p) => (
                             <option key={p} value={p}>{p}</option>
@@ -1108,12 +1108,12 @@ export default function DebtsPage() {
                         </select>
                       </label>
                       <label className="space-y-1 sm:col-span-2">
-                        <span className="font-semibold text-zinc-200">Notes</span>
+                        <span className="font-semibold text-app">Notes</span>
                         <input
                           type="text"
                           value={newPaymentNote}
                           onChange={(e) => setNewPaymentNote(e.target.value)}
-                          className="w-full rounded-md border border-[#222222] bg-black px-2 py-1 text-white outline-none focus:border-[#c0392b]"
+                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
                         />
                       </label>
                     </div>
@@ -1123,7 +1123,7 @@ export default function DebtsPage() {
                         type="button"
                         onClick={handleAddPayment}
                         disabled={isAddingPayment}
-                        className="rounded-md bg-[#c0392b] px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                        className="rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-app disabled:opacity-50"
                       >
                         {isAddingPayment ? "Saving..." : "Save Payment"}
                       </button>
@@ -1142,11 +1142,11 @@ export default function DebtsPage() {
                     {debtPayments.map((p) => (
                       <div
                         key={p.id}
-                        className="flex flex-wrap items-center justify-between gap-2 border-b border-[#222222] pb-2 text-[11px] last:border-b-0"
+                        className="flex flex-wrap items-center justify-between gap-2 border-b border-app pb-2 text-[11px] last:border-b-0"
                       >
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-zinc-200">{formatDate(p.date)}</span>
-                          <span className="text-white">{formatMoney(p.amount, p.currency ?? 'AED')}</span>
+                          <span className="font-semibold text-app">{formatDate(p.date)}</span>
+                          <span className="text-app">{formatMoney(p.amount, p.currency ?? 'AED')}</span>
                           <span className="text-zinc-500">{p.pocket}</span>
                           {p.notes && <span className="text-zinc-500">{p.notes}</span>}
                         </div>
@@ -1154,7 +1154,7 @@ export default function DebtsPage() {
                           type="button"
                           onClick={() => handleDeletePayment(p)}
                           disabled={deletingPaymentId === p.id}
-                          className="rounded border border-[#222222] bg-black px-2 py-0.5 text-[10px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
+                          className="rounded border border-app bg-black px-2 py-0.5 text-[10px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
                         >
                           {deletingPaymentId === p.id ? "Removing..." : "Delete"}
                         </button>
@@ -1168,7 +1168,7 @@ export default function DebtsPage() {
                 <button
                   type="button"
                   onClick={closeView}
-                  className="rounded-md border border-[#222222] px-4 py-2 text-sm font-semibold text-zinc-300"
+                  className="rounded-md border border-app px-4 py-2 text-sm font-semibold text-app"
                 >
                   Close
                 </button>

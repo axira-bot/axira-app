@@ -539,21 +539,21 @@ export default function InvestorsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <div className="border-b border-[#222222] bg-[#111111] px-4 py-4">
-        <h1 className="text-xl font-semibold text-white">Investor Dashboard</h1>
-        <p className="mt-1 text-xs text-zinc-400">Manage investors and profit share returns.</p>
+    <div className="min-h-screen bg-app text-app">
+      <div className="border-b border-app surface px-4 py-4">
+        <h1 className="text-xl font-semibold text-app">Investor Dashboard</h1>
+        <p className="mt-1 text-xs text-muted">Manage investors and profit share returns.</p>
       </div>
 
-      <div className="flex border-b border-[#222222] bg-[#111111] px-4">
+      <div className="flex border-b border-app surface px-4">
         {(["Investors", "Returns", "Owner"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`border-b-2 px-4 py-3 text-sm font-medium transition ${
               activeTab === tab
-                ? "border-[#c0392b] text-[#c0392b]"
-                : "border-transparent text-zinc-400 hover:text-zinc-200"
+                ? "border-[var(--color-accent)] text-[var(--color-accent)]"
+                : "border-transparent text-muted hover:text-app"
             }`}
           >
             {tab}
@@ -571,15 +571,15 @@ export default function InvestorsPage() {
         {activeTab === "Investors" && (
           <>
             <div className="mb-4 grid gap-3 sm:grid-cols-3 items-end">
-              <div className="rounded-lg border border-[#222222] bg-[#111111] p-3">
-                <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+              <div className="rounded-lg border border-app surface p-3">
+                <div className="text-xs font-medium uppercase tracking-wide text-muted">
                   Total Capital (AED equivalent)
                 </div>
-                <div className="mt-2 text-xl font-semibold text-white">
+                <div className="mt-2 text-xl font-semibold text-app">
                   {formatMoney(effectiveTotalCapital, "AED")}
                 </div>
               </div>
-              <div className="space-y-1 text-xs text-zinc-300">
+              <div className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Override total capital (optional)</span>
                 <input
                   type="number"
@@ -588,7 +588,7 @@ export default function InvestorsPage() {
                   value={totalCapitalOverride}
                   onChange={(e) => setTotalCapitalOverride(e.target.value)}
                   placeholder={String(totalInvested || "")}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
                 <p className="text-[10px] text-zinc-500">
                   Leave empty to use sum of all investor capital.
@@ -598,21 +598,21 @@ export default function InvestorsPage() {
                 <button
                   type="button"
                   onClick={openAdd}
-                  className="h-10 rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a03020]"
+                  className="h-10 rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:bg-[#a03020]"
                 >
                   Add Investor
                 </button>
               </div>
             </div>
             {isLoading ? (
-              <div className="rounded-lg border border-[#222222] bg-[#111111] p-6 text-center text-zinc-400">
+              <div className="rounded-lg border border-app surface p-6 text-center text-muted">
                 Loading...
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-[#222222] bg-[#111111]">
+              <div className="overflow-x-auto rounded-lg border border-app surface">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-[#222222] text-zinc-400">
+                    <tr className="border-b border-app text-muted">
                       <th className="px-4 py-3 font-semibold">Name</th>
                       <th className="px-4 py-3 font-semibold">Investment (AED eq)</th>
                       <th className="px-4 py-3 font-semibold">Profit share %</th>
@@ -633,9 +633,9 @@ export default function InvestorsPage() {
                           ? (capital / effectiveTotalCapital) * 100
                           : 0;
                       return (
-                        <tr key={i.id} className="border-b border-[#222222] last:border-0">
-                          <td className="px-4 py-3 text-white">{i.name ?? "—"}</td>
-                          <td className="px-4 py-3 text-zinc-300">
+                        <tr key={i.id} className="border-b border-app last:border-0">
+                          <td className="px-4 py-3 text-app">{i.name ?? "—"}</td>
+                          <td className="px-4 py-3 text-app">
                             {i.original_amount != null && i.original_currency ? (
                               <>
                                 {formatNumber(i.original_amount)} {i.original_currency}{" "}
@@ -647,13 +647,13 @@ export default function InvestorsPage() {
                               formatMoney(i.investment_aed, "AED")
                             )}
                           </td>
-                          <td className="px-4 py-3 text-zinc-300">{sharePct.toFixed(1)}%</td>
-                          <td className="px-4 py-3 text-zinc-300">{formatMoney(earned, "AED")}</td>
-                          <td className="px-4 py-3 text-zinc-300">{formatMoney(withdrawn, "AED")}</td>
-                          <td className="px-4 py-3 font-medium text-[#c0392b]">{formatMoney(balance, "AED")}</td>
+                          <td className="px-4 py-3 text-app">{sharePct.toFixed(1)}%</td>
+                          <td className="px-4 py-3 text-app">{formatMoney(earned, "AED")}</td>
+                          <td className="px-4 py-3 text-app">{formatMoney(withdrawn, "AED")}</td>
+                          <td className="px-4 py-3 font-medium text-[var(--color-accent)]">{formatMoney(balance, "AED")}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
-                              <button type="button" onClick={() => openEdit(i)} className="text-[#c0392b] hover:underline">
+                              <button type="button" onClick={() => openEdit(i)} className="text-[var(--color-accent)] hover:underline">
                                 Edit
                               </button>
                               <button
@@ -694,28 +694,28 @@ export default function InvestorsPage() {
 
         {activeTab === "Returns" && (
           <>
-            <div className="mb-4 rounded-lg border border-[#222222] bg-[#111111] p-4">
-              <h3 className="text-sm font-semibold text-zinc-300">Running total</h3>
+            <div className="mb-4 rounded-lg border border-app surface p-4">
+              <h3 className="text-sm font-semibold text-app">Running total</h3>
               <div className="mt-2 grid gap-2 text-sm sm:grid-cols-3">
                 <div>
                   <span className="text-zinc-500">Total invested</span>
-                  <p className="font-semibold text-white">{formatMoney(totalInvested, "AED")}</p>
+                  <p className="font-semibold text-app">{formatMoney(totalInvested, "AED")}</p>
                 </div>
                 <div>
                   <span className="text-zinc-500">Total returned</span>
-                  <p className="font-semibold text-white">{formatMoney(totalReturned, "AED")}</p>
+                  <p className="font-semibold text-app">{formatMoney(totalReturned, "AED")}</p>
                 </div>
                 <div>
                   <span className="text-zinc-500">ROI %</span>
-                  <p className="font-semibold text-[#c0392b]">{roiPercent.toFixed(1)}%</p>
+                  <p className="font-semibold text-[var(--color-accent)]">{roiPercent.toFixed(1)}%</p>
                 </div>
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-[#222222] bg-[#111111]">
+            <div className="overflow-x-auto rounded-lg border border-app surface">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#222222] text-zinc-400">
+                  <tr className="border-b border-app text-muted">
                     <th className="px-4 py-3 font-semibold">Month</th>
                     <th className="px-4 py-3 font-semibold">Total profit</th>
                     <th className="px-4 py-3 font-semibold">Investor</th>
@@ -739,11 +739,11 @@ export default function InvestorsPage() {
                       const status = ret ? (ret.status || "pending") : "pending";
                       const isPaid = status.toLowerCase() === "paid";
                       return (
-                        <tr key={key} className="border-b border-[#222222] last:border-0">
-                          <td className="px-4 py-3 text-zinc-300">{month}</td>
-                          <td className="px-4 py-3 text-white">{formatMoney(totalProfit, "AED")}</td>
-                          <td className="px-4 py-3 text-white">{inv.name ?? "—"}</td>
-                          <td className="px-4 py-3 font-semibold text-[#c0392b]">{formatMoney(share, "AED")}</td>
+                        <tr key={key} className="border-b border-app last:border-0">
+                          <td className="px-4 py-3 text-app">{month}</td>
+                          <td className="px-4 py-3 text-app">{formatMoney(totalProfit, "AED")}</td>
+                          <td className="px-4 py-3 text-app">{inv.name ?? "—"}</td>
+                          <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(share, "AED")}</td>
                           <td className="px-4 py-3">
                             <span className={isPaid ? "text-emerald-400" : "text-amber-400"}>{status}</span>
                           </td>
@@ -754,14 +754,14 @@ export default function InvestorsPage() {
                                   type="button"
                                   onClick={() => handleReinvestReturn(inv.id, month, totalProfit, share)}
                                   disabled={markingPaid === key}
-                                  className="rounded bg-zinc-700 px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
+                                  className="rounded bg-zinc-700 px-2 py-1 text-xs font-medium text-app disabled:opacity-50"
                                 >
                                   {markingPaid === key ? "..." : "Reinvest"}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => openPayOutModal(inv.id, month, totalProfit, share)}
-                                  className="rounded bg-[#c0392b] px-2 py-1 text-xs font-medium text-white"
+                                  className="rounded bg-[var(--color-accent)] px-2 py-1 text-xs font-medium text-app"
                                 >
                                   Pay Out
                                 </button>
@@ -783,20 +783,20 @@ export default function InvestorsPage() {
         {activeTab === "Owner" && (
           <>
             <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-sm space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              <div className="rounded-lg border border-app surface p-4 text-sm space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                   Owner
                 </div>
-                <label className="space-y-1 text-xs text-zinc-300">
+                <label className="space-y-1 text-xs text-app">
                   <span className="font-semibold">Name</span>
                   <input
                     type="text"
                     value={ownerName}
                     onChange={(e) => setOwnerName(e.target.value)}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                   />
                 </label>
-                <label className="space-y-1 text-xs text-zinc-300">
+                <label className="space-y-1 text-xs text-app">
                   <span className="font-semibold">My Capital</span>
                   <div className="flex gap-2">
                     <input
@@ -805,14 +805,14 @@ export default function InvestorsPage() {
                       step="any"
                       value={ownerCapital}
                       onChange={(e) => setOwnerCapital(e.target.value)}
-                      className="flex-1 rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                      className="flex-1 rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                     />
                     <select
                       value={ownerCapitalCurrency}
                       onChange={(e) =>
                         setOwnerCapitalCurrency(e.target.value as "AED" | "DZD" | "EUR" | "USD")
                       }
-                      className="w-20 rounded-md border border-[#222222] bg-[#0a0a0a] px-2 py-2 text-sm text-white"
+                      className="w-20 rounded-md border border-app bg-[#0a0a0a] px-2 py-2 text-sm text-app"
                     >
                       {CURRENCIES.map((c) => (
                         <option key={c} value={c}>
@@ -837,11 +837,11 @@ export default function InvestorsPage() {
                   </span>
                 </div>
               </div>
-              <div className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-sm space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              <div className="rounded-lg border border-app surface p-4 text-sm space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                   Business
                 </div>
-                <label className="space-y-1 text-xs text-zinc-300">
+                <label className="space-y-1 text-xs text-app">
                   <span className="font-semibold">Business Valuation (AED)</span>
                   <input
                     type="number"
@@ -849,10 +849,10 @@ export default function InvestorsPage() {
                     step="any"
                     value={businessValuation}
                     onChange={(e) => setBusinessValuation(e.target.value)}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                   />
                 </label>
-                <label className="space-y-1 text-xs text-zinc-300">
+                <label className="space-y-1 text-xs text-app">
                   <span className="font-semibold">Share price (AED)</span>
                   <input
                     type="number"
@@ -860,11 +860,11 @@ export default function InvestorsPage() {
                     step="any"
                     value={sharePrice}
                     onChange={(e) => setSharePrice(e.target.value)}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                   />
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="space-y-1 text-xs text-zinc-300">
+                  <label className="space-y-1 text-xs text-app">
                     <span className="font-semibold">Total shares</span>
                     <input
                       type="number"
@@ -872,10 +872,10 @@ export default function InvestorsPage() {
                       step="1"
                       value={totalShares}
                       onChange={(e) => setTotalShares(e.target.value)}
-                      className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                      className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                     />
                   </label>
-                  <label className="space-y-1 text-xs text-zinc-300">
+                  <label className="space-y-1 text-xs text-app">
                     <span className="font-semibold">Available shares</span>
                     <input
                       type="number"
@@ -883,20 +883,20 @@ export default function InvestorsPage() {
                       step="1"
                       value={availableShares}
                       onChange={(e) => setAvailableShares(e.target.value)}
-                      className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                      className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                     />
                   </label>
                 </div>
               </div>
-              <div className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-sm space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              <div className="rounded-lg border border-app surface p-4 text-sm space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                   Notes
                 </div>
                 <textarea
                   value={ownerNotes}
                   onChange={(e) => setOwnerNotes(e.target.value)}
                   rows={8}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
                 <div className="flex justify-end">
                   <button
@@ -923,7 +923,7 @@ export default function InvestorsPage() {
                       }
                       setIsSavingOwner(false);
                     }}
-                    className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
                   >
                     {isSavingOwner ? "Saving..." : "Save Owner Settings"}
                   </button>
@@ -945,38 +945,38 @@ export default function InvestorsPage() {
               const investorPct = valuation > 0 ? (investorCapitalAed / valuation) * 100 : 0;
               const availablePct = Math.max(0, 100 - myPct - investorPct);
               return (
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-sm space-y-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                <div className="rounded-lg border border-app surface p-4 text-sm space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                     Ownership Summary
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     <div>
                       <div className="text-zinc-500 text-xs">My equity (AED)</div>
-                      <div className="text-lg font-semibold text-white">
+                      <div className="text-lg font-semibold text-app">
                         {formatMoney(ownerAed, "AED")}
                       </div>
                     </div>
                     <div>
                       <div className="text-zinc-500 text-xs">Business worth</div>
-                      <div className="text-lg font-semibold text-white">
+                      <div className="text-lg font-semibold text-app">
                         {formatMoney(valuation, "AED")}
                       </div>
                     </div>
                     <div>
                       <div className="text-zinc-500 text-xs">My ownership %</div>
-                      <div className="text-lg font-semibold text-white">
+                      <div className="text-lg font-semibold text-app">
                         {myPct.toFixed(1)}%
                       </div>
                     </div>
                     <div>
                       <div className="text-zinc-500 text-xs">Investor ownership %</div>
-                      <div className="text-lg font-semibold text-white">
+                      <div className="text-lg font-semibold text-app">
                         {investorPct.toFixed(1)}%
                       </div>
                     </div>
                     <div>
                       <div className="text-zinc-500 text-xs">Available for new investors %</div>
-                      <div className="text-lg font-semibold text-[#c0392b]">
+                      <div className="text-lg font-semibold text-[var(--color-accent)]">
                         {availablePct.toFixed(1)}%
                       </div>
                     </div>
@@ -992,19 +992,19 @@ export default function InvestorsPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={closeModal} />
-          <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-white">{editingId ? "Edit Investor" : "Add Investor"}</h2>
+          <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
+            <h2 className="text-lg font-semibold text-app">{editingId ? "Edit Investor" : "Add Investor"}</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Full name</span>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => updateField("name", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Investment amount</span>
                 <input
                   type="number"
@@ -1012,15 +1012,15 @@ export default function InvestorsPage() {
                   step="any"
                   value={form.investmentAmount}
                   onChange={(e) => updateField("investmentAmount", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Currency</span>
                 <select
                   value={form.currency}
                   onChange={(e) => updateField("currency", e.target.value as (typeof CURRENCIES)[number])}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 >
                   {CURRENCIES.map((c) => (
                     <option key={c} value={c}>
@@ -1030,7 +1030,7 @@ export default function InvestorsPage() {
                 </select>
               </label>
               {form.currency === "DZD" && (
-                <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+                <label className="space-y-1 text-xs text-app sm:col-span-2">
                   <span className="font-semibold">Rate (DZD per AED, to convert to AED)</span>
                   <input
                     type="number"
@@ -1038,20 +1038,20 @@ export default function InvestorsPage() {
                     step="any"
                     value={form.rate}
                     onChange={(e) => updateField("rate", e.target.value)}
-                    className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                   />
                 </label>
               )}
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Investment date</span>
                 <input
                   type="date"
                   value={form.investmentDate}
                   onChange={(e) => updateField("investmentDate", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Profit share %</span>
                 <input
                   type="number"
@@ -1060,16 +1060,16 @@ export default function InvestorsPage() {
                   step="0.01"
                   value={form.profitSharePercent}
                   onChange={(e) => updateField("profitSharePercent", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Notes</span>
                 <textarea
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
                   rows={2}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
               {form.investmentAmount && (
@@ -1083,7 +1083,7 @@ export default function InvestorsPage() {
                 type="button"
                 onClick={closeModal}
                 disabled={isSaving}
-                className="rounded-md border border-[#222222] px-4 py-2 text-sm font-medium text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app px-4 py-2 text-sm font-medium text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1091,7 +1091,7 @@ export default function InvestorsPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
@@ -1109,25 +1109,25 @@ export default function InvestorsPage() {
               if (!isSavingPayOut) setPayOutReturn(null);
             }}
           />
-          <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-white">Pay out investor return</h2>
-            <p className="mt-1 text-xs text-zinc-400">
+          <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
+            <h2 className="text-lg font-semibold text-app">Pay out investor return</h2>
+            <p className="mt-1 text-xs text-muted">
               This will create a movement Out with category <span className="font-semibold">Investor Return</span> and mark this return as paid.
             </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 text-xs text-zinc-300">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 text-xs text-app">
               <div>
                 <span className="text-zinc-500">Investor</span>
-                <div className="mt-1 text-white">
+                <div className="mt-1 text-app">
                   {investors.find((i) => i.id === payOutReturn.investorId)?.name ?? "—"}
                 </div>
               </div>
               <div>
                 <span className="text-zinc-500">Month</span>
-                <div className="mt-1 text-white">{payOutReturn.month}</div>
+                <div className="mt-1 text-app">{payOutReturn.month}</div>
               </div>
               <div>
                 <span className="text-zinc-500">Amount</span>
-                <div className="mt-1 text-[#c0392b] font-semibold">
+                <div className="mt-1 text-[var(--color-accent)] font-semibold">
                   {formatMoney(payOutReturn.investorShare, "AED")}
                 </div>
               </div>
@@ -1137,7 +1137,7 @@ export default function InvestorsPage() {
                   type="date"
                   value={payOutDate}
                   onChange={(e) => setPayOutDate(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
                 />
               </label>
               <label className="space-y-1">
@@ -1145,7 +1145,7 @@ export default function InvestorsPage() {
                 <select
                   value={payOutPocket}
                   onChange={(e) => setPayOutPocket(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-xs text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
                 >
                   {AED_POCKETS.map((p) => (
                     <option key={p} value={p}>
@@ -1162,7 +1162,7 @@ export default function InvestorsPage() {
                   if (!isSavingPayOut) setPayOutReturn(null);
                 }}
                 disabled={isSavingPayOut}
-                className="rounded-md border border-[#222222] px-4 py-2 text-sm font-medium text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app px-4 py-2 text-sm font-medium text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1170,7 +1170,7 @@ export default function InvestorsPage() {
                 type="button"
                 onClick={handleMarkReturnPaid}
                 disabled={isSavingPayOut}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 {isSavingPayOut ? "Paying..." : "Confirm payout"}
               </button>
@@ -1192,13 +1192,13 @@ export default function InvestorsPage() {
               }
             }}
           />
-          <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-[#222222] bg-[#111111] p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-white">Add bonus</h2>
-            <p className="mt-1 text-xs text-zinc-400">
+          <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
+            <h2 className="text-lg font-semibold text-app">Add bonus</h2>
+            <p className="mt-1 text-xs text-muted">
               Record an extra payout for this investor. This will count as withdrawn and create a movement.
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Amount (AED)</span>
                 <input
                   type="number"
@@ -1206,24 +1206,24 @@ export default function InvestorsPage() {
                   step="any"
                   value={bonusAmount}
                   onChange={(e) => setBonusAmount(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Date</span>
                 <input
                   type="date"
                   value={bonusDate}
                   onChange={(e) => setBonusDate(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
-              <label className="space-y-1 text-xs text-zinc-300">
+              <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Pay from pocket</span>
                 <select
                   value={bonusPocket}
                   onChange={(e) => setBonusPocket(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 >
                   {AED_POCKETS.map((p) => (
                     <option key={p} value={p}>
@@ -1232,13 +1232,13 @@ export default function InvestorsPage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1 text-xs text-zinc-300 sm:col-span-2">
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Reason (optional)</span>
                 <input
                   type="text"
                   value={bonusReason}
                   onChange={(e) => setBonusReason(e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
                 />
               </label>
             </div>
@@ -1252,7 +1252,7 @@ export default function InvestorsPage() {
                     setBonusReason("");
                   }
                 }}
-                className="rounded-md border border-[#222222] px-4 py-2 text-sm font-medium text-zinc-200 disabled:opacity-50"
+                className="rounded-md border border-app px-4 py-2 text-sm font-medium text-app disabled:opacity-50"
                 disabled={isSavingBonus}
               >
                 Cancel
@@ -1323,7 +1323,7 @@ export default function InvestorsPage() {
                   setBonusAmount("");
                   setBonusReason("");
                 }}
-                className="rounded-md bg-[#c0392b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 {isSavingBonus ? "Saving..." : "Save bonus"}
               </button>
