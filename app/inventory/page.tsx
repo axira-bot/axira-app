@@ -510,10 +510,10 @@ export default function InventoryPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Inventory</h1>
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
+          <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Inventory</h1>
             <p className="text-sm font-medium text-[#c0392b]">Cars</p>
           </div>
           <button

@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Car, Deal, Movement, Rent } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/context/AuthContext";
 
 type CashPosition = {
   id: string;
@@ -83,7 +84,30 @@ function timeAgo(iso: string): string {
   return `${year} year${year !== 1 ? "s" : ""} ago`;
 }
 
+function StaffBlurGate({
+  children,
+  show,
+}: {
+  children: React.ReactNode;
+  show: boolean;
+}) {
+  if (!show) return <>{children}</>;
+  return (
+    <div className="relative">
+      <div className="pointer-events-none select-none blur-[6px]">{children}</div>
+      <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-[#0a0a0a]/80">
+        <span className="text-sm font-medium text-zinc-400">
+          Managers &amp; Owners Only
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
+  const { role } = useAuth();
+  const isStaff = role === "staff";
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -446,11 +470,12 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-6 md:px-8">
         {/* Currency Rates */}
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-            Currency Rates (display only)
-          </h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StaffBlurGate show={isStaff}>
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+              Currency Rates (display only)
+            </h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { label: "DZD/AED", key: "rate_DZD" as RateKey },
               { label: "EUR/AED", key: "rate_EUR" as RateKey },
@@ -525,8 +550,9 @@ export default function DashboardPage() {
                 </div>
               );
             })}
-          </div>
-        </section>
+            </div>
+          </section>
+        </StaffBlurGate>
 
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
@@ -548,11 +574,12 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* Section 1 - Top stats */}
-            <section className="space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-                Overview
-              </h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StaffBlurGate show={isStaff}>
+              <section className="space-y-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                  Overview
+                </h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
                   <div className="text-xs font-medium uppercase tracking-wide text-zinc-400">
                     Total AED
@@ -585,8 +612,9 @@ export default function DashboardPage() {
                     {formatCurrency(pendingRevenueDzd || 0, "DZD")}
                   </div>
                 </div>
-              </div>
-            </section>
+                </div>
+              </section>
+            </StaffBlurGate>
 
             {/* Pending Items */}
             {(pendingClientPaymentsCount > 0 ||
@@ -595,6 +623,7 @@ export default function DashboardPage() {
               pendingConversionsCount > 0 ||
               pendingCommissionTotal > 0 ||
               nextRentDue) && (
+              <StaffBlurGate show={isStaff}>
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
                   Pending Items
@@ -717,14 +746,16 @@ export default function DashboardPage() {
                   )}
                 </div>
               </section>
+              </StaffBlurGate>
             )}
 
             {/* Activity Log */}
-            <section className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-                  Activity
-                </h2>
+            <StaffBlurGate show={isStaff}>
+              <section className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                    Activity
+                  </h2>
                 <Link
                   href="/activity"
                   className="text-xs font-medium text-[#c0392b] hover:underline"
@@ -760,16 +791,18 @@ export default function DashboardPage() {
                     ))}
                   </ul>
                 )}
-              </div>
-            </section>
+                </div>
+              </section>
+            </StaffBlurGate>
 
             {/* Section 2 - Cash Positions */}
-            <section className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-                  Cash Positions
-                </h2>
-              </div>
+            <StaffBlurGate show={isStaff}>
+              <section className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                    Cash Positions
+                  </h2>
+                </div>
 
               {cashPositions.length === 0 ? (
                 <div className="rounded-lg border border-[#222222] bg-[#111111] p-4 text-sm text-zinc-400">
@@ -852,7 +885,8 @@ export default function DashboardPage() {
                   ))}
                 </div>
               )}
-            </section>
+              </section>
+            </StaffBlurGate>
 
             {/* Section 3 - Inventory */}
             <section className="space-y-3">
@@ -943,41 +977,43 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-                  Recent Movements
-                </h2>
-                <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
-                  {movements.length === 0 ? (
-                    <div className="text-sm text-zinc-400">
-                      No movements yet.
-                    </div>
-                  ) : (
-                    <div className="space-y-3 text-xs">
-                      {movements.map((movement) => (
-                        <div
-                          key={movement.id}
-                          className="flex flex-col gap-1 border-b border-[#222222] pb-3 last:border-b-0 last:pb-0"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium">
-                              {movement.category}
-                            </span>
-                            <span className="text-[10px] text-zinc-400">
-                              {formatDate(movement.date ?? movement.created_at)}
-                            </span>
+              <StaffBlurGate show={isStaff}>
+                <div className="space-y-3">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+                    Recent Movements
+                  </h2>
+                  <div className="rounded-lg border border-[#222222] bg-[#111111] p-4">
+                    {movements.length === 0 ? (
+                      <div className="text-sm text-zinc-400">
+                        No movements yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-3 text-xs">
+                        {movements.map((movement) => (
+                          <div
+                            key={movement.id}
+                            className="flex flex-col gap-1 border-b border-[#222222] pb-3 last:border-b-0 last:pb-0"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium">
+                                {movement.category}
+                              </span>
+                              <span className="text-[10px] text-zinc-400">
+                                {formatDate(movement.date ?? movement.created_at)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-300">
+                              <span>
+                                {formatCurrency(movement.amount || 0, movement.currency ?? "AED")}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-300">
-                            <span>
-                              {formatCurrency(movement.amount || 0, movement.currency ?? "AED")}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </StaffBlurGate>
             </section>
           </>
         )}

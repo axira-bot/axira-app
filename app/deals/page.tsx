@@ -224,7 +224,6 @@ export default function DealsPage() {
   }, [deals]);
 
   const availableCars = useMemo(() => {
-    // Exclude cars that already have a deal, but keep the current editing car
     return cars.filter((c) => {
       if (!c.id) return false;
       if (editingDealId) {
