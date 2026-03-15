@@ -543,7 +543,7 @@ export default function EmployeesPage() {
 
       <div className="p-4">
         {error && (
-          <div className="mb-4 rounded-md border border-red-800 bg-red-950/30 px-4 py-2 text-sm text-red-200">
+          <div className="mb-4 rounded-md border border-red-800 bg-red-950/30 px-4 py-2 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -592,7 +592,7 @@ export default function EmployeesPage() {
                             className={
                               (e.status || "").toLowerCase() === "active"
                                 ? "text-emerald-400"
-                                : "text-zinc-500"
+                                : "text-gray-400"
                             }
                           >
                             {e.status ?? "—"}
@@ -644,7 +644,7 @@ export default function EmployeesPage() {
                   </tbody>
                 </table>
                 {employees.length === 0 && (
-                  <div className="p-6 text-center text-zinc-500">No employees yet. Add one to get started.</div>
+                  <div className="p-6 text-center text-gray-400">No employees yet. Add one to get started.</div>
                 )}
               </div>
             )}
@@ -705,7 +705,7 @@ export default function EmployeesPage() {
                 })}
               </ul>
               {Object.keys(pendingByEmployee).filter((id) => (pendingByEmployee[id] ?? 0) > 0).length === 0 && (
-                <p className="text-zinc-500">No pending commissions.</p>
+                <p className="text-gray-400">No pending commissions.</p>
               )}
             </div>
 
@@ -747,7 +747,7 @@ export default function EmployeesPage() {
                 </tbody>
               </table>
               {filteredCommissions.length === 0 && (
-                <div className="p-6 text-center text-zinc-500">No commissions match the filters.</div>
+                <div className="p-6 text-center text-gray-400">No commissions match the filters.</div>
               )}
             </div>
           </>
@@ -761,18 +761,18 @@ export default function EmployeesPage() {
           <div className="relative max-w-lg rounded-lg border border-app surface p-4 shadow-xl">
             <h2 className="text-lg font-semibold text-app">Employee details</h2>
             <dl className="mt-4 space-y-2 text-sm">
-              <div><dt className="text-zinc-500">Name</dt><dd className="text-app">{viewEmployee.name ?? "—"}</dd></div>
-              <div><dt className="text-zinc-500">Role</dt><dd className="text-app">{viewEmployee.role ?? "—"}</dd></div>
-              <div><dt className="text-zinc-500">Phone</dt><dd className="text-app">{viewEmployee.phone ?? "—"}</dd></div>
-              <div><dt className="text-zinc-500">Email</dt><dd className="text-app">{viewEmployee.email ?? "—"}</dd></div>
-              <div><dt className="text-zinc-500">Base salary</dt><dd className="text-app">{formatMoney(viewEmployee.base_salary, viewEmployee.salary_currency ?? "DZD")}</dd></div>
-              <div><dt className="text-zinc-500">Commission per deal</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_deal, "AED")}</dd></div>
+              <div><dt className="text-gray-400">Name</dt><dd className="text-app">{viewEmployee.name ?? "—"}</dd></div>
+              <div><dt className="text-gray-400">Role</dt><dd className="text-app">{viewEmployee.role ?? "—"}</dd></div>
+              <div><dt className="text-gray-400">Phone</dt><dd className="text-app">{viewEmployee.phone ?? "—"}</dd></div>
+              <div><dt className="text-gray-400">Email</dt><dd className="text-app">{viewEmployee.email ?? "—"}</dd></div>
+              <div><dt className="text-gray-400">Base salary</dt><dd className="text-app">{formatMoney(viewEmployee.base_salary, viewEmployee.salary_currency ?? "DZD")}</dd></div>
+              <div><dt className="text-gray-400">Commission per deal</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_deal, "AED")}</dd></div>
               {viewEmployee.role === "Manager" && (
-                <div><dt className="text-zinc-500">Commission (managed)</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_managed_deal, "AED")}</dd></div>
+                <div><dt className="text-gray-400">Commission (managed)</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_managed_deal, "AED")}</dd></div>
               )}
-              <div><dt className="text-zinc-500">Start date</dt><dd className="text-app">{formatDate(viewEmployee.start_date)}</dd></div>
-              <div><dt className="text-zinc-500">Status</dt><dd className="text-app">{viewEmployee.status ?? "—"}</dd></div>
-              {viewEmployee.notes && <div><dt className="text-zinc-500">Notes</dt><dd className="text-app whitespace-pre-wrap">{viewEmployee.notes}</dd></div>}
+              <div><dt className="text-gray-400">Start date</dt><dd className="text-app">{formatDate(viewEmployee.start_date)}</dd></div>
+              <div><dt className="text-gray-400">Status</dt><dd className="text-app">{viewEmployee.status ?? "—"}</dd></div>
+              {viewEmployee.notes && <div><dt className="text-gray-400">Notes</dt><dd className="text-app whitespace-pre-wrap">{viewEmployee.notes}</dd></div>}
             </dl>
             <div className="mt-4 flex justify-end">
               <button
@@ -813,7 +813,7 @@ export default function EmployeesPage() {
                 <select
                   value={paySalaryMonth}
                   onChange={(e) => setPaySalaryMonth(e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app"
                 >
                   {monthsForSelect.map((m) => (
                     <option key={m} value={m}>
@@ -854,7 +854,7 @@ export default function EmployeesPage() {
                 <select
                   value={paySalaryPocket}
                   onChange={(e) => setPaySalaryPocket(e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app"
                 >
                   {COMMISSION_POCKETS.map((p) => (
                     <option key={p} value={p}>
@@ -869,7 +869,7 @@ export default function EmployeesPage() {
                   type="date"
                   value={paySalaryDate}
                   onChange={(e) => setPaySalaryDate(e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app"
                 />
               </label>
               <label className="space-y-1 sm:col-span-2">
@@ -878,7 +878,7 @@ export default function EmployeesPage() {
                   value={paySalaryNotes}
                   onChange={(e) => setPaySalaryNotes(e.target.value)}
                   rows={2}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app"
                 />
               </label>
             </div>
@@ -928,31 +928,31 @@ export default function EmployeesPage() {
               return (
                 <div className="mt-3 space-y-3 text-xs text-app">
                   <div>
-                    <div className="text-zinc-500">Employee</div>
+                    <div className="text-gray-400">Employee</div>
                     <div className="text-app font-medium">{emp?.name ?? "—"}</div>
                   </div>
                   <div>
-                    <div className="text-zinc-500">Total pending commissions</div>
+                    <div className="text-gray-400">Total pending commissions</div>
                     <div className="text-[var(--color-accent)] font-semibold">
                       {formatMoney(total, "DZD")}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <label className="space-y-1">
-                      <span className="text-zinc-500">Date</span>
+                      <span className="text-gray-400">Date</span>
                       <input
                         type="date"
                         value={payAllDate}
                         onChange={(e) => setPayAllDate(e.target.value)}
-                        className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
+                        className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app"
                       />
                     </label>
                     <label className="space-y-1">
-                      <span className="text-zinc-500">Pocket</span>
+                      <span className="text-gray-400">Pocket</span>
                       <select
                         value={payAllPocket}
                         onChange={(e) => setPayAllPocket(e.target.value)}
-                        className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
+                        className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app"
                       >
                         {COMMISSION_POCKETS.map((p) => (
                           <option key={p} value={p}>
@@ -1005,7 +1005,7 @@ export default function EmployeesPage() {
                   type="text"
                   value={form.name}
                   onChange={(e) => updateField("name", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1013,7 +1013,7 @@ export default function EmployeesPage() {
                 <select
                   value={form.role}
                   onChange={(e) => updateField("role", e.target.value as (typeof ROLES)[number])}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 >
                   {ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -1027,7 +1027,7 @@ export default function EmployeesPage() {
                 <select
                   value={form.status}
                   onChange={(e) => updateField("status", e.target.value as (typeof STATUSES)[number])}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>
@@ -1042,7 +1042,7 @@ export default function EmployeesPage() {
                   type="text"
                   value={form.phone}
                   onChange={(e) => updateField("phone", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1051,7 +1051,7 @@ export default function EmployeesPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => updateField("email", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1063,12 +1063,12 @@ export default function EmployeesPage() {
                     step="1"
                     value={form.baseSalary}
                     onChange={(e) => updateField("baseSalary", e.target.value)}
-                    className="flex-1 rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                    className="flex-1 rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   />
                   <select
                     value={form.salaryCurrency}
                     onChange={(e) => updateField("salaryCurrency", e.target.value as (typeof SALARY_CURRENCIES)[number])}
-                    className="w-20 rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                    className="w-20 rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   >
                     {SALARY_CURRENCIES.map((c) => (
                       <option key={c} value={c}>{c}</option>
@@ -1084,7 +1084,7 @@ export default function EmployeesPage() {
                   step="1"
                   value={form.commissionPerDeal}
                   onChange={(e) => updateField("commissionPerDeal", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               {form.role === "Manager" && (
@@ -1096,7 +1096,7 @@ export default function EmployeesPage() {
                     step="1"
                     value={form.commissionPerManagedDeal}
                     onChange={(e) => updateField("commissionPerManagedDeal", e.target.value)}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   />
                 </label>
               )}
@@ -1106,7 +1106,7 @@ export default function EmployeesPage() {
                   type="date"
                   value={form.startDate}
                   onChange={(e) => updateField("startDate", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
@@ -1115,7 +1115,7 @@ export default function EmployeesPage() {
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
                   rows={2}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
             </div>

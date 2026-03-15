@@ -90,7 +90,7 @@ function DriveLinkIcon({ href }: { href: string }) {
       target="_blank"
       rel="noopener noreferrer"
       title="Open Google Drive folder"
-      className="inline-flex items-center justify-center rounded border border-app bg-[#0a0a0a] p-1.5 text-muted transition hover:border-[var(--color-accent)]/70 hover:text-app"
+      className="inline-flex items-center justify-center rounded border border-app bg-white p-1.5 text-muted transition hover:border-[var(--color-accent)]/70 hover:text-app"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -1179,7 +1179,7 @@ export default function DealsPage() {
         </div>
 
         {error && (
-          <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
             {error}
           </div>
         )}
@@ -1354,7 +1354,7 @@ export default function DealsPage() {
                   type="date"
                   value={form.date}
                   onChange={(e) => updateField("date", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1371,12 +1371,12 @@ export default function DealsPage() {
                     onFocus={() => setClientDropdownOpen(true)}
                     onBlur={() => setTimeout(() => setClientDropdownOpen(false), 200)}
                     placeholder="Search or select client..."
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                   {clientDropdownOpen && (
                     <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-48 overflow-y-auto rounded-md border border-app surface py-1 shadow-lg">
                       {filteredClientsForDropdown.length === 0 ? (
-                        <div className="px-3 py-2 text-xs text-zinc-500">No clients match</div>
+                        <div className="px-3 py-2 text-xs text-gray-400">No clients match</div>
                       ) : (
                         filteredClientsForDropdown.map((c) => (
                           <button
@@ -1391,7 +1391,7 @@ export default function DealsPage() {
                             className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-app hover:bg-[#222222]"
                           >
                             <span>{c.name || "—"}</span>
-                            {c.phone ? <span className="text-zinc-500 text-xs">{c.phone}</span> : null}
+                            {c.phone ? <span className="text-gray-400 text-xs">{c.phone}</span> : null}
                           </button>
                         ))
                       )}
@@ -1418,7 +1418,7 @@ export default function DealsPage() {
                 <select
                   value={form.carId}
                   onChange={(e) => updateField("carId", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="">Select a car (available)</option>
                   {availableCars.map((c) => (
@@ -1434,7 +1434,7 @@ export default function DealsPage() {
                 <select
                   value={form.employeeId}
                   onChange={(e) => updateField("employeeId", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="">No employee</option>
                   {employees.map((e) => (
@@ -1449,7 +1449,7 @@ export default function DealsPage() {
                       type="checkbox"
                       checked={form.isManagedDeal}
                       onChange={(e) => updateField("isManagedDeal", e.target.checked)}
-                      className="rounded border-app bg-[#0a0a0a] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                      className="rounded border-app bg-white text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                     />
                     <span>Fully managed (use manager commission rate)</span>
                   </label>
@@ -1462,7 +1462,7 @@ export default function DealsPage() {
                   type="number"
                   value={form.saleDzd}
                   onChange={(e) => updateField("saleDzd", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1472,7 +1472,7 @@ export default function DealsPage() {
                   type="number"
                   value={form.amountReceivedDzd}
                   onChange={(e) => updateField("amountReceivedDzd", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1489,7 +1489,7 @@ export default function DealsPage() {
                   type="number"
                   value={form.rate}
                   onChange={(e) => updateField("rate", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1507,7 +1507,7 @@ export default function DealsPage() {
                   value={form.saleUsd}
                   onChange={(e) => updateField("saleUsd", e.target.value)}
                   placeholder="e.g. 6450"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1522,7 +1522,7 @@ export default function DealsPage() {
                   <span className="font-semibold text-app">Car Cost AED</span>
                   <span className="text-app">{formatMoney(carCostAed, "AED")}</span>
                 </div>
-                <div className="mt-1 text-[11px] text-zinc-500">
+                <div className="mt-1 text-[11px] text-gray-400">
                   Auto-filled from selected car purchase price.
                 </div>
               </div>
@@ -1533,7 +1533,7 @@ export default function DealsPage() {
                   type="number"
                   value={form.shippingAed}
                   onChange={(e) => updateField("shippingAed", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1543,7 +1543,7 @@ export default function DealsPage() {
                   type="number"
                   value={form.inspectionAed}
                   onChange={(e) => updateField("inspectionAed", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1553,7 +1553,7 @@ export default function DealsPage() {
                   type="number"
                   value={form.recoveryAed}
                   onChange={(e) => updateField("recoveryAed", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1563,7 +1563,7 @@ export default function DealsPage() {
                   type="number"
                   value={form.maintenanceAed}
                   onChange={(e) => updateField("maintenanceAed", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1573,7 +1573,7 @@ export default function DealsPage() {
                   type="number"
                   value={form.otherAed}
                   onChange={(e) => updateField("otherAed", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1598,7 +1598,7 @@ export default function DealsPage() {
                   <span className="font-semibold text-app">Live Profit Preview</span>
                   <span className="text-[var(--color-accent)]">{formatMoney(profitPreview, "AED")}</span>
                 </div>
-                <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-500">
+                <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
                   <span>Total expenses</span>
                   <span>{formatMoney(totalExpenses, "AED")}</span>
                 </div>
@@ -1609,7 +1609,7 @@ export default function DealsPage() {
                 <select
                   value={form.status}
                   onChange={(e) => updateField("status", e.target.value as "pending" | "closed")}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="pending">pending</option>
                   <option value="closed">closed</option>
@@ -1625,7 +1625,7 @@ export default function DealsPage() {
                   value={form.driveLink}
                   onChange={(e) => updateField("driveLink", e.target.value)}
                   placeholder="https://drive.google.com/..."
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
@@ -1634,7 +1634,7 @@ export default function DealsPage() {
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
                   rows={3}
-                  className="w-full resize-none rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
@@ -1689,11 +1689,11 @@ export default function DealsPage() {
                   <span className="font-semibold text-app">Sale</span>
                   <span className="text-app">{formatMoney(viewDeal.sale_dzd, "DZD")}</span>
                 </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500">
+                <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
                   <span>Rate</span>
                   <span>{viewDeal.rate != null ? formatNumber(viewDeal.rate) : "-"}</span>
                 </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500">
+                <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
                   <span>Sale AED</span>
                   <span>{formatMoney(viewDeal.sale_aed, "AED")}</span>
                 </div>
@@ -1704,11 +1704,11 @@ export default function DealsPage() {
                   <span className="font-semibold text-app">Profit</span>
                   <span className="text-[var(--color-accent)]">{formatMoney(viewDeal.profit, "AED")}</span>
                 </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500">
+                <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
                   <span>Status</span>
                   <span className="text-app">{(viewDeal.status || "pending").toLowerCase()}</span>
                 </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500">
+                <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
                   <span>Shipping Paid</span>
                   <span className="text-app">{viewDeal.shipping_paid ? "Yes" : "No"}</span>
                 </div>
@@ -1752,7 +1752,7 @@ export default function DealsPage() {
                     Payment history
                   </div>
                   {(viewDeal.pending_dzd ?? 0) <= 0 ? (
-                    <span className="text-[11px] text-zinc-500">
+                    <span className="text-[11px] text-gray-400">
                       This deal has no pending payments
                     </span>
                   ) : (
@@ -1765,7 +1765,7 @@ export default function DealsPage() {
                     </button>
                   )}
                 </div>
-                <div className="mt-2 rounded-md border border-app bg-[#0a0a0a] p-2 text-[11px] text-app">
+                <div className="mt-2 rounded-md border border-app bg-white p-2 text-[11px] text-app">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex flex-col">
                       <span className="text-xs font-semibold text-app">Collected DZD</span>
@@ -1782,7 +1782,7 @@ export default function DealsPage() {
                   </div>
                 </div>
                 {isPaymentFormOpen && (
-                  <div className="mt-2 flex flex-col gap-2 rounded-md border border-app bg-[#0a0a0a] p-2 text-[11px] text-app">
+                  <div className="mt-2 flex flex-col gap-2 rounded-md border border-app bg-white p-2 text-[11px] text-app">
                     {(() => {
                       const pendingDzd = viewDeal.pending_dzd ?? 0;
                       const paymentAmount = parseNum(newPaymentAmount);
@@ -1860,7 +1860,7 @@ export default function DealsPage() {
                           <span className="text-app">
                             {formatMoney(p.dzd, "DZD")}
                           </span>
-                          {p.notes ? <span className="text-zinc-500">{p.notes}</span> : null}
+                          {p.notes ? <span className="text-gray-400">{p.notes}</span> : null}
                         </div>
                         <button
                           type="button"
@@ -1915,7 +1915,7 @@ export default function DealsPage() {
                   type="text"
                   value={quickAddName}
                   onChange={(e) => setQuickAddName(e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="block space-y-1 text-xs text-app">
@@ -1924,7 +1924,7 @@ export default function DealsPage() {
                   type="text"
                   value={quickAddPhone}
                   onChange={(e) => setQuickAddPhone(e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>

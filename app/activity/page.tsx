@@ -130,7 +130,7 @@ export default function ActivityPage() {
         </header>
 
         {error && (
-          <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
             {error}
           </div>
         )}
@@ -142,7 +142,7 @@ export default function ActivityPage() {
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-muted">
@@ -151,7 +151,7 @@ export default function ActivityPage() {
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-muted">
@@ -159,7 +159,7 @@ export default function ActivityPage() {
             <select
               value={entityFilter}
               onChange={(e) => setEntityFilter(e.target.value as ActivityEntity | "")}
-              className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
             >
               {ENTITY_OPTIONS.map((o) => (
                 <option key={o.value || "all"} value={o.value}>
@@ -192,15 +192,15 @@ export default function ActivityPage() {
                     <tr key={a.id} className="border-b border-app last:border-b-0">
                       <td className="px-4 py-3 text-app whitespace-nowrap">
                         {formatDate(a.created_at)}
-                        <span className="ml-2 text-zinc-500">({timeAgo(a.created_at)})</span>
+                        <span className="ml-2 text-gray-400">({timeAgo(a.created_at)})</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full border border-[#333] bg-[#1a1a1a] px-2 py-0.5 text-[11px] font-medium text-app">
+                        <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-app">
                           {a.action}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full border border-[#333] bg-[#1a1a1a] px-2 py-0.5 text-[11px] font-medium text-app">
+                        <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-app">
                           {displayType(a.entity)}
                         </span>
                       </td>

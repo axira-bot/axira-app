@@ -587,7 +587,7 @@ export default function DashboardPage() {
         {error && (
           <div
             className="rounded-md border px-3 py-2 text-xs"
-            style={{ borderColor: "var(--color-primary)", background: "rgba(91,15,21,0.4)", color: "var(--color-text)" }}
+            style={{ borderColor: "var(--color-primary)", background: "rgba(196,18,48,0.08)", color: "var(--color-text)" }}
           >
             {error}
           </div>
@@ -668,7 +668,7 @@ export default function DashboardPage() {
                     <Link
                       href="/deals"
                       className="rounded-lg border p-4 text-left transition hover:opacity-90"
-                      style={{ borderColor: "var(--color-accent)", background: "var(--color-primary)" }}
+                      style={{ borderColor: "rgba(196,18,48,0.25)", background: "rgba(196,18,48,0.05)" }}
                     >
                       <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
                         Pending Client Payments
@@ -685,7 +685,7 @@ export default function DashboardPage() {
                     <Link
                       href="/containers"
                       className="rounded-lg border p-4 text-left transition hover:opacity-90"
-                      style={{ borderColor: "var(--color-accent)", background: "var(--color-primary)" }}
+                      style={{ borderColor: "rgba(196,18,48,0.25)", background: "rgba(196,18,48,0.05)" }}
                     >
                       <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
                         Unpaid Shipping
@@ -699,7 +699,7 @@ export default function DashboardPage() {
                     <Link
                       href="/inventory"
                       className="rounded-lg border p-4 text-left transition hover:opacity-90"
-                      style={{ borderColor: "var(--color-accent)", background: "var(--color-primary)" }}
+                      style={{ borderColor: "rgba(196,18,48,0.25)", background: "rgba(196,18,48,0.05)" }}
                     >
                       <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
                         Supplier Debt
@@ -713,7 +713,7 @@ export default function DashboardPage() {
                     <Link
                       href="/employees"
                       className="rounded-lg border p-4 text-left transition hover:opacity-90"
-                      style={{ borderColor: "var(--color-accent)", background: "var(--color-primary)" }}
+                      style={{ borderColor: "rgba(196,18,48,0.25)", background: "rgba(196,18,48,0.05)" }}
                     >
                       <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
                         Unpaid Commissions
@@ -730,7 +730,7 @@ export default function DashboardPage() {
                     <Link
                       href="/transfers"
                       className="rounded-lg border p-4 text-left transition hover:opacity-90"
-                      style={{ borderColor: "var(--color-accent)", background: "var(--color-primary)" }}
+                      style={{ borderColor: "rgba(196,18,48,0.25)", background: "rgba(196,18,48,0.05)" }}
                     >
                       <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
                         Pending Conversions
@@ -751,7 +751,7 @@ export default function DashboardPage() {
                       style={
                         nextRentDue.paidThisYear
                           ? { borderColor: "var(--color-border)" }
-                          : { borderColor: "var(--color-accent)", background: "var(--color-primary)" }
+                          : { borderColor: "rgba(196,18,48,0.25)", background: "rgba(196,18,48,0.05)" }
                       }
                     >
                       <div

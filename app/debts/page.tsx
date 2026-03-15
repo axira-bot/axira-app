@@ -689,7 +689,7 @@ export default function DebtsPage() {
         </div>
 
         {error && (
-          <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-200">{error}</div>
+          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>
         )}
 
         {activeTab === "receivables" && (
@@ -698,7 +698,7 @@ export default function DebtsPage() {
               <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Total outstanding (receivables)</h2>
               <div className="mt-2 flex flex-wrap gap-4">
                 {Object.entries(receivableTotalsByCurrency).length === 0 ? (
-                  <span className="text-zinc-500">No outstanding</span>
+                  <span className="text-gray-400">No outstanding</span>
                 ) : (
                   Object.entries(receivableTotalsByCurrency).map(([cur, sum]) => (
                     <span key={cur} className="text-lg font-semibold text-emerald-400">
@@ -722,7 +722,7 @@ export default function DebtsPage() {
               {isLoading ? (
                 <div className="p-8 text-center text-muted">Loading...</div>
               ) : listReceivables.length === 0 ? (
-                <div className="p-8 text-center text-zinc-500">No receivables yet.</div>
+                <div className="p-8 text-center text-gray-400">No receivables yet.</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
@@ -811,7 +811,7 @@ export default function DebtsPage() {
               <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Total payable</h2>
               <div className="mt-2 flex flex-wrap gap-4">
                 {Object.entries(payableTotalsByCurrency).length === 0 ? (
-                  <span className="text-zinc-500">No payables</span>
+                  <span className="text-gray-400">No payables</span>
                 ) : (
                   Object.entries(payableTotalsByCurrency).map(([cur, sum]) => (
                     <span key={cur} className="text-lg font-semibold text-red-400">
@@ -835,7 +835,7 @@ export default function DebtsPage() {
               {isLoading ? (
                 <div className="p-8 text-center text-muted">Loading...</div>
               ) : listPayables.length === 0 ? (
-                <div className="p-8 text-center text-zinc-500">No payables yet.</div>
+                <div className="p-8 text-center text-gray-400">No payables yet.</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
@@ -907,7 +907,7 @@ export default function DebtsPage() {
                                 </>
                               )}
                               {isSupplier && (
-                                <span className="text-zinc-500 text-[11px]">From inventory</span>
+                                <span className="text-gray-400 text-[11px]">From inventory</span>
                               )}
                             </td>
                           </tr>
@@ -936,7 +936,7 @@ export default function DebtsPage() {
                     type="text"
                     value={form.name}
                     onChange={(e) => updateField("name", e.target.value)}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
                 <label className="space-y-1 text-xs text-muted">
@@ -945,7 +945,7 @@ export default function DebtsPage() {
                     type="number"
                     value={form.amount}
                     onChange={(e) => updateField("amount", e.target.value)}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
                 <label className="space-y-1 text-xs text-muted">
@@ -953,7 +953,7 @@ export default function DebtsPage() {
                   <select
                     value={form.currency}
                     onChange={(e) => updateField("currency", e.target.value as DebtFormState["currency"])}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   >
                     {CURRENCIES.map((c) => (
                       <option key={c} value={c}>{c}</option>
@@ -966,7 +966,7 @@ export default function DebtsPage() {
                     type="text"
                     value={form.reason}
                     onChange={(e) => updateField("reason", e.target.value)}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
                 <label className="space-y-1 text-xs text-muted">
@@ -975,7 +975,7 @@ export default function DebtsPage() {
                     type="date"
                     value={form.date}
                     onChange={(e) => updateField("date", e.target.value)}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
                 <label className="space-y-1 text-xs text-muted">
@@ -984,7 +984,7 @@ export default function DebtsPage() {
                     type="date"
                     value={form.dueDate}
                     onChange={(e) => updateField("dueDate", e.target.value)}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
                 <label className="space-y-1 text-xs text-muted sm:col-span-2">
@@ -993,7 +993,7 @@ export default function DebtsPage() {
                     value={form.notes}
                     onChange={(e) => updateField("notes", e.target.value)}
                     rows={2}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
                 {editingId && (
@@ -1002,7 +1002,7 @@ export default function DebtsPage() {
                     <select
                       value={form.status}
                       onChange={(e) => updateField("status", e.target.value as DebtFormState["status"])}
-                      className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                      className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                     >
                       {STATUSES.map((s) => (
                         <option key={s} value={s}>{statusLabel(s)}</option>
@@ -1043,19 +1043,19 @@ export default function DebtsPage() {
               </p>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-zinc-500">Original</span>
+                  <span className="text-gray-400">Original</span>
                   <p className="font-semibold text-app">{formatMoney(viewDebt.original_amount, viewDebt.currency ?? "AED")}</p>
                 </div>
                 <div>
-                  <span className="text-zinc-500">Paid</span>
+                  <span className="text-gray-400">Paid</span>
                   <p className="font-semibold text-app">{formatMoney(viewDebt.amount_paid, viewDebt.currency ?? "AED")}</p>
                 </div>
                 <div>
-                  <span className="text-zinc-500">Remaining</span>
+                  <span className="text-gray-400">Remaining</span>
                   <p className="font-semibold text-[var(--color-accent)]">{formatMoney(viewDebt.amount_remaining, viewDebt.currency ?? "AED")}</p>
                 </div>
                 <div>
-                  <span className="text-zinc-500">Status</span>
+                  <span className="text-gray-400">Status</span>
                   <p className="font-semibold text-app">{statusLabel(viewDebt.status)}</p>
                 </div>
               </div>
@@ -1067,7 +1067,7 @@ export default function DebtsPage() {
                     <button
                       type="button"
                       onClick={() => setIsPaymentFormOpen((p) => !p)}
-                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                      className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                     >
                       {isPaymentFormOpen ? "Cancel" : "Add Payment"}
                     </button>
@@ -1075,7 +1075,7 @@ export default function DebtsPage() {
                 </div>
 
                 {isPaymentFormOpen && (viewDebt.amount_remaining ?? 0) > 0 && (
-                  <div className="mt-3 rounded-md border border-app bg-[#0a0a0a] p-3 text-xs">
+                  <div className="mt-3 rounded-md border border-app bg-white p-3 text-xs">
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <label className="space-y-1">
                         <span className="font-semibold text-app">Amount</span>
@@ -1132,11 +1132,11 @@ export default function DebtsPage() {
                 )}
 
                 {paymentsLoading ? (
-                  <p className="mt-2 text-zinc-500">Loading payments...</p>
+                  <p className="mt-2 text-gray-400">Loading payments...</p>
                 ) : paymentsError && !isPaymentFormOpen ? (
                   <p className="mt-2 text-red-300">{paymentsError}</p>
                 ) : debtPayments.length === 0 ? (
-                  <p className="mt-2 text-zinc-500">No payments yet.</p>
+                  <p className="mt-2 text-gray-400">No payments yet.</p>
                 ) : (
                   <div className="mt-2 space-y-2">
                     {debtPayments.map((p) => (
@@ -1147,8 +1147,8 @@ export default function DebtsPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold text-app">{formatDate(p.date)}</span>
                           <span className="text-app">{formatMoney(p.amount, p.currency ?? 'AED')}</span>
-                          <span className="text-zinc-500">{p.pocket}</span>
-                          {p.notes && <span className="text-zinc-500">{p.notes}</span>}
+                          <span className="text-gray-400">{p.pocket}</span>
+                          {p.notes && <span className="text-gray-400">{p.notes}</span>}
                         </div>
                         <button
                           type="button"

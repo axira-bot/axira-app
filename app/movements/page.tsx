@@ -964,7 +964,7 @@ export default function MovementsPage() {
         </div>
 
         {error && (
-          <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
             {error}
           </div>
         )}
@@ -1045,7 +1045,7 @@ export default function MovementsPage() {
                         type="button"
                         onClick={() => handleDeleteRent(r)}
                         disabled={isDeletingRentId === r.id}
-                        className="rounded border border-red-900 bg-red-950/40 px-2 py-1 text-[11px] text-red-200 hover:border-red-600 disabled:opacity-50"
+                        className="rounded border border-red-300 bg-red-50 px-2 py-1 text-[11px] text-red-700 hover:border-red-600 disabled:opacity-50"
                       >
                         {isDeletingRentId === r.id ? "Deleting…" : "Delete"}
                       </button>
@@ -1056,7 +1056,7 @@ export default function MovementsPage() {
             })}
           </div>
           {rents.length === 0 && (
-            <div className="rounded-lg border border-[#222222] surface p-4 text-sm text-zinc-500">
+            <div className="rounded-lg border border-[#222222] surface p-4 text-sm text-gray-400">
               No rent or fixed expenses. Click &quot;Add Rent&quot; to add one.
             </div>
           )}
@@ -1170,7 +1170,7 @@ export default function MovementsPage() {
                               </button>
                             </>
                           ) : (
-                            <span className="text-zinc-500 text-[11px]">—</span>
+                            <span className="text-gray-400 text-[11px]">—</span>
                           )}
                         </td>
                       </tr>
@@ -1214,7 +1214,7 @@ export default function MovementsPage() {
                   type="date"
                   value={form.date}
                   onChange={(e) => updateField("date", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1223,7 +1223,7 @@ export default function MovementsPage() {
                 <select
                   value={form.type}
                   onChange={(e) => updateField("type", e.target.value as "In" | "Out")}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="In">In</option>
                   <option value="Out">Out</option>
@@ -1240,7 +1240,7 @@ export default function MovementsPage() {
                       e.target.value as MovementFormState["category"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
@@ -1256,7 +1256,7 @@ export default function MovementsPage() {
                   type="number"
                   value={form.amount}
                   onChange={(e) => updateField("amount", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1272,7 +1272,7 @@ export default function MovementsPage() {
                       updateField("pocket", validPockets[0]);
                     }
                   }}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="AED">AED</option>
                   <option value="DZD">DZD</option>
@@ -1291,7 +1291,7 @@ export default function MovementsPage() {
                       e.target.value as MovementFormState["pocket"]
                     )
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {(POCKETS_BY_CURRENCY[form.currency] ?? POCKETS).map((p) => (
                     <option key={p} value={p}>
@@ -1306,7 +1306,7 @@ export default function MovementsPage() {
                 <select
                   value={form.dealId}
                   onChange={(e) => updateField("dealId", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="">No deal linked</option>
                   {openDeals.map((d) => (
@@ -1322,7 +1322,7 @@ export default function MovementsPage() {
                 <input
                   value={form.reference}
                   onChange={(e) => updateField("reference", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -1331,7 +1331,7 @@ export default function MovementsPage() {
                 <input
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
@@ -1383,7 +1383,7 @@ export default function MovementsPage() {
               </button>
             </div>
             {rentError && (
-              <div className="mt-3 rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+              <div className="mt-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
                 {rentError}
               </div>
             )}
@@ -1395,7 +1395,7 @@ export default function MovementsPage() {
                   value={rentForm.description}
                   onChange={(e) => setRentForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="e.g. Dubai warehouse"
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1406,7 +1406,7 @@ export default function MovementsPage() {
                   step="any"
                   value={rentForm.annual_amount}
                   onChange={(e) => setRentForm((f) => ({ ...f, annual_amount: e.target.value }))}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1416,7 +1416,7 @@ export default function MovementsPage() {
                   onChange={(e) =>
                     setRentForm((f) => ({ ...f, currency: e.target.value as "AED" | "DZD" }))
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="AED">AED</option>
                   <option value="DZD">DZD</option>
@@ -1428,7 +1428,7 @@ export default function MovementsPage() {
                   type="date"
                   value={rentForm.start_date}
                   onChange={(e) => setRentForm((f) => ({ ...f, start_date: e.target.value }))}
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1441,7 +1441,7 @@ export default function MovementsPage() {
                       pocket: e.target.value as MovementFormState["pocket"] | "",
                     }))
                   }
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="">—</option>
                   {POCKETS.map((p) => (
@@ -1458,7 +1458,7 @@ export default function MovementsPage() {
                   value={rentForm.notes}
                   onChange={(e) => setRentForm((f) => ({ ...f, notes: e.target.value }))}
                   placeholder="e.g. landlord, contract ref"
-                  className="w-full rounded-md border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>

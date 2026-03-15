@@ -563,7 +563,7 @@ export default function InvestorsPage() {
 
       <div className="p-4">
         {error && (
-          <div className="mb-4 rounded-md border border-red-800 bg-red-950/30 px-4 py-2 text-sm text-red-200">
+          <div className="mb-4 rounded-md border border-red-800 bg-red-950/30 px-4 py-2 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -588,9 +588,9 @@ export default function InvestorsPage() {
                   value={totalCapitalOverride}
                   onChange={(e) => setTotalCapitalOverride(e.target.value)}
                   placeholder={String(totalInvested || "")}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
-                <p className="text-[10px] text-zinc-500">
+                <p className="text-[10px] text-gray-400">
                   Leave empty to use sum of all investor capital.
                 </p>
               </div>
@@ -639,7 +639,7 @@ export default function InvestorsPage() {
                             {i.original_amount != null && i.original_currency ? (
                               <>
                                 {formatNumber(i.original_amount)} {i.original_currency}{" "}
-                                <span className="text-[11px] text-zinc-500">
+                                <span className="text-[11px] text-gray-400">
                                   ({formatMoney(i.investment_aed, "AED")} at current rate)
                                 </span>
                               </>
@@ -685,7 +685,7 @@ export default function InvestorsPage() {
                   </tbody>
                 </table>
                 {investors.length === 0 && (
-                  <div className="p-6 text-center text-zinc-500">No investors yet. Add one to get started.</div>
+                  <div className="p-6 text-center text-gray-400">No investors yet. Add one to get started.</div>
                 )}
               </div>
             )}
@@ -698,15 +698,15 @@ export default function InvestorsPage() {
               <h3 className="text-sm font-semibold text-app">Running total</h3>
               <div className="mt-2 grid gap-2 text-sm sm:grid-cols-3">
                 <div>
-                  <span className="text-zinc-500">Total invested</span>
+                  <span className="text-gray-400">Total invested</span>
                   <p className="font-semibold text-app">{formatMoney(totalInvested, "AED")}</p>
                 </div>
                 <div>
-                  <span className="text-zinc-500">Total returned</span>
+                  <span className="text-gray-400">Total returned</span>
                   <p className="font-semibold text-app">{formatMoney(totalReturned, "AED")}</p>
                 </div>
                 <div>
-                  <span className="text-zinc-500">ROI %</span>
+                  <span className="text-gray-400">ROI %</span>
                   <p className="font-semibold text-[var(--color-accent)]">{roiPercent.toFixed(1)}%</p>
                 </div>
               </div>
@@ -775,7 +775,7 @@ export default function InvestorsPage() {
                 </tbody>
               </table>
               {monthsSorted.length === 0 && (
-                <div className="p-6 text-center text-zinc-500">No deal profit by month. Deals will appear here.</div>
+                <div className="p-6 text-center text-gray-400">No deal profit by month. Deals will appear here.</div>
               )}
             </div>
           </>
@@ -793,7 +793,7 @@ export default function InvestorsPage() {
                     type="text"
                     value={ownerName}
                     onChange={(e) => setOwnerName(e.target.value)}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   />
                 </label>
                 <label className="space-y-1 text-xs text-app">
@@ -805,14 +805,14 @@ export default function InvestorsPage() {
                       step="any"
                       value={ownerCapital}
                       onChange={(e) => setOwnerCapital(e.target.value)}
-                      className="flex-1 rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                      className="flex-1 rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                     <select
                       value={ownerCapitalCurrency}
                       onChange={(e) =>
                         setOwnerCapitalCurrency(e.target.value as "AED" | "DZD" | "EUR" | "USD")
                       }
-                      className="w-20 rounded-md border border-app bg-[#0a0a0a] px-2 py-2 text-sm text-app"
+                      className="w-20 rounded-md border border-app bg-white px-2 py-2 text-sm text-app"
                     >
                       {CURRENCIES.map((c) => (
                         <option key={c} value={c}>
@@ -822,7 +822,7 @@ export default function InvestorsPage() {
                     </select>
                   </div>
                 </label>
-                <div className="text-[11px] text-zinc-500">
+                <div className="text-[11px] text-gray-400">
                   AED equivalent:{" "}
                   {(() => {
                     const amt = parseNum(ownerCapital);
@@ -849,7 +849,7 @@ export default function InvestorsPage() {
                     step="any"
                     value={businessValuation}
                     onChange={(e) => setBusinessValuation(e.target.value)}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   />
                 </label>
                 <label className="space-y-1 text-xs text-app">
@@ -860,7 +860,7 @@ export default function InvestorsPage() {
                     step="any"
                     value={sharePrice}
                     onChange={(e) => setSharePrice(e.target.value)}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   />
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -872,7 +872,7 @@ export default function InvestorsPage() {
                       step="1"
                       value={totalShares}
                       onChange={(e) => setTotalShares(e.target.value)}
-                      className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                      className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                   </label>
                   <label className="space-y-1 text-xs text-app">
@@ -883,7 +883,7 @@ export default function InvestorsPage() {
                       step="1"
                       value={availableShares}
                       onChange={(e) => setAvailableShares(e.target.value)}
-                      className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                      className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                   </label>
                 </div>
@@ -896,7 +896,7 @@ export default function InvestorsPage() {
                   value={ownerNotes}
                   onChange={(e) => setOwnerNotes(e.target.value)}
                   rows={8}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
                 <div className="flex justify-end">
                   <button
@@ -951,31 +951,31 @@ export default function InvestorsPage() {
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     <div>
-                      <div className="text-zinc-500 text-xs">My equity (AED)</div>
+                      <div className="text-gray-400 text-xs">My equity (AED)</div>
                       <div className="text-lg font-semibold text-app">
                         {formatMoney(ownerAed, "AED")}
                       </div>
                     </div>
                     <div>
-                      <div className="text-zinc-500 text-xs">Business worth</div>
+                      <div className="text-gray-400 text-xs">Business worth</div>
                       <div className="text-lg font-semibold text-app">
                         {formatMoney(valuation, "AED")}
                       </div>
                     </div>
                     <div>
-                      <div className="text-zinc-500 text-xs">My ownership %</div>
+                      <div className="text-gray-400 text-xs">My ownership %</div>
                       <div className="text-lg font-semibold text-app">
                         {myPct.toFixed(1)}%
                       </div>
                     </div>
                     <div>
-                      <div className="text-zinc-500 text-xs">Investor ownership %</div>
+                      <div className="text-gray-400 text-xs">Investor ownership %</div>
                       <div className="text-lg font-semibold text-app">
                         {investorPct.toFixed(1)}%
                       </div>
                     </div>
                     <div>
-                      <div className="text-zinc-500 text-xs">Available for new investors %</div>
+                      <div className="text-gray-400 text-xs">Available for new investors %</div>
                       <div className="text-lg font-semibold text-[var(--color-accent)]">
                         {availablePct.toFixed(1)}%
                       </div>
@@ -1001,7 +1001,7 @@ export default function InvestorsPage() {
                   type="text"
                   value={form.name}
                   onChange={(e) => updateField("name", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1012,7 +1012,7 @@ export default function InvestorsPage() {
                   step="any"
                   value={form.investmentAmount}
                   onChange={(e) => updateField("investmentAmount", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1020,7 +1020,7 @@ export default function InvestorsPage() {
                 <select
                   value={form.currency}
                   onChange={(e) => updateField("currency", e.target.value as (typeof CURRENCIES)[number])}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 >
                   {CURRENCIES.map((c) => (
                     <option key={c} value={c}>
@@ -1038,7 +1038,7 @@ export default function InvestorsPage() {
                     step="any"
                     value={form.rate}
                     onChange={(e) => updateField("rate", e.target.value)}
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   />
                 </label>
               )}
@@ -1048,7 +1048,7 @@ export default function InvestorsPage() {
                   type="date"
                   value={form.investmentDate}
                   onChange={(e) => updateField("investmentDate", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1060,7 +1060,7 @@ export default function InvestorsPage() {
                   step="0.01"
                   value={form.profitSharePercent}
                   onChange={(e) => updateField("profitSharePercent", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
@@ -1069,11 +1069,11 @@ export default function InvestorsPage() {
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
                   rows={2}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               {form.investmentAmount && (
-                <p className="sm:col-span-2 text-xs text-zinc-500">
+                <p className="sm:col-span-2 text-xs text-gray-400">
                   AED equivalent: {formatMoney(investmentAedFromForm, "AED")}
                 </p>
               )}
@@ -1116,36 +1116,36 @@ export default function InvestorsPage() {
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 text-xs text-app">
               <div>
-                <span className="text-zinc-500">Investor</span>
+                <span className="text-gray-400">Investor</span>
                 <div className="mt-1 text-app">
                   {investors.find((i) => i.id === payOutReturn.investorId)?.name ?? "—"}
                 </div>
               </div>
               <div>
-                <span className="text-zinc-500">Month</span>
+                <span className="text-gray-400">Month</span>
                 <div className="mt-1 text-app">{payOutReturn.month}</div>
               </div>
               <div>
-                <span className="text-zinc-500">Amount</span>
+                <span className="text-gray-400">Amount</span>
                 <div className="mt-1 text-[var(--color-accent)] font-semibold">
                   {formatMoney(payOutReturn.investorShare, "AED")}
                 </div>
               </div>
               <label className="space-y-1">
-                <span className="text-zinc-500">Date</span>
+                <span className="text-gray-400">Date</span>
                 <input
                   type="date"
                   value={payOutDate}
                   onChange={(e) => setPayOutDate(e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app"
                 />
               </label>
               <label className="space-y-1">
-                <span className="text-zinc-500">Pocket</span>
+                <span className="text-gray-400">Pocket</span>
                 <select
                   value={payOutPocket}
                   onChange={(e) => setPayOutPocket(e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app"
                 >
                   {AED_POCKETS.map((p) => (
                     <option key={p} value={p}>
@@ -1206,7 +1206,7 @@ export default function InvestorsPage() {
                   step="any"
                   value={bonusAmount}
                   onChange={(e) => setBonusAmount(e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1215,7 +1215,7 @@ export default function InvestorsPage() {
                   type="date"
                   value={bonusDate}
                   onChange={(e) => setBonusDate(e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1223,7 +1223,7 @@ export default function InvestorsPage() {
                 <select
                   value={bonusPocket}
                   onChange={(e) => setBonusPocket(e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 >
                   {AED_POCKETS.map((p) => (
                     <option key={p} value={p}>
@@ -1238,7 +1238,7 @@ export default function InvestorsPage() {
                   type="text"
                   value={bonusReason}
                   onChange={(e) => setBonusReason(e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
               </label>
             </div>

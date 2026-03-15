@@ -46,7 +46,7 @@ function DriveLinkIcon({ href }: { href: string }) {
       target="_blank"
       rel="noopener noreferrer"
       title="Open Google Drive folder"
-      className="inline-flex items-center justify-center rounded border border-app bg-[#0a0a0a] p-1.5 text-muted transition hover:border-[var(--color-accent)]/70 hover:text-app"
+      className="inline-flex items-center justify-center rounded border border-app bg-white p-1.5 text-muted transition hover:border-[var(--color-accent)]/70 hover:text-app"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -333,7 +333,7 @@ export default function ClientsPage() {
         </div>
 
         {error && (
-          <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
             {error}
           </div>
         )}
@@ -458,7 +458,7 @@ export default function ClientsPage() {
                 <input
                   value={form.fullName}
                   onChange={(e) => updateField("fullName", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1">
@@ -468,7 +468,7 @@ export default function ClientsPage() {
                 <input
                   value={form.phone}
                   onChange={(e) => updateField("phone", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1">
@@ -477,7 +477,7 @@ export default function ClientsPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => updateField("email", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1">
@@ -487,7 +487,7 @@ export default function ClientsPage() {
                   onChange={(e) =>
                     updateField("type", e.target.value as "Client" | "Prospect")
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="Client">Client</option>
                   <option value="Prospect">Prospect</option>
@@ -501,7 +501,7 @@ export default function ClientsPage() {
                   value={form.lookingFor}
                   onChange={(e) => updateField("lookingFor", e.target.value)}
                   placeholder="e.g. 2023 Prado VX, white, <80k km"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 sm:col-span-2">
@@ -511,7 +511,7 @@ export default function ClientsPage() {
                   value={form.driveLink}
                   onChange={(e) => updateField("driveLink", e.target.value)}
                   placeholder="https://drive.google.com/..."
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 sm:col-span-2">
@@ -520,7 +520,7 @@ export default function ClientsPage() {
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
                   rows={3}
-                  className="w-full resize-none rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>

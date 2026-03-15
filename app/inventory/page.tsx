@@ -702,7 +702,7 @@ export default function InventoryPage() {
                 <select
                   value={form.brand}
                   onChange={(e) => updateField("brand", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {BRANDS.map((b) => (
                     <option key={b} value={b}>
@@ -718,7 +718,7 @@ export default function InventoryPage() {
                   value={form.model}
                   onChange={(e) => updateField("model", e.target.value)}
                   placeholder="e.g. Prado"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -727,7 +727,7 @@ export default function InventoryPage() {
                 <select
                   value={form.year}
                   onChange={(e) => updateField("year", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {YEARS.map((y) => (
                     <option key={y} value={y}>
@@ -745,7 +745,7 @@ export default function InventoryPage() {
                   value={form.color}
                   onChange={(e) => updateField("color", e.target.value)}
                   placeholder="e.g. White"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -758,7 +758,7 @@ export default function InventoryPage() {
                   value={form.mileage}
                   onChange={(e) => updateField("mileage", e.target.value)}
                   placeholder="e.g. 54000"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -768,7 +768,7 @@ export default function InventoryPage() {
                   value={form.vin}
                   onChange={(e) => updateField("vin", e.target.value)}
                   placeholder="VIN"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -778,7 +778,7 @@ export default function InventoryPage() {
                   value={form.countryOfOrigin}
                   onChange={(e) => updateField("countryOfOrigin", e.target.value)}
                   placeholder="e.g. China, Japan, Korea"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -789,7 +789,7 @@ export default function InventoryPage() {
                   value={form.purchasePrice}
                   onChange={(e) => updateField("purchasePrice", e.target.value)}
                   placeholder="e.g. 125000"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -800,7 +800,7 @@ export default function InventoryPage() {
                   value={form.amountPaidToSupplier}
                   onChange={(e) => updateField("amountPaidToSupplier", e.target.value)}
                   placeholder="Defaults to purchase price (fully paid)"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
@@ -815,7 +815,7 @@ export default function InventoryPage() {
                     const owed = Math.max(0, p - paid);
                     return p > 0 ? formatNumber(owed) : "-";
                   })()}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-muted"
                 />
               </label>
 
@@ -832,7 +832,7 @@ export default function InventoryPage() {
                         e.target.value as PaidPocket | ""
                       )
                     }
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   >
                     <option value="">Select pocket</option>
                     {(form.purchaseCurrency === "AED"
@@ -858,7 +858,7 @@ export default function InventoryPage() {
                   onChange={(e) =>
                     updateField("purchaseCurrency", e.target.value as "AED" | "DZD" | "USD" | "EUR")
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="AED">AED</option>
                   <option value="DZD">DZD</option>
@@ -877,7 +877,7 @@ export default function InventoryPage() {
                     value={form.purchaseRate}
                     onChange={(e) => updateField("purchaseRate", e.target.value)}
                     placeholder="e.g. 1.00"
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
               ) : (
@@ -894,7 +894,7 @@ export default function InventoryPage() {
                       e.target.value as "Dubai Showroom" | "Algeria Showroom" | "In Transit"
                     )
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="Dubai Showroom">Dubai Showroom</option>
                   <option value="Algeria Showroom">Algeria Showroom</option>
@@ -907,7 +907,7 @@ export default function InventoryPage() {
                 <select
                   value={form.owner}
                   onChange={(e) => updateField("owner", e.target.value as "Axira" | "Client")}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="Axira">Axira</option>
                   <option value="Client">Client</option>
@@ -923,7 +923,7 @@ export default function InventoryPage() {
                     value={form.clientName}
                     onChange={(e) => updateField("clientName", e.target.value)}
                     placeholder="Client name"
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
               ) : null}
@@ -933,7 +933,7 @@ export default function InventoryPage() {
                 <select
                   value={form.status}
                   onChange={(e) => updateField("status", e.target.value as "available" | "sold")}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   <option value="available">available</option>
                   <option value="sold">sold</option>
@@ -948,7 +948,7 @@ export default function InventoryPage() {
                     onChange={(e) => updateField("notes", e.target.value)}
                     placeholder="Notes..."
                     rows={4}
-                    className="w-full resize-none rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
               </div>

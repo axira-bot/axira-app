@@ -125,7 +125,7 @@ export default function AdminUsersPage() {
   if (error && users.length === 0) {
     return (
       <div className="min-h-screen bg-app p-6">
-        <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-sm text-red-200">
+        <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
         <p className="mt-4 text-sm text-muted">
@@ -162,7 +162,7 @@ export default function AdminUsersPage() {
         </header>
 
         {error && (
-          <div className="mb-4 rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-sm text-red-200">
+          <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -277,7 +277,7 @@ export default function AdminUsersPage() {
             All users
           </h2>
           {users.length === 0 ? (
-            <div className="p-6 text-sm text-zinc-500">No users yet.</div>
+            <div className="p-6 text-sm text-gray-400">No users yet.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -300,7 +300,7 @@ export default function AdminUsersPage() {
                         {u.name ?? "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full border border-[#333] bg-[#1a1a1a] px-2 py-0.5 text-xs font-medium text-app">
+                        <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-app">
                           {u.role}
                         </span>
                       </td>

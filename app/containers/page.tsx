@@ -48,7 +48,7 @@ function DriveLinkIcon({ href }: { href: string }) {
       target="_blank"
       rel="noopener noreferrer"
       title="Open Google Drive folder"
-      className="inline-flex items-center justify-center rounded border border-app bg-[#0a0a0a] p-1.5 text-muted transition hover:border-[var(--color-accent)]/70 hover:text-app"
+      className="inline-flex items-center justify-center rounded border border-app bg-white p-1.5 text-muted transition hover:border-[var(--color-accent)]/70 hover:text-app"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -953,7 +953,7 @@ export default function ContainersPage() {
         </header>
 
         {error && (
-          <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
             {error}
           </div>
         )}
@@ -1170,7 +1170,7 @@ export default function ContainersPage() {
                     onChange={(e) =>
                       updateAddCarField("inventoryCarId", e.target.value)
                     }
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   >
                     <option value="">Select car from inventory</option>
                     {availableInventoryCars.map((c) => (
@@ -1202,7 +1202,7 @@ export default function ContainersPage() {
                       onChange={(e) =>
                         updateAddCarField("brand", e.target.value)
                       }
-                      className="rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                      className="rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                     <input
                       placeholder="Model"
@@ -1210,7 +1210,7 @@ export default function ContainersPage() {
                       onChange={(e) =>
                         updateAddCarField("model", e.target.value)
                       }
-                      className="rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                      className="rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                     <input
                       placeholder="Year"
@@ -1218,7 +1218,7 @@ export default function ContainersPage() {
                       onChange={(e) =>
                         updateAddCarField("year", e.target.value)
                       }
-                      className="rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                      className="rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                     <input
                       placeholder="Color"
@@ -1226,7 +1226,7 @@ export default function ContainersPage() {
                       onChange={(e) =>
                         updateAddCarField("color", e.target.value)
                       }
-                      className="rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                      className="rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                   </div>
                 </div>
@@ -1249,7 +1249,7 @@ export default function ContainersPage() {
                       onChange={(e) =>
                         updateAddCarField("partnerName", e.target.value)
                       }
-                      className="w-full rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                      className="w-full rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                   )}
                 </div>
@@ -1264,7 +1264,7 @@ export default function ContainersPage() {
                     onChange={(e) =>
                       updateAddCarField("shippingContribution", e.target.value)
                     }
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   />
                   <button
                     type="button"
@@ -1374,7 +1374,7 @@ export default function ContainersPage() {
                     onChange={(e) =>
                       updatePayInvoiceField("amount", e.target.value)
                     }
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
                 <label className="space-y-1 text-[11px] text-app">
@@ -1387,7 +1387,7 @@ export default function ContainersPage() {
                         e.target.value as PayInvoiceForm["pocket"]
                       )
                     }
-                    className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   >
                     <option value="Dubai Cash">Dubai Cash</option>
                     <option value="Dubai Bank">Dubai Bank</option>
@@ -1450,7 +1450,7 @@ export default function ContainersPage() {
                 <input
                   value={newForm.ref}
                   onChange={(e) => updateNewField("ref", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1">
@@ -1461,7 +1461,7 @@ export default function ContainersPage() {
                   type="date"
                   value={newForm.date}
                   onChange={(e) => updateNewField("date", e.target.value)}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1">
@@ -1474,7 +1474,7 @@ export default function ContainersPage() {
                   onChange={(e) =>
                     updateNewField("estimatedShipping", e.target.value)
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1">
@@ -1486,7 +1486,7 @@ export default function ContainersPage() {
                   onChange={(e) =>
                     updateNewField("invoiceRef", e.target.value)
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1">
@@ -1499,7 +1499,7 @@ export default function ContainersPage() {
                       e.target.value as NewContainerForm["status"]
                     )
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {STATUS_OPTIONS.map((s) => (
                     <option key={s} value={s}>
@@ -1517,7 +1517,7 @@ export default function ContainersPage() {
                     updateNewField("driveLink", e.target.value)
                   }
                   placeholder="https://drive.google.com/..."
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <div className="sm:col-span-2">
@@ -1529,7 +1529,7 @@ export default function ContainersPage() {
                       updateNewField("notes", e.target.value)
                     }
                     rows={3}
-                    className="w-full resize-none rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                    className="w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
               </div>

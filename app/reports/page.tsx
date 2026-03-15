@@ -834,7 +834,7 @@ export default function ReportsPage() {
         </div>
 
         {error && (
-          <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
             {error}
           </div>
         )}
@@ -854,7 +854,7 @@ export default function ReportsPage() {
                       type="date"
                       value={plFrom}
                       onChange={(e) => setPlFrom(e.target.value)}
-                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                      className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-xs text-muted">
@@ -863,7 +863,7 @@ export default function ReportsPage() {
                       type="date"
                       value={plTo}
                       onChange={(e) => setPlTo(e.target.value)}
-                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                      className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                   </label>
                   <button
@@ -1002,7 +1002,7 @@ export default function ReportsPage() {
                   <select
                     value={invLocation}
                     onChange={(e) => setInvLocation(e.target.value)}
-                    className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                    className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   >
                     <option value="All">All locations</option>
                     <option value="Dubai Showroom">Dubai Showroom</option>
@@ -1012,7 +1012,7 @@ export default function ReportsPage() {
                   <select
                     value={invStatus}
                     onChange={(e) => setInvStatus(e.target.value)}
-                    className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                    className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   >
                     <option value="All">All statuses</option>
                     <option value="available">Available</option>
@@ -1091,7 +1091,7 @@ export default function ReportsPage() {
                   <select
                     value={dealsStatus}
                     onChange={(e) => setDealsStatus(e.target.value)}
-                    className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                    className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   >
                     <option value="All">All statuses</option>
                     <option value="pending">Pending</option>
@@ -1103,7 +1103,7 @@ export default function ReportsPage() {
                       type="date"
                       value={dealsFrom}
                       onChange={(e) => setDealsFrom(e.target.value)}
-                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                      className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-xs text-muted">
@@ -1112,7 +1112,7 @@ export default function ReportsPage() {
                       type="date"
                       value={dealsTo}
                       onChange={(e) => setDealsTo(e.target.value)}
-                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                      className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                   </label>
                   <button
@@ -1217,7 +1217,7 @@ export default function ReportsPage() {
                       type="date"
                       value={cfFrom}
                       onChange={(e) => setCfFrom(e.target.value)}
-                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                      className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-xs text-muted">
@@ -1226,7 +1226,7 @@ export default function ReportsPage() {
                       type="date"
                       value={cfTo}
                       onChange={(e) => setCfTo(e.target.value)}
-                      className="rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app"
+                      className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                   </label>
                   <button
@@ -1257,19 +1257,19 @@ export default function ReportsPage() {
                     </h3>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <div className="text-xs uppercase text-zinc-500">Income AED</div>
+                        <div className="text-xs uppercase text-gray-400">Income AED</div>
                         <div className="mt-1 text-lg font-semibold text-emerald-400">
                           {formatMoney(cfByCurrency.aed.income, "AED")}
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs uppercase text-zinc-500">Expenses AED</div>
+                        <div className="text-xs uppercase text-gray-400">Expenses AED</div>
                         <div className="mt-1 text-lg font-semibold text-red-400">
                           {formatMoney(cfByCurrency.aed.expenses, "AED")}
                         </div>
                       </div>
                       <div className="col-span-2 border-t border-app pt-2">
-                        <div className="text-xs uppercase text-zinc-500">Net AED</div>
+                        <div className="text-xs uppercase text-gray-400">Net AED</div>
                         <div className="mt-1 text-lg font-semibold text-app">
                           {formatMoney(cfByCurrency.aed.income - cfByCurrency.aed.expenses, "AED")}
                         </div>
@@ -1282,19 +1282,19 @@ export default function ReportsPage() {
                     </h3>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <div className="text-xs uppercase text-zinc-500">Income DZD</div>
+                        <div className="text-xs uppercase text-gray-400">Income DZD</div>
                         <div className="mt-1 text-lg font-semibold text-emerald-400">
                           {formatMoney(cfByCurrency.dzd.income, "DZD")}
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs uppercase text-zinc-500">Expenses DZD</div>
+                        <div className="text-xs uppercase text-gray-400">Expenses DZD</div>
                         <div className="mt-1 text-lg font-semibold text-red-400">
                           {formatMoney(cfByCurrency.dzd.expenses, "DZD")}
                         </div>
                       </div>
                       <div className="col-span-2 border-t border-app pt-2">
-                        <div className="text-xs uppercase text-zinc-500">Net DZD</div>
+                        <div className="text-xs uppercase text-gray-400">Net DZD</div>
                         <div className="mt-1 text-lg font-semibold text-app">
                           {formatMoney(cfByCurrency.dzd.income - cfByCurrency.dzd.expenses, "DZD")}
                         </div>

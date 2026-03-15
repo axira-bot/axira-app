@@ -684,7 +684,7 @@ export default function TransfersPage() {
 
         {/* Dashboard alert: pending conversions */}
         {dashboardAlert.count > 0 && (
-          <section className="rounded-lg border border-red-800 bg-red-950/40 p-4">
+          <section className="rounded-lg border border-red-800 bg-red-50 p-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-red-300">
               Dashboard alert
             </h2>
@@ -716,7 +716,7 @@ export default function TransfersPage() {
         </div>
 
         {error && (
-          <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
             {error}
           </div>
         )}
@@ -786,7 +786,7 @@ export default function TransfersPage() {
                               {meta.receivingPocket}
                             </td>
                             <td className="px-4 py-3">
-                              <span className="inline-flex rounded-full bg-red-900/60 px-2 py-0.5 text-[11px] font-semibold text-red-200">
+                              <span className="inline-flex rounded-full bg-red-900/60 px-2 py-0.5 text-[11px] font-semibold text-red-700">
                                 PENDING
                               </span>
                             </td>
@@ -855,7 +855,7 @@ export default function TransfersPage() {
                             <td className="px-4 py-3 text-app">
                               {formatDateTime(movement.date, meta.time)}
                               {meta.approvedAt && (
-                                <span className="ml-1 text-zinc-500">
+                                <span className="ml-1 text-gray-400">
                                   (approved{" "}
                                   {formatDate(meta.approvedAt)})
                                 </span>
@@ -1054,7 +1054,7 @@ export default function TransfersPage() {
                     conversionForm.date,
                     conversionForm.time
                   )}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-muted"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1065,7 +1065,7 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateConversionField("date", e.target.value)
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1076,7 +1076,7 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateConversionField("time", e.target.value)
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
@@ -1088,7 +1088,7 @@ export default function TransfersPage() {
                     updateConversionField("depositedBy", e.target.value)
                   }
                   placeholder="Who gave the cash to the dealer"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1101,7 +1101,7 @@ export default function TransfersPage() {
                       e.target.value as ConversionFormState["fromPocket"]
                     )
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CONVERSION_FROM_POCKETS.map((p) => (
                     <option key={p} value={p}>
@@ -1116,7 +1116,7 @@ export default function TransfersPage() {
                   type="text"
                   readOnly
                   value="DZD"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-muted"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1127,7 +1127,7 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateConversionField("amountDzd", e.target.value)
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1140,7 +1140,7 @@ export default function TransfersPage() {
                       e.target.value as ConversionFormState["toCurrency"]
                     )
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CONVERSION_TO_CURRENCIES.map((c) => (
                     <option key={c} value={c}>
@@ -1158,7 +1158,7 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateConversionField("rate", e.target.value)
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1171,7 +1171,7 @@ export default function TransfersPage() {
                       ? formatMoney(expectedAmount, conversionForm.toCurrency)
                       : "-"
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-muted"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1184,7 +1184,7 @@ export default function TransfersPage() {
                       e.target.value as ConversionFormState["receivingPocket"]
                     )
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CONVERSION_RECEIVING_POCKETS.map((p) => (
                     <option key={p} value={p}>
@@ -1201,7 +1201,7 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateConversionField("notes", e.target.value)
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
@@ -1249,7 +1249,7 @@ export default function TransfersPage() {
                   type="text"
                   readOnly
                   value={approvalModal.meta.receivingPocket}
-                  className="mt-1 w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
+                  className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-muted"
                 />
               </label>
               <label className="block text-xs text-app">
@@ -1263,7 +1263,7 @@ export default function TransfersPage() {
                       prev ? { ...prev, actualAmount: e.target.value } : null
                     )
                   }
-                  className="mt-1 w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="block text-xs text-app">
@@ -1276,7 +1276,7 @@ export default function TransfersPage() {
                       prev ? { ...prev, dateReceived: e.target.value } : null
                     )
                   }
-                  className="mt-1 w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
@@ -1335,7 +1335,7 @@ export default function TransfersPage() {
                   type="text"
                   readOnly
                   value={exchangeRefId ?? ""}
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-muted"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1346,7 +1346,7 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateExchangeField("date", e.target.value)
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
@@ -1358,7 +1358,7 @@ export default function TransfersPage() {
                     updateExchangeField("doneBy", e.target.value)
                   }
                   placeholder="Who did the exchange"
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1371,7 +1371,7 @@ export default function TransfersPage() {
                       e.target.value as ExchangeFormState["fromCurrency"]
                     )
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CURRENCIES.map((c) => (
                     <option key={c} value={c}>
@@ -1388,7 +1388,7 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateExchangeField("fromAmount", e.target.value)
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1401,7 +1401,7 @@ export default function TransfersPage() {
                       e.target.value as ExchangeFormState["fromPocket"]
                     )
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {POCKETS_ALL.map((p) => (
                     <option key={p} value={p}>
@@ -1420,7 +1420,7 @@ export default function TransfersPage() {
                       e.target.value as ExchangeFormState["toCurrency"]
                     )
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {CURRENCIES.filter((c) => c !== exchangeForm.fromCurrency).map(
                     (c) => (
@@ -1439,7 +1439,7 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateExchangeField("toAmount", e.target.value)
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1450,7 +1450,7 @@ export default function TransfersPage() {
                   value={
                     exchangeRate > 0 ? exchangeRate.toFixed(4) : "-"
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-muted"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-muted"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
@@ -1463,7 +1463,7 @@ export default function TransfersPage() {
                       e.target.value as ExchangeFormState["toPocket"]
                     )
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
                   {POCKETS_ALL.filter((p) => p !== exchangeForm.fromPocket).map(
                     (p) => (
@@ -1482,7 +1482,7 @@ export default function TransfersPage() {
                   onChange={(e) =>
                     updateExchangeField("notes", e.target.value)
                   }
-                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
             </div>
