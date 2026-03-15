@@ -6,19 +6,102 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/context/AuthContext";
 
+/* ── Nav Icons ─────────────────────────────────────────────── */
+const icons: Record<string, React.ReactNode> = {
+  "/dashboard": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+    </svg>
+  ),
+  "/activity": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+  ),
+  "/inventory": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+      <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+    </svg>
+  ),
+  "/deals": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+    </svg>
+  ),
+  "/containers": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    </svg>
+  ),
+  "/movements": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/>
+    </svg>
+  ),
+  "/transfers": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+      <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+    </svg>
+  ),
+  "/debts": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+    </svg>
+  ),
+  "/employees": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  "/investors": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+    </svg>
+  ),
+  "/reports": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+      <line x1="6" y1="20" x2="6" y2="14"/>
+    </svg>
+  ),
+  "/clients": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+  ),
+  "/admin/users": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+    </svg>
+  ),
+};
+
+/* ── Nav Items ─────────────────────────────────────────────── */
 const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/activity", label: "Activity" },
-  { href: "/inventory", label: "Inventory" },
-  { href: "/deals", label: "Deals" },
-  { href: "/containers", label: "Containers" },
-  { href: "/movements", label: "Movements" },
-  { href: "/transfers", label: "Transfers" },
-  { href: "/debts", label: "Debts" },
-  { href: "/employees", label: "Employees" },
-  { href: "/investors", label: "Investors" },
-  { href: "/reports", label: "Reports" },
-  { href: "/clients", label: "Clients" },
+  { href: "/dashboard",   label: "Dashboard" },
+  { href: "/activity",    label: "Activity" },
+  { href: "/inventory",   label: "Inventory" },
+  { href: "/deals",       label: "Deals" },
+  { href: "/containers",  label: "Containers" },
+  { href: "/movements",   label: "Movements" },
+  { href: "/transfers",   label: "Transfers" },
+  { href: "/debts",       label: "Debts" },
+  { href: "/employees",   label: "Employees" },
+  { href: "/investors",   label: "Investors" },
+  { href: "/reports",     label: "Reports" },
+  { href: "/clients",     label: "Clients" },
+];
+
+/* Groups with subtle dividers */
+const groups = [
+  ["/dashboard", "/activity"],
+  ["/inventory", "/deals", "/containers", "/movements", "/transfers", "/debts"],
+  ["/employees", "/investors", "/reports", "/clients"],
 ];
 
 function roleLabel(role: string | null): string {
@@ -42,34 +125,37 @@ function visibleHrefsForRole(role: string | null): Set<string> {
   return new Set();
 }
 
+/* ── Logo ──────────────────────────────────────────────────── */
 function AxiraLogo() {
   return (
-    <svg width="40" height="40" viewBox="0 0 40 40" className="shrink-0">
-      <polygon points="20,2 38,36 2,36" fill="none" stroke="#C9A84C" strokeWidth="2" />
-      <polygon points="20,10 32,34 8,34" fill="#C9A84C" opacity="0.15" />
-      <polygon points="20,18 28,32 12,32" fill="#C9A84C" />
+    <svg width="32" height="32" viewBox="0 0 40 40" className="shrink-0">
+      <polygon points="20,2 38,36 2,36" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+      <polygon points="20,10 32,34 8,34" fill="rgba(255,255,255,0.06)" />
+      <polygon points="20,18 28,32 12,32" fill="#C41230" />
     </svg>
   );
 }
 
+/* ── Mobile Hamburger Button ───────────────────────────────── */
 export function MobileMenuButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center justify-center w-9 h-9 rounded-md md:hidden"
-      style={{ color: "#C9A84C" }}
+      className="flex items-center justify-center w-9 h-9 rounded-lg md:hidden"
+      style={{ color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.08)" }}
       aria-label="Open menu"
     >
-      <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <line x1="3" y1="6" x2="19" y2="6" />
-        <line x1="3" y1="12" x2="19" y2="12" />
-        <line x1="3" y1="18" x2="19" y2="18" />
+      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <line x1="2" y1="5" x2="16" y2="5" />
+        <line x1="2" y1="10" x2="16" y2="10" />
+        <line x1="2" y1="15" x2="16" y2="15" />
       </svg>
     </button>
   );
 }
 
+/* ── Sidebar Content ───────────────────────────────────────── */
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -82,64 +168,145 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
     router.refresh();
   };
 
+  const renderNavItem = (href: string, label: string) => {
+    if (!visibleHrefs.has(href)) return null;
+    const isActive = pathname === href;
+    return (
+      <Link
+        key={href}
+        href={href}
+        onClick={onClose}
+        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150"
+        style={{
+          color: isActive ? "#FFFFFF" : "rgba(170,170,170,0.85)",
+          background: isActive ? "rgba(196,18,48,0.18)" : "transparent",
+          borderLeft: isActive ? "3px solid #C41230" : "3px solid transparent",
+          paddingLeft: "0.625rem",
+        }}
+        onMouseEnter={(e) => {
+          if (!isActive) {
+            (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
+            (e.currentTarget as HTMLElement).style.color = "#FFFFFF";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive) {
+            (e.currentTarget as HTMLElement).style.background = "transparent";
+            (e.currentTarget as HTMLElement).style.color = "rgba(170,170,170,0.85)";
+          }
+        }}
+      >
+        <span style={{ color: isActive ? "#C41230" : "rgba(170,170,170,0.6)", flexShrink: 0 }}>
+          {icons[href]}
+        </span>
+        <span style={{ fontFamily: "var(--font-body)", letterSpacing: "0.01em" }}>{label}</span>
+      </Link>
+    );
+  };
+
   return (
-    <div className="relative flex flex-1 flex-col h-full overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.05]" aria-hidden>
-        <svg width="100%" height="100%" className="h-full w-full">
-          <defs>
-            <pattern id="hex" width="20" height="20" patternUnits="userSpaceOnUse">
-              <polygon points="10,1 19,5.5 19,14.5 10,19 1,14.5 1,5.5" fill="none" stroke="#C9A84C" strokeWidth="0.3" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#hex)" />
-        </svg>
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: "var(--color-sidebar)" }}>
+      {/* Logo */}
+      <div className="flex items-center justify-between px-5 pt-6 pb-5">
+        <div className="flex items-center gap-3">
+          <AxiraLogo />
+          <div className="flex flex-col leading-tight">
+            <span className="text-base font-bold tracking-[0.15em]" style={{ fontFamily: "var(--font-brand)", color: "#FFFFFF" }}>
+              AXIRA
+            </span>
+            <span className="text-[9px] tracking-[0.25em] uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>
+              Auto Export
+            </span>
+          </div>
+        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg transition"
+            style={{ color: "rgba(255,255,255,0.4)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#fff"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.4)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="3" x2="13" y2="13" /><line x1="13" y1="3" x2="3" y2="13" />
+            </svg>
+          </button>
+        )}
       </div>
 
-      <div className="relative flex flex-1 flex-col overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-6">
-          <div className="flex items-center gap-3">
-            <AxiraLogo />
-            <div className="flex flex-col leading-tight">
-              <span className="text-lg font-bold tracking-wide" style={{ fontFamily: "var(--font-heading)", color: "#C9A84C" }}>AXIRA</span>
-              <span className="text-[10px] tracking-[0.2em] uppercase" style={{ fontFamily: "var(--font-body)", color: "rgba(245,237,216,0.6)" }}>Auto Export</span>
+      {/* Divider */}
+      <div className="mx-4 mb-3" style={{ height: "1px", background: "rgba(255,255,255,0.07)" }} />
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-3 pb-4">
+        {groups.map((group, gi) => {
+          const items = group
+            .map((href) => {
+              const item = navItems.find((n) => n.href === href);
+              if (!item) return null;
+              return renderNavItem(item.href, item.label);
+            })
+            .filter(Boolean);
+
+          if (items.length === 0) return null;
+
+          return (
+            <div key={gi}>
+              {gi > 0 && (
+                <div className="mx-2 my-3" style={{ height: "1px", background: "rgba(255,255,255,0.05)" }} />
+              )}
+              <div className="flex flex-col gap-0.5">{items}</div>
             </div>
+          );
+        })}
+
+        {/* Admin users */}
+        {visibleHrefs.has("/admin/users") && (
+          <>
+            <div className="mx-2 my-3" style={{ height: "1px", background: "rgba(255,255,255,0.05)" }} />
+            <div className="flex flex-col gap-0.5">
+              {renderNavItem("/admin/users", "Users")}
+            </div>
+          </>
+        )}
+      </nav>
+
+      {/* User footer */}
+      <div className="px-4 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="flex items-center gap-3">
+          {/* Avatar */}
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+            style={{ background: "#C41230", color: "#fff", fontFamily: "var(--font-body)" }}
+          >
+            {profile?.name?.trim()?.slice(0, 1).toUpperCase() ?? "U"}
           </div>
-          {onClose && (
-            <button type="button" onClick={onClose} className="p-1 rounded" style={{ color: "rgba(245,237,216,0.6)" }}>
-              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="4" y1="4" x2="16" y2="16" /><line x1="16" y1="4" x2="4" y2="16" />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        <div className="mx-4 h-px shrink-0" style={{ background: "rgba(201,168,76,0.4)" }} />
-
-        <nav className="flex flex-1 flex-col gap-0.5 px-3 py-4">
-          {navItems.map((item) =>
-            visibleHrefs.has(item.href) ? (
-              <Link key={item.href} href={item.href} onClick={onClose}
-                className={`rounded-md px-3 py-2.5 text-sm font-medium transition border-l-[3px] border-transparent ${pathname === item.href ? "border-[#C9A84C] bg-black/20 pl-[calc(0.75rem-3px)] text-[#C9A84C]" : "text-[rgba(245,237,216,0.5)] hover:bg-black/10 hover:text-[#F5EDD8]"}`}
-                style={{ fontFamily: "var(--font-heading)" }}>
-                {item.label}
-              </Link>
-            ) : null
-          )}
-          {visibleHrefs.has("/admin/users") && (
-            <Link href="/admin/users" onClick={onClose}
-              className={`rounded-md px-3 py-2.5 text-sm font-medium transition border-l-[3px] border-transparent ${pathname === "/admin/users" ? "border-[#C9A84C] bg-black/20 pl-[calc(0.75rem-3px)] text-[#C9A84C]" : "text-[rgba(245,237,216,0.5)] hover:bg-black/10 hover:text-[#F5EDD8]"}`}
-              style={{ fontFamily: "var(--font-heading)" }}>Users</Link>
-          )}
-        </nav>
-
-        <div className="border-t px-4 py-3" style={{ borderColor: "rgba(201,168,76,0.2)" }}>
-          <p className="truncate text-sm font-medium" style={{ fontFamily: "var(--font-body)", color: "#F5EDD8" }}>Welcome, {profile?.name?.trim() || "User"}</p>
-          {role && <p className="mt-0.5 text-xs" style={{ fontFamily: "var(--font-body)", color: "rgba(245,237,216,0.5)" }}>{roleLabel(role)}</p>}
-          <button type="button" onClick={handleLogout} className="mt-2 flex items-center gap-2 text-xs font-medium transition hover:opacity-80" style={{ fontFamily: "var(--font-body)", color: "rgba(245,237,216,0.7)" }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-sm font-medium" style={{ color: "#FFFFFF" }}>
+              {profile?.name?.trim() || "User"}
+            </p>
+            {role && (
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+                {roleLabel(role)}
+              </p>
+            )}
+          </div>
+          {/* Logout */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            title="Log out"
+            className="p-1.5 rounded-lg transition"
+            style={{ color: "rgba(255,255,255,0.4)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#C41230"; (e.currentTarget as HTMLElement).style.background = "rgba(196,18,48,0.12)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.4)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
-            Log out
           </button>
         </div>
       </div>
@@ -147,14 +314,16 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   );
 }
 
+/* ── Desktop Sidebar ───────────────────────────────────────── */
 export default function Sidebar() {
   return (
-    <aside className="fixed left-0 top-0 z-30 hidden md:flex h-full w-[240px] flex-col" style={{ background: "#5B0F15" }}>
+    <aside className="fixed left-0 top-0 z-30 hidden md:flex h-full w-[240px] flex-col">
       <SidebarContent />
     </aside>
   );
 }
 
+/* ── Mobile Drawer ─────────────────────────────────────────── */
 export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -171,8 +340,8 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <div className="fixed inset-0 z-50 md:hidden">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <aside className="absolute left-0 top-0 h-full w-[280px] flex flex-col" style={{ background: "#5B0F15" }}>
+      <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.55)" }} onClick={onClose} />
+      <aside className="absolute left-0 top-0 h-full w-[280px] flex flex-col">
         <SidebarContent onClose={onClose} />
       </aside>
     </div>
