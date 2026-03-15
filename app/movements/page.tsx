@@ -500,7 +500,7 @@ export default function MovementsPage() {
       body: JSON.stringify({
         type: "expense_logged",
         data: {
-          description: form.description || form.category || "Movement",
+          description: form.category || "Movement",
           amount,
           currency: form.currency,
           pocket: form.pocket,
