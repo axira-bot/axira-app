@@ -679,7 +679,7 @@ export default function DebtsPage() {
               onClick={() => setActiveTab(tab)}
               className={
                 activeTab === tab
-                  ? "rounded-full border border-[var(--color-accent)] bg-[var(--color-accent)]/15 px-4 py-1.5 text-sm font-semibold text-app"
+                  ? "rounded-full border border-[var(--color-accent)] bg-[var(--color-accent)]/15 px-4 py-1.5 text-sm font-semibold text-white"
                   : "rounded-full border border-app surface px-4 py-1.5 text-sm font-semibold text-app hover:border-[var(--color-accent)]/70"
               }
             >
@@ -713,7 +713,7 @@ export default function DebtsPage() {
               <button
                 type="button"
                 onClick={openAdd}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
               >
                 Add Receivable
               </button>
@@ -766,14 +766,14 @@ export default function DebtsPage() {
                             <button
                               type="button"
                               onClick={() => openView(d)}
-                              className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                              className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                             >
                               View
                             </button>
                             <button
                               type="button"
                               onClick={() => openEdit(d)}
-                              className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                              className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                             >
                               Edit
                             </button>
@@ -781,7 +781,7 @@ export default function DebtsPage() {
                               <button
                                 type="button"
                                 onClick={() => handleMarkSettled(d)}
-                                className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:border-emerald-600"
+                                className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:border-emerald-600"
                               >
                                 Mark settled
                               </button>
@@ -790,7 +790,7 @@ export default function DebtsPage() {
                               type="button"
                               onClick={() => handleDeleteDebt(d)}
                               disabled={deletingId === d.id}
-                              className="rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
+                              className="rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
                             >
                               {deletingId === d.id ? "Deleting..." : "Delete"}
                             </button>
@@ -826,7 +826,7 @@ export default function DebtsPage() {
               <button
                 type="button"
                 onClick={openAdd}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
               >
                 Add Payable
               </button>
@@ -876,14 +876,14 @@ export default function DebtsPage() {
                                   <button
                                     type="button"
                                     onClick={() => openView(d)}
-                                    className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                                    className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                                   >
                                     View
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => openEdit(d)}
-                                    className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                                    className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                                   >
                                     Edit
                                   </button>
@@ -891,7 +891,7 @@ export default function DebtsPage() {
                                     <button
                                       type="button"
                                       onClick={() => handleMarkSettled(d)}
-                                      className="mr-2 rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:border-emerald-600"
+                                      className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:border-emerald-600"
                                     >
                                       Mark settled
                                     </button>
@@ -900,7 +900,7 @@ export default function DebtsPage() {
                                     type="button"
                                     onClick={() => handleDeleteDebt(d)}
                                     disabled={deletingId === d.id}
-                                    className="rounded-md border border-app bg-black px-2 py-1 text-[11px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
+                                    className="rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
                                   >
                                     {deletingId === d.id ? "Deleting..." : "Delete"}
                                   </button>
@@ -1023,7 +1023,7 @@ export default function DebtsPage() {
                   type="button"
                   onClick={handleSaveDebt}
                   disabled={isSaving}
-                  className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                  className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
                   {isSaving ? "Saving..." : "Save"}
                 </button>
@@ -1083,7 +1083,7 @@ export default function DebtsPage() {
                           type="number"
                           value={newPaymentAmount}
                           onChange={(e) => setNewPaymentAmount(e.target.value)}
-                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
+                          className="w-full rounded-md border border-app bg-white px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
                         />
                       </label>
                       <label className="space-y-1">
@@ -1092,7 +1092,7 @@ export default function DebtsPage() {
                           type="date"
                           value={newPaymentDate}
                           onChange={(e) => setNewPaymentDate(e.target.value)}
-                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
+                          className="w-full rounded-md border border-app bg-white px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
                         />
                       </label>
                       <label className="space-y-1 sm:col-span-2">
@@ -1100,7 +1100,7 @@ export default function DebtsPage() {
                         <select
                           value={newPaymentPocket}
                           onChange={(e) => setNewPaymentPocket(e.target.value)}
-                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
+                          className="w-full rounded-md border border-app bg-white px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
                         >
                           {(POCKETS_BY_CURRENCY[viewDebt.currency ?? "AED"] ?? []).map((p) => (
                             <option key={p} value={p}>{p}</option>
@@ -1113,7 +1113,7 @@ export default function DebtsPage() {
                           type="text"
                           value={newPaymentNote}
                           onChange={(e) => setNewPaymentNote(e.target.value)}
-                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
+                          className="w-full rounded-md border border-app bg-white px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
                         />
                       </label>
                     </div>
@@ -1123,7 +1123,7 @@ export default function DebtsPage() {
                         type="button"
                         onClick={handleAddPayment}
                         disabled={isAddingPayment}
-                        className="rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-app disabled:opacity-50"
+                        className="rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
                       >
                         {isAddingPayment ? "Saving..." : "Save Payment"}
                       </button>
@@ -1154,7 +1154,7 @@ export default function DebtsPage() {
                           type="button"
                           onClick={() => handleDeletePayment(p)}
                           disabled={deletingPaymentId === p.id}
-                          className="rounded border border-app bg-black px-2 py-0.5 text-[10px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
+                          className="rounded border border-app bg-white px-2 py-0.5 text-[10px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
                         >
                           {deletingPaymentId === p.id ? "Removing..." : "Delete"}
                         </button>

@@ -84,10 +84,10 @@ const STATUS_OPTIONS: Array<NewContainerForm["status"]> = [
 ];
 
 const STATUS_BADGE: Record<string, string> = {
-  Loading: "bg-yellow-900/40 text-yellow-300 border-yellow-500/40",
-  "In Transit": "bg-sky-900/40 text-sky-300 border-sky-500/40",
-  Arrived: "bg-orange-900/40 text-orange-300 border-orange-500/40",
-  Cleared: "bg-emerald-900/40 text-emerald-300 border-emerald-500/40",
+  Loading: "bg-amber-50 text-amber-700 border-amber-300",
+  "In Transit": "bg-sky-50 text-sky-700 border-sky-300",
+  Arrived: "bg-orange-50 text-orange-700 border-orange-300",
+  Cleared: "bg-emerald-50 text-emerald-700 border-emerald-300",
 };
 
 function formatNumber(value: number): string {
@@ -946,7 +946,7 @@ export default function ContainersPage() {
               setIsNewModalOpen(true);
               setError(null);
             }}
-            className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
+            className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
           >
             New Container
           </button>
@@ -1025,7 +1025,7 @@ export default function ContainersPage() {
                               onClick={() =>
                                 setSelectedContainerId(container.id)
                               }
-                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
                               View
                             </button>
@@ -1054,14 +1054,14 @@ export default function ContainersPage() {
                                 setIsNewModalOpen(true);
                                 setError(null);
                               }}
-                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteContainer(container)}
-                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700"
+                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300"
                             >
                               Delete
                             </button>
@@ -1103,7 +1103,7 @@ export default function ContainersPage() {
 
             {/* Shipping summary */}
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-md border border-app bg-black p-3">
+              <div className="rounded-md border border-app bg-white p-3">
                 <div className="text-[11px] font-semibold text-muted">
                   Estimated Shipping
                 </div>
@@ -1111,7 +1111,7 @@ export default function ContainersPage() {
                   {formatMoney(selectedContainer.shipping_cost, "AED")}
                 </div>
               </div>
-              <div className="rounded-md border border-app bg-black p-3">
+              <div className="rounded-md border border-app bg-white p-3">
                 <div className="text-[11px] font-semibold text-muted">
                   Actual Shipping
                 </div>
@@ -1126,7 +1126,7 @@ export default function ContainersPage() {
                   </div>
                 )}
               </div>
-              <div className="rounded-md border border-app bg-black p-3">
+              <div className="rounded-md border border-app bg-white p-3">
                 <div className="text-[11px] font-semibold text-muted">
                   Cars in container
                 </div>
@@ -1137,7 +1137,7 @@ export default function ContainersPage() {
             </div>
 
             {selectedContainer.drive_link && (
-              <div className="mt-3 rounded-md border border-app bg-black p-3">
+              <div className="mt-3 rounded-md border border-app bg-white p-3">
                 <div className="text-[11px] font-semibold text-muted">
                   Google Drive
                 </div>
@@ -1155,7 +1155,7 @@ export default function ContainersPage() {
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 rounded-md border border-app bg-black p-3 text-[11px] sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 rounded-md border border-app bg-white p-3 text-[11px] sm:grid-cols-2">
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-app">
                     <input
@@ -1270,7 +1270,7 @@ export default function ContainersPage() {
                     type="button"
                     onClick={handleAddCar}
                     disabled={isAddingCar}
-                    className="mt-1 inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-app disabled:opacity-50"
+                    className="mt-1 inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
                   >
                     {isAddingCar ? "Adding..." : "Add Car to Container"}
                   </button>
@@ -1346,7 +1346,7 @@ export default function ContainersPage() {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveCar(cc)}
-                                className="rounded-md border border-app bg-black px-2 py-1 text-[10px] font-semibold text-app hover:border-red-700"
+                                className="rounded-md border border-app bg-white px-2 py-1 text-[10px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300"
                               >
                                 Remove
                               </button>
@@ -1401,7 +1401,7 @@ export default function ContainersPage() {
                     type="button"
                     onClick={handlePayInvoice}
                     disabled={isPayingInvoice || !!selectedContainer.shipping_paid}
-                    className="inline-flex w-full items-center justify-center rounded-md bg-[var(--color-accent)] px-3 py-2 text-xs font-semibold text-app disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center rounded-md bg-[var(--color-accent)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
                   >
                     {selectedContainer.shipping_paid
                       ? "Invoice Paid"
@@ -1540,7 +1540,7 @@ export default function ContainersPage() {
                 type="button"
                 onClick={() => !isSavingNew && setIsNewModalOpen(false)}
                 disabled={isSavingNew}
-                className="rounded-md border border-app bg-black px-4 py-2 text-xs font-semibold text-app disabled:opacity-50"
+                className="rounded-md border border-app bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1548,7 +1548,7 @@ export default function ContainersPage() {
                 type="button"
                 onClick={handleCreateContainer}
                 disabled={isSavingNew}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
               >
                 {isSavingNew ? "Saving..." : "Create"}
               </button>

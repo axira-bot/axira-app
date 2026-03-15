@@ -554,7 +554,7 @@ export default function EmployeesPage() {
               <button
                 type="button"
                 onClick={openAdd}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:bg-[#a03020]"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a03020]"
               >
                 Add Employee
               </button>
@@ -695,7 +695,7 @@ export default function EmployeesPage() {
                           type="button"
                           onClick={() => openPayAllModal(e.id)}
                           disabled={payAllSaving && payAllEmployeeId === e.id}
-                          className="rounded bg-[var(--color-accent)] px-2 py-1 text-xs font-medium text-app disabled:opacity-50"
+                          className="rounded bg-[var(--color-accent)] px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
                         >
                           {payAllSaving && payAllEmployeeId === e.id ? "Paying..." : "Pay All Pending"}
                         </button>
@@ -897,7 +897,7 @@ export default function EmployeesPage() {
                 type="button"
                 onClick={handlePaySalary}
                 disabled={isSavingSalary}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
               >
                 {isSavingSalary ? "Paying..." : "Pay Salary"}
               </button>
@@ -983,7 +983,7 @@ export default function EmployeesPage() {
                 type="button"
                 onClick={handlePayAllPending}
                 disabled={payAllSaving}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
               >
                 {payAllSaving ? "Paying..." : "Confirm payment"}
               </button>
@@ -1132,7 +1132,7 @@ export default function EmployeesPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>

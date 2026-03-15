@@ -706,8 +706,8 @@ export default function TransfersPage() {
               onClick={() => setActiveTab(tab)}
               className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                 activeTab === tab
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-app"
-                  : "border-app surface text-app hover:border-[var(--color-accent)]/70"
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-[#C41230]/70"
               }`}
             >
               {tab}
@@ -731,7 +731,7 @@ export default function TransfersPage() {
                   setIsConversionModalOpen(true);
                   setError(null);
                 }}
-                className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
+                className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
               >
                 Add Conversion
               </button>
@@ -797,7 +797,7 @@ export default function TransfersPage() {
                                   openApprovalModal(movement, meta)
                                 }
                                 disabled={approvingRef === ref}
-                                className="rounded-md border border-app bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-app hover:opacity-90 disabled:opacity-50"
+                                className="rounded-md border border-app bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-white hover:opacity-90 disabled:opacity-50"
                               >
                                 Approve
                               </button>
@@ -805,7 +805,7 @@ export default function TransfersPage() {
                                 type="button"
                                 onClick={() => handleDeleteConversion(ref)}
                                 disabled={deletingRef === ref}
-                                className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700 disabled:opacity-50"
+                                className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
                               >
                                 {deletingRef === ref ? "Deleting..." : "Delete"}
                               </button>
@@ -892,7 +892,7 @@ export default function TransfersPage() {
                                 type="button"
                                 onClick={() => handleDeleteConversion(ref)}
                                 disabled={deletingRef === ref}
-                                className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700 disabled:opacity-50"
+                                className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
                               >
                                 {deletingRef === ref ? "Deleting..." : "Delete"}
                               </button>
@@ -919,7 +919,7 @@ export default function TransfersPage() {
                   setIsExchangeModalOpen(true);
                   setError(null);
                 }}
-                className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
+                className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
               >
                 Add Exchange
               </button>
@@ -999,7 +999,7 @@ export default function TransfersPage() {
                                 type="button"
                                 onClick={() => handleDeleteExchange(ex.ref)}
                                 disabled={deletingRef === ex.ref}
-                                className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700 disabled:opacity-50"
+                                className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
                               >
                                 {deletingRef === ex.ref
                                   ? "Deleting..."
@@ -1210,7 +1210,7 @@ export default function TransfersPage() {
                 type="button"
                 onClick={() => !isSaving && setIsConversionModalOpen(false)}
                 disabled={isSaving}
-                className="rounded-md border border-app bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1218,7 +1218,7 @@ export default function TransfersPage() {
                 type="button"
                 onClick={handleSaveConversion}
                 disabled={isSaving}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
@@ -1285,7 +1285,7 @@ export default function TransfersPage() {
                 type="button"
                 onClick={() => !isApprovalSaving && setApprovalModal(null)}
                 disabled={isApprovalSaving}
-                className="rounded-md border border-app bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1293,7 +1293,7 @@ export default function TransfersPage() {
                 type="button"
                 onClick={handleConfirmApproval}
                 disabled={isApprovalSaving}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isApprovalSaving ? "Confirming..." : "Confirm"}
               </button>
@@ -1491,7 +1491,7 @@ export default function TransfersPage() {
                 type="button"
                 onClick={() => !isSaving && setIsExchangeModalOpen(false)}
                 disabled={isSaving}
-                className="rounded-md border border-app bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1499,7 +1499,7 @@ export default function TransfersPage() {
                 type="button"
                 onClick={handleSaveExchange}
                 disabled={isSaving}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>

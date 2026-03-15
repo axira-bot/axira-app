@@ -1154,7 +1154,7 @@ export default function DealsPage() {
           <button
             type="button"
             onClick={openAddModal}
-            className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
+            className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
           >
             Add Deal
           </button>
@@ -1169,8 +1169,8 @@ export default function DealsPage() {
               className={[
                 "rounded-full border px-3 py-1 text-xs font-semibold transition",
                 activeTab === tab
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-app"
-                  : "border-app surface text-app hover:border-[var(--color-accent)]/70",
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-[#C41230]/70",
               ].join(" ")}
             >
               {tab}
@@ -1236,8 +1236,8 @@ export default function DealsPage() {
                             className={[
                               "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
                               status === "closed"
-                                ? "border-app bg-black text-app"
-                                : "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 text-app",
+                                ? "border-gray-300 bg-gray-100 text-gray-600"
+                                : "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 text-white",
                             ].join(" ")}
                           >
                             {status === "closed" ? "closed" : "pending"}
@@ -1251,7 +1251,7 @@ export default function DealsPage() {
                             <button
                               type="button"
                               onClick={() => openEditModal(d)}
-                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
                               Edit
                             </button>
@@ -1259,14 +1259,14 @@ export default function DealsPage() {
                               type="button"
                               onClick={() => handleDelete(d)}
                               disabled={isDeletingId === d.id}
-                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700 disabled:opacity-50"
+                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
                             >
                               {isDeletingId === d.id ? "Deleting..." : "Delete"}
                             </button>
                             <button
                               type="button"
                               onClick={() => openView(d)}
-                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
                               View
                             </button>
@@ -1476,7 +1476,7 @@ export default function DealsPage() {
                 />
               </label>
 
-              <div className="rounded-md border border-app bg-black px-3 py-2 text-xs text-app">
+              <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-app">Pending DZD</span>
                   <span className="text-app">{formatMoney(pendingDzd, "DZD")}</span>
@@ -1493,7 +1493,7 @@ export default function DealsPage() {
                 />
               </label>
 
-              <div className="rounded-md border border-app bg-black px-3 py-2 text-xs text-app sm:col-span-2">
+              <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <span className="font-semibold text-app">Sale AED</span>
                   <span className="text-app">{formatMoney(saleAed, "AED")}</span>
@@ -1517,7 +1517,7 @@ export default function DealsPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-app bg-black px-3 py-2 text-xs text-app sm:col-span-2">
+              <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <span className="font-semibold text-app">Car Cost AED</span>
                   <span className="text-app">{formatMoney(carCostAed, "AED")}</span>
@@ -1577,7 +1577,7 @@ export default function DealsPage() {
                 />
               </label>
 
-              <label className="flex items-center justify-between gap-3 rounded-md border border-app bg-black px-3 py-2 text-xs text-app sm:col-span-2">
+              <label className="flex items-center justify-between gap-3 rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Shipping Paid</span>
                 <button
                   type="button"
@@ -1585,7 +1585,7 @@ export default function DealsPage() {
                   className={[
                     "rounded-full border px-3 py-1 text-[11px] font-semibold transition",
                     form.shippingPaid
-                      ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-app"
+                      ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
                       : "border-app surface text-app",
                   ].join(" ")}
                 >
@@ -1593,7 +1593,7 @@ export default function DealsPage() {
                 </button>
               </label>
 
-              <div className="rounded-md border border-app bg-black px-3 py-2 text-xs text-app sm:col-span-2">
+              <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <span className="font-semibold text-app">Live Profit Preview</span>
                   <span className="text-[var(--color-accent)]">{formatMoney(profitPreview, "AED")}</span>
@@ -1644,7 +1644,7 @@ export default function DealsPage() {
                 type="button"
                 onClick={closeModal}
                 disabled={isSaving}
-                className="rounded-md border border-app bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1652,7 +1652,7 @@ export default function DealsPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
@@ -1684,7 +1684,7 @@ export default function DealsPage() {
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-md border border-app bg-black p-3 text-xs text-app">
+              <div className="rounded-md border border-app bg-white p-3 text-xs text-app">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-app">Sale</span>
                   <span className="text-app">{formatMoney(viewDeal.sale_dzd, "DZD")}</span>
@@ -1699,7 +1699,7 @@ export default function DealsPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-app bg-black p-3 text-xs text-app">
+              <div className="rounded-md border border-app bg-white p-3 text-xs text-app">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-app">Profit</span>
                   <span className="text-[var(--color-accent)]">{formatMoney(viewDeal.profit, "AED")}</span>
@@ -1714,7 +1714,7 @@ export default function DealsPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-app bg-black p-3 text-xs text-app sm:col-span-2">
+              <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                   Expenses (AED)
                 </div>
@@ -1746,7 +1746,7 @@ export default function DealsPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-app bg-black p-3 text-xs text-app sm:col-span-2">
+              <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                     Payment history
@@ -1800,7 +1800,7 @@ export default function DealsPage() {
                           type="number"
                           value={newPaymentAmount}
                           onChange={(e) => setNewPaymentAmount(e.target.value)}
-                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                          className="w-full rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                         />
                         {exceedsPending && (
                           <p className="mt-1 text-red-300">
@@ -1815,7 +1815,7 @@ export default function DealsPage() {
                           type="date"
                           value={newPaymentDate}
                           onChange={(e) => setNewPaymentDate(e.target.value)}
-                          className="w-full rounded-md border border-app bg-black px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                          className="w-full rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                         />
                       </label>
                     </div>
@@ -1824,7 +1824,7 @@ export default function DealsPage() {
                       <input
                         value={newPaymentNote}
                         onChange={(e) => setNewPaymentNote(e.target.value)}
-                        className="w-full rounded-md border border-app bg-black px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                        className="w-full rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                       />
                     </label>
                     <div className="flex justify-end">
@@ -1832,7 +1832,7 @@ export default function DealsPage() {
                         type="button"
                         onClick={handleAddPayment}
                         disabled={saveDisabled}
-                        className="rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-app disabled:opacity-50"
+                        className="rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
                       >
                         {isAddingPayment ? "Saving..." : "Save Payment"}
                       </button>
@@ -1866,7 +1866,7 @@ export default function DealsPage() {
                           type="button"
                           onClick={() => handleDeletePayment(p)}
                           disabled={deletingPaymentId === p.id}
-                          className="rounded border border-app bg-black px-2 py-0.5 text-[10px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
+                          className="rounded border border-app bg-white px-2 py-0.5 text-[10px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
                         >
                           {deletingPaymentId === p.id ? "Removing..." : "Delete"}
                         </button>
@@ -1877,7 +1877,7 @@ export default function DealsPage() {
               </div>
 
               {(viewDeal as Deal & { drive_link?: string | null }).drive_link ? (
-                <div className="rounded-md border border-app bg-black p-3 text-xs text-app sm:col-span-2">
+                <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                     Google Drive
                   </div>
@@ -1887,7 +1887,7 @@ export default function DealsPage() {
                 </div>
               ) : null}
               {viewDeal.notes ? (
-                <div className="rounded-md border border-app bg-black p-3 text-xs text-app sm:col-span-2">
+                <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                     Notes
                   </div>
@@ -1940,7 +1940,7 @@ export default function DealsPage() {
                 type="button"
                 onClick={handleQuickAddClient}
                 disabled={quickAddSaving}
-                className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
               >
                 {quickAddSaving ? "Saving..." : "Save"}
               </button>

@@ -598,7 +598,7 @@ export default function InvestorsPage() {
                 <button
                   type="button"
                   onClick={openAdd}
-                  className="h-10 rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:bg-[#a03020]"
+                  className="h-10 rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a03020]"
                 >
                   Add Investor
                 </button>
@@ -761,7 +761,7 @@ export default function InvestorsPage() {
                                 <button
                                   type="button"
                                   onClick={() => openPayOutModal(inv.id, month, totalProfit, share)}
-                                  className="rounded bg-[var(--color-accent)] px-2 py-1 text-xs font-medium text-app"
+                                  className="rounded bg-[var(--color-accent)] px-2 py-1 text-xs font-medium text-white"
                                 >
                                   Pay Out
                                 </button>
@@ -923,7 +923,7 @@ export default function InvestorsPage() {
                       }
                       setIsSavingOwner(false);
                     }}
-                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                   >
                     {isSavingOwner ? "Saving..." : "Save Owner Settings"}
                   </button>
@@ -1091,7 +1091,7 @@ export default function InvestorsPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
@@ -1170,7 +1170,7 @@ export default function InvestorsPage() {
                 type="button"
                 onClick={handleMarkReturnPaid}
                 disabled={isSavingPayOut}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isSavingPayOut ? "Paying..." : "Confirm payout"}
               </button>
@@ -1323,7 +1323,7 @@ export default function InvestorsPage() {
                   setBonusAmount("");
                   setBonusReason("");
                 }}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isSavingBonus ? "Saving..." : "Save bonus"}
               </button>

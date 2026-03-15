@@ -97,7 +97,7 @@ function StaffBlurGate({
       <div className="pointer-events-none select-none blur-[6px]">{children}</div>
       <div
         className="absolute inset-0 flex items-center justify-center rounded-lg"
-        style={{ background: "rgba(13,6,8,0.85)" }}
+        style={{ background: "rgba(255,255,255,0.95)" }}
       >
         <span
           className="text-sm font-medium"

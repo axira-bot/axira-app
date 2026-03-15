@@ -560,8 +560,8 @@ export default function InventoryPage() {
               className={[
                 "rounded-full border px-3 py-1 text-xs font-semibold transition",
                 activeTab === tab
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-app"
-                  : "border-app surface text-app hover:border-[var(--color-accent)]/70",
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-[#C41230]/70",
               ].join(" ")}
             >
               {filterTabLabels[tab]}
@@ -637,8 +637,8 @@ export default function InventoryPage() {
                             className={[
                               "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
                               status === "sold"
-                                ? "border-app bg-black text-app"
-                                : "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 text-app",
+                                ? "border-app bg-white text-app"
+                                : "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 text-white",
                             ].join(" ")}
                           >
                             {status === "sold" ? "Sold" : "Available"}
@@ -649,7 +649,7 @@ export default function InventoryPage() {
                             <button
                               type="button"
                               onClick={() => openEditModal(car)}
-                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
                               Edit
                             </button>
@@ -657,7 +657,7 @@ export default function InventoryPage() {
                               type="button"
                               onClick={() => handleDelete(car)}
                               disabled={isDeletingId === car.id}
-                              className="rounded-md border border-app bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700 disabled:opacity-50"
+                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
                             >
                               {isDeletingId === car.id ? "Deleting..." : "Delete"}
                             </button>
@@ -959,7 +959,7 @@ export default function InventoryPage() {
                 type="button"
                 onClick={closeModal}
                 disabled={isSaving}
-                className="rounded-md border border-app bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>

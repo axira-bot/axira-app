@@ -824,8 +824,8 @@ export default function ReportsPage() {
               onClick={() => setActiveTab(tab)}
               className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                 activeTab === tab
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-app"
-                  : "border-app surface text-app hover:border-[var(--color-accent)]/70"
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-[#C41230]/70"
               }`}
             >
               {tab}
@@ -869,7 +869,7 @@ export default function ReportsPage() {
                   <button
                     type="button"
                     onClick={exportPl}
-                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
+                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
                   >
                     Export to Excel
                   </button>
@@ -1021,7 +1021,7 @@ export default function ReportsPage() {
                   <button
                     type="button"
                     onClick={exportInventory}
-                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
+                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
                   >
                     Export to Excel
                   </button>
@@ -1118,7 +1118,7 @@ export default function ReportsPage() {
                   <button
                     type="button"
                     onClick={exportDeals}
-                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
+                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
                   >
                     Export to Excel
                   </button>
@@ -1232,7 +1232,7 @@ export default function ReportsPage() {
                   <button
                     type="button"
                     onClick={exportCashFlow}
-                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
+                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
                   >
                     Export to Excel
                   </button>

@@ -905,7 +905,7 @@ export default function MovementsPage() {
             <button
               type="button"
               onClick={openModal}
-              className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app hover:opacity-90"
+              className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
             >
               Add Movement
             </button>
@@ -954,7 +954,7 @@ export default function MovementsPage() {
               className={[
                 "rounded-full border px-3 py-1 text-xs font-semibold transition",
                 activeTab === tab
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-app"
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
                   : "border-[#222222] surface text-app hover:border-[var(--color-accent)]/70",
               ].join(" ")}
             >
@@ -1156,7 +1156,7 @@ export default function MovementsPage() {
                                   setIsModalOpen(true);
                                   setError(null);
                                 }}
-                                className="mr-2 rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                                className="mr-2 rounded-md border border-[#222222] bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                               >
                                 Edit
                               </button>
@@ -1164,7 +1164,7 @@ export default function MovementsPage() {
                                 type="button"
                                 onClick={() => handleDelete(m)}
                                 disabled={isDeletingId === m.id}
-                                className="rounded-md border border-[#222222] bg-black px-3 py-1 text-[11px] font-semibold text-app hover:border-red-700 disabled:opacity-50"
+                                className="rounded-md border border-[#222222] bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
                               >
                                 {isDeletingId === m.id ? "Deleting..." : "Delete"}
                               </button>
@@ -1341,7 +1341,7 @@ export default function MovementsPage() {
                 type="button"
                 onClick={closeModal}
                 disabled={isSaving}
-                className="rounded-md border border-[#222222] bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md border border-[#222222] bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1349,7 +1349,7 @@ export default function MovementsPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
@@ -1467,7 +1467,7 @@ export default function MovementsPage() {
                 type="button"
                 onClick={() => !isSavingRent && setIsRentModalOpen(false)}
                 disabled={isSavingRent}
-                className="rounded-md border border-[#222222] bg-black px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md border border-[#222222] bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1475,7 +1475,7 @@ export default function MovementsPage() {
                 type="button"
                 onClick={handleSaveRent}
                 disabled={isSavingRent}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isSavingRent ? "Saving..." : "Save"}
               </button>
