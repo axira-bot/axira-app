@@ -343,6 +343,20 @@ export default function InventoryPage() {
           amount: payload.purchase_price ?? undefined,
           currency: payload.purchase_currency ?? undefined,
         });
+        // Telegram notification — new car
+        fetch("/api/telegram/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "new_car",
+            data: {
+              brand: payload.brand ?? "",
+              model: payload.model ?? "",
+              year: payload.year,
+              color: payload.color,
+            },
+          }),
+        }).catch(() => {});
       }
 
       if (

@@ -379,6 +379,24 @@ export default function TransfersPage() {
       currency: conversionForm.toCurrency,
     });
 
+    // Telegram notification — conversion/transfer created
+    fetch("/api/telegram/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "custom",
+        data: {
+          message: `💱 *New Conversion Created*
+
+💰 ${conversionForm.amountDzd} DZD → ${conversionForm.toCurrency}
+📈 Rate: ${conversionForm.rate}
+💵 Expected: ${expectedAmount} ${conversionForm.toCurrency}
+👛 From: ${conversionForm.fromPocket}
+📥 To: ${conversionForm.receivingPocket}`,
+        },
+      }),
+    }).catch(() => {});
+
     setIsSaving(false);
     setIsConversionModalOpen(false);
     setConversionForm(emptyConversionForm());
@@ -486,6 +504,21 @@ export default function TransfersPage() {
       amount: actualAmount,
       currency: meta.toCurrency,
     });
+
+    // Telegram notification — conversion approved
+    fetch("/api/telegram/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "custom",
+        data: {
+          message: `✅ *Conversion Approved*
+
+💰 ${conversion.amount} DZD → ${actualAmount} ${meta.toCurrency}
+📥 Received in: ${meta.receivingPocket}`,
+        },
+      }),
+    }).catch(() => {});
 
     setApprovalModal(null);
     setIsApprovalSaving(false);

@@ -493,6 +493,21 @@ export default function MovementsPage() {
       amount,
       currency: form.currency,
     });
+    // Telegram notification — new movement
+    fetch("/api/telegram/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "expense_logged",
+        data: {
+          description: form.description || form.category || "Movement",
+          amount,
+          currency: form.currency,
+          pocket: form.pocket,
+        },
+      }),
+    }).catch(() => {});
+
     setMovements((prev) => [newMovement, ...prev]);
     setIsSaving(false);
     setIsModalOpen(false);
