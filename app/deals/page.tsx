@@ -1191,16 +1191,16 @@ export default function DealsPage() {
             <div className="p-4 text-sm text-muted">No deals found.</div>
           ) : (
             <div className="w-full overflow-x-auto">
-              <table className="min-w-[1120px] w-full text-left text-xs">
+              <table className="min-w-[680px] w-full text-left text-xs">
                 <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3">Client</th>
                     <th className="px-4 py-3">Car</th>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Sale DZD</th>
-                    <th className="px-4 py-3">Rate</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Rate</th>
                     <th className="px-4 py-3">Sale AED</th>
-                    <th className="px-4 py-3">Total Expenses</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Total Expenses</th>
                     <th className="px-4 py-3">Profit</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 w-10">Drive</th>
@@ -1227,9 +1227,9 @@ export default function DealsPage() {
                         </td>
                         <td className="px-4 py-3 text-app">{formatDate(d.date ?? d.created_at)}</td>
                         <td className="px-4 py-3 text-app">{formatMoney(d.sale_dzd, "DZD")}</td>
-                        <td className="px-4 py-3 text-app">{d.rate != null ? formatNumber(d.rate) : "-"}</td>
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">{d.rate != null ? formatNumber(d.rate) : "-"}</td>
                         <td className="px-4 py-3 text-app">{formatMoney(d.sale_aed, "AED")}</td>
-                        <td className="px-4 py-3 text-app">{formatMoney(total, "AED")}</td>
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(total, "AED")}</td>
                         <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(d.profit, "AED")}</td>
                         <td className="px-4 py-3">
                           <span

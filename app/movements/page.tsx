@@ -1070,16 +1070,16 @@ export default function MovementsPage() {
             <div className="p-4 text-sm text-muted">No movements found.</div>
           ) : (
             <div className="w-full overflow-x-auto">
-              <table className="min-w-[980px] w-full text-left text-xs">
+              <table className="min-w-[640px] w-full text-left text-xs">
                 <thead className="border-b border-[#222222] text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Amount</th>
-                    <th className="px-4 py-3">Pocket</th>
-                    <th className="px-4 py-3">Deal</th>
-                    <th className="px-4 py-3">Notes</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Pocket</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Deal</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Notes</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
@@ -1112,13 +1112,13 @@ export default function MovementsPage() {
                         <td className="px-4 py-3 text-app">
                           {formatMoney(m.amount, m.currency)}
                         </td>
-                        <td className="px-4 py-3 text-app">
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">
                           {m.pocket || "-"}
                         </td>
-                        <td className="px-4 py-3 text-app">
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">
                           {dealLabel(m.deal_id ?? null)}
                         </td>
-                        <td className="px-4 py-3 text-app">
+                        <td className="px-4 py-3 text-app hidden sm:table-cell truncate max-w-[150px]">
                           {formatDescription(m.description) ?? m.reference ?? "-"}
                         </td>
                         <td className="px-4 py-3">

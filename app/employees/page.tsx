@@ -565,14 +565,14 @@ export default function EmployeesPage() {
               </div>
             ) : (
               <div className="overflow-x-auto rounded-lg border border-app surface">
-                <table className="w-full text-left text-sm">
+                <table className="min-w-[640px] w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-app text-muted">
                       <th className="px-4 py-3 font-semibold">Name</th>
-                      <th className="px-4 py-3 font-semibold">Role</th>
-                      <th className="px-4 py-3 font-semibold">Salary</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Role</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Salary</th>
                       <th className="px-4 py-3 font-semibold">Commission</th>
-                      <th className="px-4 py-3 font-semibold">Status</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Status</th>
                       <th className="px-4 py-3 font-semibold">Actions</th>
                     </tr>
                   </thead>
@@ -580,14 +580,14 @@ export default function EmployeesPage() {
                     {employees.map((e) => (
                       <tr key={e.id} className="border-b border-app last:border-0">
                         <td className="px-4 py-3 text-app">{e.name ?? "—"}</td>
-                        <td className="px-4 py-3 text-app">{e.role ?? "—"}</td>
-                        <td className="px-4 py-3 text-app">{formatMoney(e.base_salary, e.salary_currency ?? "DZD")}</td>
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">{e.role ?? "—"}</td>
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(e.base_salary, e.salary_currency ?? "DZD")}</td>
                         <td className="px-4 py-3 text-app">
                           {e.role === "Manager" && e.commission_per_managed_deal != null
                             ? `${formatNumber(e.commission_per_deal ?? 0)} / ${formatNumber(e.commission_per_managed_deal)} (managed)`
                             : formatMoney(e.commission_per_deal, "AED") + " / deal"}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 hidden sm:table-cell">
                           <span
                             className={
                               (e.status || "").toLowerCase() === "active"
@@ -710,14 +710,14 @@ export default function EmployeesPage() {
             </div>
 
             <div className="overflow-x-auto rounded-lg border border-app surface">
-              <table className="w-full text-left text-sm">
+              <table className="min-w-[640px] w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-app text-muted">
                     <th className="px-4 py-3 font-semibold">Employee</th>
-                    <th className="px-4 py-3 font-semibold">Deal</th>
-                    <th className="px-4 py-3 font-semibold">Date</th>
+                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">Deal</th>
+                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">Date</th>
                     <th className="px-4 py-3 font-semibold">Amount</th>
-                    <th className="px-4 py-3 font-semibold">Currency</th>
+                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">Currency</th>
                     <th className="px-4 py-3 font-semibold">Status</th>
                   </tr>
                 </thead>
@@ -725,14 +725,14 @@ export default function EmployeesPage() {
                   {filteredCommissions.map((c) => (
                     <tr key={c.id} className="border-b border-app last:border-0">
                       <td className="px-4 py-3 text-app">{getEmployeeName(c.employee_id)}</td>
-                      <td className="px-4 py-3 text-app">
+                      <td className="px-4 py-3 text-app hidden sm:table-cell">
                         {c.deal
                           ? `${c.deal.car_label ?? "—"} – ${c.deal.client_name ?? ""}`
                           : c.deal_id}
                       </td>
-                      <td className="px-4 py-3 text-app">{formatDate(c.deal?.date ?? null)}</td>
+                      <td className="px-4 py-3 text-app hidden sm:table-cell">{formatDate(c.deal?.date ?? null)}</td>
                       <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(c.amount, "DZD")}</td>
-                      <td className="px-4 py-3 text-app">DZD</td>
+                      <td className="px-4 py-3 text-app hidden sm:table-cell">DZD</td>
                       <td className="px-4 py-3">
                         <span
                           className={

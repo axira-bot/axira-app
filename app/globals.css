@@ -261,3 +261,12 @@ table tbody td {
   max-height: 90vh;
   overflow-y: auto;
 }
+
+/* ── Mobile utilities ──────────────────────────────────── */
+@media (max-width: 640px) {
+  .modal-content {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+}

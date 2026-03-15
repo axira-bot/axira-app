@@ -725,15 +725,15 @@ export default function DebtsPage() {
                 <div className="p-8 text-center text-gray-400">No receivables yet.</div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="min-w-[640px] w-full text-left text-xs">
                     <thead className="border-b border-app text-muted">
                       <tr>
                         <th className="px-4 py-3">Name</th>
                         <th className="px-4 py-3 text-right">Amount</th>
-                        <th className="px-4 py-3">Currency</th>
-                        <th className="px-4 py-3">Reason</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">Currency</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">Reason</th>
                         <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3">Due date</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">Due date</th>
                         <th className="px-4 py-3">Status</th>
                         <th className="px-4 py-3">Actions</th>
                       </tr>
@@ -745,10 +745,10 @@ export default function DebtsPage() {
                           <td className="px-4 py-3 text-right text-app">
                             {formatMoney(d.amount_remaining ?? d.original_amount, d.currency ?? "AED")}
                           </td>
-                          <td className="px-4 py-3 text-app">{d.currency ?? "-"}</td>
-                          <td className="px-4 py-3 text-app">{d.reason ?? "-"}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{d.currency ?? "-"}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{d.reason ?? "-"}</td>
                           <td className="px-4 py-3 text-app">{formatDate(d.date)}</td>
-                          <td className="px-4 py-3 text-app">{formatDate(d.due_date)}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{formatDate(d.due_date)}</td>
                           <td className="px-4 py-3">
                             <span
                               className={
@@ -838,15 +838,15 @@ export default function DebtsPage() {
                 <div className="p-8 text-center text-gray-400">No payables yet.</div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="min-w-[640px] w-full text-left text-xs">
                     <thead className="border-b border-app text-muted">
                       <tr>
                         <th className="px-4 py-3">Name</th>
                         <th className="px-4 py-3 text-right">Amount</th>
-                        <th className="px-4 py-3">Currency</th>
-                        <th className="px-4 py-3">Reason</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">Currency</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">Reason</th>
                         <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3">Due date</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">Due date</th>
                         <th className="px-4 py-3">Status</th>
                         <th className="px-4 py-3">Actions</th>
                       </tr>
@@ -861,10 +861,10 @@ export default function DebtsPage() {
                             <td className="px-4 py-3 text-right text-app">
                               {formatMoney(d.amount_remaining ?? d.original_amount, d.currency ?? "AED")}
                             </td>
-                            <td className="px-4 py-3 text-app">{d.currency ?? "-"}</td>
-                            <td className="px-4 py-3 text-app">{d.reason ?? "-"}</td>
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">{d.currency ?? "-"}</td>
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">{d.reason ?? "-"}</td>
                             <td className="px-4 py-3 text-app">{formatDate(d.date)}</td>
-                            <td className="px-4 py-3 text-app">{formatDate(d.due_date)}</td>
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">{formatDate(d.due_date)}</td>
                             <td className="px-4 py-3">
                               <span className="rounded bg-zinc-700/50 px-2 py-0.5 text-app">
                                 {statusLabel(d.status)}

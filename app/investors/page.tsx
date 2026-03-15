@@ -610,14 +610,14 @@ export default function InvestorsPage() {
               </div>
             ) : (
               <div className="overflow-x-auto rounded-lg border border-app surface">
-                <table className="w-full text-left text-sm">
+                <table className="min-w-[700px] w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-app text-muted">
                       <th className="px-4 py-3 font-semibold">Name</th>
                       <th className="px-4 py-3 font-semibold">Investment (AED eq)</th>
-                      <th className="px-4 py-3 font-semibold">Profit share %</th>
-                      <th className="px-4 py-3 font-semibold">Total profit earned</th>
-                      <th className="px-4 py-3 font-semibold">Total withdrawn</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Profit share %</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Total profit earned</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Total withdrawn</th>
                       <th className="px-4 py-3 font-semibold">Balance</th>
                       <th className="px-4 py-3 font-semibold">Actions</th>
                     </tr>
@@ -647,9 +647,9 @@ export default function InvestorsPage() {
                               formatMoney(i.investment_aed, "AED")
                             )}
                           </td>
-                          <td className="px-4 py-3 text-app">{sharePct.toFixed(1)}%</td>
-                          <td className="px-4 py-3 text-app">{formatMoney(earned, "AED")}</td>
-                          <td className="px-4 py-3 text-app">{formatMoney(withdrawn, "AED")}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{sharePct.toFixed(1)}%</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(earned, "AED")}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(withdrawn, "AED")}</td>
                           <td className="px-4 py-3 font-medium text-[var(--color-accent)]">{formatMoney(balance, "AED")}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
@@ -713,14 +713,14 @@ export default function InvestorsPage() {
             </div>
 
             <div className="overflow-x-auto rounded-lg border border-app surface">
-              <table className="w-full text-left text-sm">
+              <table className="min-w-[680px] w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-app text-muted">
                     <th className="px-4 py-3 font-semibold">Month</th>
-                    <th className="px-4 py-3 font-semibold">Total profit</th>
+                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">Total profit</th>
                     <th className="px-4 py-3 font-semibold">Investor</th>
                     <th className="px-4 py-3 font-semibold">Share</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">Status</th>
                     <th className="px-4 py-3 font-semibold">Action</th>
                   </tr>
                 </thead>
@@ -741,10 +741,10 @@ export default function InvestorsPage() {
                       return (
                         <tr key={key} className="border-b border-app last:border-0">
                           <td className="px-4 py-3 text-app">{month}</td>
-                          <td className="px-4 py-3 text-app">{formatMoney(totalProfit, "AED")}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(totalProfit, "AED")}</td>
                           <td className="px-4 py-3 text-app">{inv.name ?? "—"}</td>
                           <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(share, "AED")}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 hidden sm:table-cell">
                             <span className={isPaid ? "text-emerald-400" : "text-amber-400"}>{status}</span>
                           </td>
                           <td className="px-4 py-3">

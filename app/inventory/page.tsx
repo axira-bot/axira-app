@@ -582,17 +582,17 @@ export default function InventoryPage() {
             <div className="p-4 text-sm text-muted">No cars found.</div>
           ) : (
             <div className="w-full overflow-x-auto">
-              <table className="min-w-[1100px] w-full text-left text-xs rtl:text-right">
+              <table className="min-w-[680px] w-full text-left text-xs rtl:text-right">
                 <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3">Car</th>
-                    <th className="px-4 py-3">Color</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Color</th>
                     <th className="px-4 py-3">Mileage</th>
-                    <th className="px-4 py-3">Location</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Location</th>
                     <th className="px-4 py-3">Owner</th>
                     <th className="px-4 py-3">Purchase Price</th>
-                    <th className="px-4 py-3">Paid to Supplier</th>
-                    <th className="px-4 py-3">Supplier Owed</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Paid to Supplier</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Supplier Owed</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
@@ -607,11 +607,11 @@ export default function InventoryPage() {
                           <div className="font-semibold text-app">{carTitle || "Car"}</div>
                           {car.vin ? <div className="mt-0.5 text-[11px] text-muted">VIN: {car.vin}</div> : null}
                         </td>
-                        <td className="px-4 py-3 text-app">{car.color || "-"}</td>
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">{car.color || "-"}</td>
                         <td className="px-4 py-3 text-app">
                           {car.mileage != null ? formatNumber(car.mileage) : "-"}
                         </td>
-                        <td className="px-4 py-3 text-app">{car.location || "-"}</td>
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">{car.location || "-"}</td>
                         <td className="px-4 py-3 text-app">
                           {car.owner || "-"}
                           {car.owner === "Client" && car.client_name ? (
@@ -624,10 +624,10 @@ export default function InventoryPage() {
                             <div className="mt-0.5 text-[11px] text-muted">Rate: {formatNumber(car.purchase_rate)}</div>
                           ) : null}
                         </td>
-                        <td className="px-4 py-3 text-app">
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">
                           {car.supplier_paid != null ? formatNumber(car.supplier_paid) : "-"}
                         </td>
-                        <td className="px-4 py-3 text-app">
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">
                           {car.supplier_owed != null && car.supplier_owed > 0
                             ? formatNumber(car.supplier_owed)
                             : "-"}

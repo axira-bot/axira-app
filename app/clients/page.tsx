@@ -346,14 +346,14 @@ export default function ClientsPage() {
             <div className="p-4 text-sm text-muted">No clients found.</div>
           ) : (
             <div className="w-full overflow-x-auto">
-              <table className="min-w-[880px] w-full text-left text-xs">
+              <table className="min-w-[640px] w-full text-left text-xs">
                 <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3">Name</th>
                     <th className="px-4 py-3">Phone</th>
-                    <th className="px-4 py-3">Email</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Looking For</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Email</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Type</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">Looking For</th>
                     <th className="px-4 py-3 w-10">Drive</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
@@ -376,10 +376,10 @@ export default function ClientsPage() {
                         <td className="px-4 py-3 text-app">
                           {client.phone || "-"}
                         </td>
-                        <td className="px-4 py-3 text-app">
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">
                           {client.email || "-"}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 hidden sm:table-cell">
                           <span
                             className={[
                               "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
@@ -389,7 +389,7 @@ export default function ClientsPage() {
                             {type}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-app">
+                        <td className="px-4 py-3 text-app hidden sm:table-cell truncate max-w-[150px]">
                           {client.looking_for || "-"}
                         </td>
                         <td className="px-4 py-3">

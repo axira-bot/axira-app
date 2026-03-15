@@ -744,17 +744,17 @@ export default function TransfersPage() {
                     Pending conversions
                   </h3>
                   <div className="w-full overflow-x-auto">
-                    <table className="min-w-[900px] w-full text-left text-xs">
+                    <table className="min-w-[680px] w-full text-left text-xs">
                       <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                         <tr>
                           <th className="px-4 py-3">Transaction ID</th>
                           <th className="px-4 py-3">Date</th>
-                          <th className="px-4 py-3">Deposited by</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">Deposited by</th>
                           <th className="px-4 py-3">Amount DZD</th>
-                          <th className="px-4 py-3">Rate</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">Rate</th>
                           <th className="px-4 py-3">Expected</th>
-                          <th className="px-4 py-3">Receiving pocket</th>
-                          <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">Receiving pocket</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">Status</th>
                           <th className="px-4 py-3">Actions</th>
                         </tr>
                       </thead>
@@ -770,22 +770,22 @@ export default function TransfersPage() {
                             <td className="px-4 py-3 text-app">
                               {formatDateTime(movement.date, meta.time)}
                             </td>
-                            <td className="px-4 py-3 text-app">
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">
                               {meta.depositedBy}
                             </td>
                             <td className="px-4 py-3 text-app">
                               {formatMoney(movement.amount, "DZD")}
                             </td>
-                            <td className="px-4 py-3 text-app">
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">
                               {movement.rate}
                             </td>
                             <td className="px-4 py-3 text-app">
                               {formatMoney(meta.expectedAmount, meta.toCurrency)}
                             </td>
-                            <td className="px-4 py-3 text-app">
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">
                               {meta.receivingPocket}
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3 hidden sm:table-cell">
                               <span className="inline-flex rounded-full bg-red-900/60 px-2 py-0.5 text-[11px] font-semibold text-red-700">
                                 PENDING
                               </span>
@@ -828,18 +828,18 @@ export default function TransfersPage() {
                   </div>
                 ) : (
                   <div className="w-full overflow-x-auto">
-                    <table className="min-w-[900px] w-full text-left text-xs">
+                    <table className="min-w-[680px] w-full text-left text-xs">
                       <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                         <tr>
                           <th className="px-4 py-3">Transaction ID</th>
                           <th className="px-4 py-3">Date</th>
-                          <th className="px-4 py-3">Deposited by</th>
-                          <th className="px-4 py-3">From</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">Deposited by</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">From</th>
                           <th className="px-4 py-3">Amount DZD</th>
-                          <th className="px-4 py-3">Rate</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">Rate</th>
                           <th className="px-4 py-3">Received</th>
-                          <th className="px-4 py-3">Receiving pocket</th>
-                          <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">Receiving pocket</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">Status</th>
                           <th className="px-4 py-3">Actions</th>
                         </tr>
                       </thead>
@@ -861,16 +861,16 @@ export default function TransfersPage() {
                                 </span>
                               )}
                             </td>
-                            <td className="px-4 py-3 text-app">
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">
                               {meta.depositedBy}
                             </td>
-                            <td className="px-4 py-3 text-app">
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">
                               {movement.pocket}
                             </td>
                             <td className="px-4 py-3 text-app">
                               {formatMoney(movement.amount, "DZD")}
                             </td>
-                            <td className="px-4 py-3 text-app">
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">
                               {movement.rate}
                             </td>
                             <td className="px-4 py-3 text-app">
@@ -879,10 +879,10 @@ export default function TransfersPage() {
                                 meta.toCurrency
                               )}
                             </td>
-                            <td className="px-4 py-3 text-app">
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">
                               {meta.receivingPocket}
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3 hidden sm:table-cell">
                               <span className="inline-flex rounded-full bg-emerald-900/40 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">
                                 APPROVED
                               </span>
@@ -935,15 +935,15 @@ export default function TransfersPage() {
                 </div>
               ) : (
                 <div className="w-full overflow-x-auto">
-                  <table className="min-w-[900px] w-full text-left text-xs">
+                  <table className="min-w-[680px] w-full text-left text-xs">
                     <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                       <tr>
                         <th className="px-4 py-3">Reference ID</th>
                         <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3">Done by</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">Done by</th>
                         <th className="px-4 py-3">From</th>
                         <th className="px-4 py-3">To</th>
-                        <th className="px-4 py-3">Rate</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">Rate</th>
                         <th className="px-4 py-3">Actions</th>
                       </tr>
                     </thead>
@@ -982,7 +982,7 @@ export default function TransfersPage() {
                             <td className="px-4 py-3 text-app">
                               {formatDate(ex.date)}
                             </td>
-                            <td className="px-4 py-3 text-app">
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">
                               {doneBy}
                             </td>
                             <td className="px-4 py-3 text-app">
@@ -991,7 +991,7 @@ export default function TransfersPage() {
                             <td className="px-4 py-3 text-app">
                               {toStr}
                             </td>
-                            <td className="px-4 py-3 text-app">
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">
                               {rate.toFixed(4)}
                             </td>
                             <td className="px-4 py-3">
