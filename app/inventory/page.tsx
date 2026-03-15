@@ -30,6 +30,7 @@ type CarFormState = {
   status: "available" | "sold";
   amountPaidToSupplier: string;
   paidFromPocket: PaidPocket | "";
+  countryOfOrigin: string;
 };
 
 const BRANDS = [
@@ -114,6 +115,7 @@ const emptyForm = (): CarFormState => ({
   status: "available",
   amountPaidToSupplier: "",
   paidFromPocket: "",
+  countryOfOrigin: "",
 });
 
 function formatNumber(value: number): string {
@@ -214,6 +216,7 @@ export default function InventoryPage() {
       status: (car.status as "available" | "sold") || "available",
       amountPaidToSupplier: paid != null ? String(paid) : "",
       paidFromPocket: "",
+      countryOfOrigin: car.country_of_origin || "",
     });
     setIsModalOpen(true);
     setError(null);
@@ -282,6 +285,7 @@ export default function InventoryPage() {
       notes: form.notes || null,
       supplier_paid: supplierPaidNum,
       supplier_owed: supplierOwedNum,
+      country_of_origin: form.countryOfOrigin || null,
     };
 
     const carLabel = `${form.brand} ${form.model} ${form.year}`.trim();
@@ -750,6 +754,16 @@ export default function InventoryPage() {
                   value={form.vin}
                   onChange={(e) => updateField("vin", e.target.value)}
                   placeholder="VIN"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                />
+              </label>
+
+              <label className="space-y-1 text-xs text-app">
+                <span className="font-semibold">Country of Origin (optional)</span>
+                <input
+                  value={form.countryOfOrigin}
+                  onChange={(e) => updateField("countryOfOrigin", e.target.value)}
+                  placeholder="e.g. China, Japan, Korea"
                   className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>

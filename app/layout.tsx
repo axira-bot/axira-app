@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import AppShell from "@/components/AppShell";
+import { AIChat } from "@/components/AIChat";
 
 export const metadata: Metadata = {
   title: "Axira Trading FZE",
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body className="antialiased">
         <AuthProvider>
           <AppShell>{children}</AppShell>
+          <AIChat />
         </AuthProvider>
       </body>
     </html>

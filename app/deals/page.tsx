@@ -4,6 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import type { Car, Deal } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
+import dynamic from "next/dynamic";
+
+const InvoiceDownloadButton = dynamic(
+  () => import("@/components/PDFButtons").then((m) => m.InvoiceDownloadButton),
+  { ssr: false }
+);
+const AgreementDownloadButton = dynamic(
+  () => import("@/components/PDFButtons").then((m) => m.AgreementDownloadButton),
+  { ssr: false }
+);
 
 type DealPayment = {
   id: string;
@@ -48,6 +58,7 @@ type DealFormState = {
   notes: string;
   driveLink: string;
   status: "pending" | "closed";
+  saleUsd: string;
 };
 
 const emptyForm = (): DealFormState => ({
@@ -68,6 +79,7 @@ const emptyForm = (): DealFormState => ({
   notes: "",
   driveLink: "",
   status: "pending",
+  saleUsd: "",
 });
 
 function DriveLinkIcon({ href }: { href: string }) {
@@ -171,7 +183,7 @@ export default function DealsPage() {
     ] = await Promise.all([
       supabase
         .from("cars")
-        .select("id, brand, model, year, purchase_price, status, client_name")
+        .select("id, brand, model, year, purchase_price, status, client_name, color, vin, country_of_origin")
         .order("created_at", { ascending: false }),
       supabase.from("deals").select("*").order("date", { ascending: false }),
       supabase.from("clients").select("id, name, phone").order("name", { ascending: true }),
@@ -308,6 +320,7 @@ export default function DealsPage() {
       notes: deal.notes || "",
       driveLink: (deal as Deal & { drive_link?: string | null }).drive_link ?? "",
       status: ((deal.status || "pending").toLowerCase() === "closed" ? "closed" : "pending"),
+      saleUsd: deal.sale_usd != null ? String(deal.sale_usd) : "",
     });
     setIsModalOpen(true);
     setError(null);
@@ -401,6 +414,7 @@ export default function DealsPage() {
       status: form.status,
       notes: form.notes || null,
       drive_link: form.driveLink.trim() || null,
+      sale_usd: parseNum(form.saleUsd) || null,
     };
 
     if (editingDealId) {
@@ -1200,7 +1214,7 @@ export default function DealsPage() {
                           <DriveLinkIcon href={(d as Deal & { drive_link?: string | null }).drive_link ?? ""} />
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <button
                               type="button"
                               onClick={() => openEditModal(d)}
@@ -1223,6 +1237,47 @@ export default function DealsPage() {
                             >
                               View
                             </button>
+                            {d.sale_usd ? (() => {
+                              const dealCar = cars.find((c) => c.id === d.car_id);
+                              const dealDate = d.date ? new Date(d.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase() : "";
+                              const invoiceNum = `INV-${d.id.slice(0, 8).toUpperCase()}`;
+                              return (
+                                <>
+                                  <InvoiceDownloadButton
+                                    filename={`Invoice-${d.client_name}-${dealDate}.pdf`}
+                                    data={{
+                                      invoiceNumber: invoiceNum,
+                                      date: dealDate,
+                                      clientName: d.client_name || "",
+                                      carBrand: dealCar?.brand || (d.car_label?.split(" ")[0] ?? ""),
+                                      carModel: dealCar?.model || (d.car_label?.split(" ").slice(1, -1).join(" ") ?? ""),
+                                      carYear: dealCar?.year ?? null,
+                                      carColor: dealCar?.color ?? null,
+                                      carVin: dealCar?.vin ?? null,
+                                      countryOfOrigin: (dealCar as Car & { country_of_origin?: string | null })?.country_of_origin ?? null,
+                                      saleUsd: d.sale_usd ?? 0,
+                                      exportTo: "Algeria",
+                                    }}
+                                  />
+                                  <AgreementDownloadButton
+                                    filename={`Agreement-${d.client_name}-${dealDate}.pdf`}
+                                    data={{
+                                      date: dealDate,
+                                      clientName: d.client_name || "",
+                                      carBrand: dealCar?.brand || (d.car_label?.split(" ")[0] ?? ""),
+                                      carModel: dealCar?.model || (d.car_label?.split(" ").slice(1, -1).join(" ") ?? ""),
+                                      carYear: dealCar?.year ?? null,
+                                      carColor: dealCar?.color ?? null,
+                                      carVin: dealCar?.vin ?? null,
+                                      countryOfOrigin: (dealCar as Car & { country_of_origin?: string | null })?.country_of_origin ?? null,
+                                      totalAmountUsd: d.sale_usd ?? 0,
+                                      advanceUsd: d.sale_usd && d.collected_dzd && d.rate ? Math.round(d.collected_dzd / d.rate) : 0,
+                                      balanceUsd: d.sale_usd && d.pending_dzd && d.rate ? Math.round(d.pending_dzd / d.rate) : 0,
+                                    }}
+                                  />
+                                </>
+                              );
+                            })() : null}
                           </div>
                         </td>
                       </tr>
@@ -1411,6 +1466,17 @@ export default function DealsPage() {
                   <span className="text-app">{formatMoney(saleAed, "AED")}</span>
                 </div>
               </div>
+
+              <label className="space-y-1 text-xs text-app sm:col-span-2">
+                <span className="font-semibold">Sale Price USD <span className="text-[10px] font-normal text-zinc-400">(for invoice &amp; agreement)</span></span>
+                <input
+                  type="number"
+                  value={form.saleUsd}
+                  onChange={(e) => updateField("saleUsd", e.target.value)}
+                  placeholder="e.g. 6450"
+                  className="w-full rounded-md border border-app bg-[#0a0a0a] px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                />
+              </label>
 
               <div className="sm:col-span-2">
                 <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted">

@@ -33,6 +33,7 @@ export interface Car {
   notes?: string;
   supplier_paid?: number;
   supplier_owed?: number;
+  country_of_origin?: string | null;
 }
 
 export interface Rent {
@@ -75,4 +76,5 @@ export interface Deal {
   notes?: string;
   drive_link?: string | null;
   created_at?: string;
+  sale_usd?: number | null;
 }
