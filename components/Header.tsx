@@ -43,7 +43,7 @@ export default function Header() {
 
   return (
     <header
-      className="flex h-16 shrink-0 items-center justify-between px-6"
+      className="hidden md:flex h-16 shrink-0 items-center justify-between px-6"
       style={{
         background: "var(--color-bg)",
         borderBottom: "1px solid rgba(201,168,76,0.2)",

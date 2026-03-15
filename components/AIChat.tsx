@@ -77,7 +77,7 @@ export function AIChat() {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-22 right-6 z-50 flex h-[520px] w-[380px] flex-col rounded-xl border border-[rgba(201,168,76,0.15)] bg-[#0D0608] shadow-2xl">
+        <div className="fixed bottom-20 right-4 z-50 flex flex-col rounded-xl border border-[rgba(201,168,76,0.15)] bg-[#0D0608] shadow-2xl" style={{height: "min(520px, calc(100dvh - 100px))", width: "min(380px, calc(100vw - 32px))"}}>  
 
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[rgba(201,168,76,0.15)] px-4 py-3">

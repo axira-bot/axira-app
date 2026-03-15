@@ -449,6 +449,22 @@ export default function DealsPage() {
         currency: "AED",
       });
 
+      // Telegram notification — deal closed
+      if (payload.status === "closed" && existingDeal?.status !== "closed") {
+        fetch("/api/telegram/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "deal_closed",
+            data: {
+              clientName: existingDeal?.client_name ?? "Unknown",
+              carLabel: existingDeal?.car_label ?? "Unknown",
+              profit: payload.profit ?? existingDeal?.profit,
+            },
+          }),
+        }).catch(() => {});
+      }
+
       // Handle commission update when handled_by changes or is set
       if (previousEmployeeId !== newEmployeeId) {
         if (previousEmployeeId) {
@@ -570,6 +586,23 @@ export default function DealsPage() {
         amount: newDeal.sale_aed ?? undefined,
         currency: "AED",
       });
+
+      // Telegram notification — new deal
+      fetch("/api/telegram/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "new_deal",
+          data: {
+            clientName: newDeal.client_name ?? "Unknown",
+            carLabel: newDeal.car_label ?? "Unknown",
+            saleDzd: newDeal.sale_dzd,
+            saleAed: newDeal.sale_aed,
+            saleUsd: newDeal.sale_usd,
+            date: newDeal.date ?? new Date().toISOString().slice(0, 10),
+          },
+        }),
+      }).catch(() => {});
 
       const { error: carUpdateError } = await supabase
         .from("cars")
