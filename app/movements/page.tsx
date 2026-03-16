@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import type { Movement, Rent } from "@/lib/types";
+import type { ReceiptPDFData } from "@/lib/pdf/pdfTypes";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
+
+const ReceiptDownloadButton = dynamic(
+  () => import("@/components/PDFButtons").then((m) => m.ReceiptDownloadButton),
+  { ssr: false }
+);
 
 type CashPosition = {
   id: string;
@@ -196,6 +203,7 @@ export default function MovementsPage() {
   } | null>(null);
   const [form, setForm] = useState<MovementFormState>(emptyForm());
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingReceipt, setPendingReceipt] = useState<ReceiptPDFData | null>(null);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
 
   const fetchAll = async () => {
@@ -511,6 +519,24 @@ export default function MovementsPage() {
     setMovements((prev) => [newMovement, ...prev]);
     setIsSaving(false);
     setIsModalOpen(false);
+
+    // Build receipt
+    const receiptNum = `RCP-${newMovement.id?.slice(0, 8).toUpperCase() ?? Date.now()}`;
+    const receiptRows: ReceiptPDFData["rows"] = [
+      { label: "Date", value: form.date },
+      { label: "Type", value: form.type === "In" ? "Incoming" : "Outgoing" },
+      { label: "Category", value: form.category },
+      { label: "Amount", value: `${Number(form.amount).toLocaleString("en-US")} ${form.currency}`, highlight: true },
+      { label: "Pocket", value: form.pocket },
+    ];
+    if (form.dealId) receiptRows.push({ label: "Related Deal", value: form.dealId });
+    setPendingReceipt({
+      receiptNumber: receiptNum,
+      date: form.date,
+      type: form.type === "In" ? "Incoming Payment" : `Expense — ${form.category}`,
+      rows: receiptRows,
+      notes: form.notes || undefined,
+    });
   };
 
   const handleDelete = async (movement: Movement) => {
@@ -1357,6 +1383,49 @@ export default function MovementsPage() {
           </div>
         </div>
       ) : null}
+
+      {/* ── Receipt Modal ─────────────────────────────────────────────── */}
+      {pendingReceipt && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/75" onClick={() => setPendingReceipt(null)} />
+          <div className="relative flex w-full max-w-sm flex-col rounded-xl border border-app surface p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-brand-red">Receipt Ready</p>
+                <p className="mt-0.5 text-sm font-bold text-primary">#{pendingReceipt.receiptNumber}</p>
+              </div>
+              <button
+                onClick={() => setPendingReceipt(null)}
+                className="rounded p-1 text-secondary hover:bg-app transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="mb-4 divide-y divide-app rounded-lg border border-app overflow-hidden">
+              {pendingReceipt.rows.map((row, i) => (
+                <div key={i} className="flex items-center justify-between px-3 py-2.5">
+                  <span className="text-xs text-secondary">{row.label}</span>
+                  <span className={`text-xs font-semibold ${row.highlight ? "text-brand-red" : "text-primary"}`}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mb-4 text-center text-xs text-green-400">✓ Saved successfully</p>
+            <div className="flex gap-2">
+              <ReceiptDownloadButton
+                data={pendingReceipt}
+                label="⬇ Download Receipt"
+                className="flex-1 rounded border border-brand-red/50 bg-brand-red/10 py-2.5 text-xs font-semibold text-brand-red hover:bg-brand-red/20 transition-colors"
+              />
+              <button
+                onClick={() => setPendingReceipt(null)}
+                className="flex-1 rounded border border-app py-2.5 text-xs font-semibold text-secondary hover:bg-app transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Rent Modal */}
       {isRentModalOpen ? (

@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import type { Movement } from "@/lib/types";
+import type { ReceiptPDFData } from "@/lib/pdf/pdfTypes";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
+
+const ReceiptDownloadButton = dynamic(
+  () => import("@/components/PDFButtons").then((m) => m.ReceiptDownloadButton),
+  { ssr: false }
+);
 
 const POCKETS_ALL = [
   "Dubai Cash",
@@ -176,6 +183,7 @@ export default function TransfersPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [deletingRef, setDeletingRef] = useState<string | null>(null);
   const [approvingRef, setApprovingRef] = useState<string | null>(null);
+  const [pendingReceipt, setPendingReceipt] = useState<ReceiptPDFData | null>(null);
 
   const [approvalModal, setApprovalModal] = useState<{
     conversion: Movement;
@@ -401,6 +409,24 @@ export default function TransfersPage() {
     setIsConversionModalOpen(false);
     setConversionForm(emptyConversionForm());
     await fetchAll();
+    // Build and show receipt
+    const receiptId = txId;
+    setPendingReceipt({
+      receiptNumber: receiptId,
+      date: conversionForm.date,
+      time: conversionForm.time,
+      type: "Currency Conversion",
+      rows: [
+        { label: "From Pocket", value: conversionForm.fromPocket },
+        { label: "Amount Sent (DZD)", value: `${Number(conversionForm.amountDzd).toLocaleString("en-US")} DZD`, highlight: true },
+        { label: "Exchange Rate", value: `1 ${conversionForm.toCurrency} = ${conversionForm.rate} DZD` },
+        { label: "Expected Amount", value: `${Number(expectedAmount).toLocaleString("en-US", { maximumFractionDigits: 2 })} ${conversionForm.toCurrency}`, highlight: true },
+        { label: "Receiving Pocket", value: conversionForm.receivingPocket },
+        { label: "Status", value: "Pending Approval" },
+        ...(conversionForm.depositedBy ? [{ label: "Deposited By", value: conversionForm.depositedBy }] : []),
+      ],
+      notes: conversionForm.notes || undefined,
+    });
   };
 
   const openApprovalModal = (movement: Movement, meta: ConversionMeta) => {
@@ -625,9 +651,26 @@ export default function TransfersPage() {
 
     setIsSaving(false);
     setIsExchangeModalOpen(false);
+    const capturedRef = ref;
+    const capturedForm = { ...exchangeForm };
     setExchangeRefId(null);
     setExchangeForm(emptyExchangeForm());
     await fetchAll();
+    // Build and show receipt
+    setPendingReceipt({
+      receiptNumber: capturedRef,
+      date: capturedForm.date,
+      type: "Cash Exchange",
+      rows: [
+        { label: "From Pocket", value: capturedForm.fromPocket },
+        { label: "Amount Given", value: `${Number(capturedForm.fromAmount).toLocaleString("en-US")} ${capturedForm.fromCurrency}`, highlight: true },
+        { label: "To Pocket", value: capturedForm.toPocket },
+        { label: "Amount Received", value: `${Number(capturedForm.toAmount).toLocaleString("en-US")} ${capturedForm.toCurrency}`, highlight: true },
+        ...(capturedForm.doneBy ? [{ label: "Done By", value: capturedForm.doneBy }] : []),
+      ],
+      notes: capturedForm.notes || undefined,
+      doneBy: capturedForm.doneBy || undefined,
+    });
   };
 
   const handleDeleteConversion = async (ref: string) => {
@@ -1221,6 +1264,53 @@ export default function TransfersPage() {
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Receipt Modal ─────────────────────────────────────────────── */}
+      {pendingReceipt && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/75" onClick={() => setPendingReceipt(null)} />
+          <div className="relative flex w-full max-w-sm flex-col rounded-xl border border-app surface p-6 shadow-2xl">
+            {/* Header */}
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-brand-red">Receipt Ready</p>
+                <p className="mt-0.5 text-sm font-bold text-primary">#{pendingReceipt.receiptNumber}</p>
+              </div>
+              <button
+                onClick={() => setPendingReceipt(null)}
+                className="rounded p-1 text-secondary hover:bg-app transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            {/* Summary rows */}
+            <div className="mb-4 divide-y divide-app rounded-lg border border-app overflow-hidden">
+              {pendingReceipt.rows.slice(0, 4).map((row, i) => (
+                <div key={i} className="flex items-center justify-between px-3 py-2.5">
+                  <span className="text-xs text-secondary">{row.label}</span>
+                  <span className={`text-xs font-semibold ${row.highlight ? "text-brand-red" : "text-primary"}`}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+            {/* Saved confirmation */}
+            <p className="mb-4 text-center text-xs text-green-400">✓ Saved successfully</p>
+            {/* Buttons */}
+            <div className="flex gap-2">
+              <ReceiptDownloadButton
+                data={pendingReceipt}
+                label="⬇ Download Receipt"
+                className="flex-1 rounded border border-brand-red/50 bg-brand-red/10 py-2.5 text-xs font-semibold text-brand-red hover:bg-brand-red/20 transition-colors"
+              />
+              <button
+                onClick={() => setPendingReceipt(null)}
+                className="flex-1 rounded border border-app py-2.5 text-xs font-semibold text-secondary hover:bg-app transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

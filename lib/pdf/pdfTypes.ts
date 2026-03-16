@@ -27,3 +27,14 @@ export interface SalesAgreementPDFData {
   advanceUsd: number;
   balanceUsd: number;
 }
+
+export interface ReceiptPDFData {
+  receiptNumber: string;
+  date: string;
+  time?: string;
+  type: string;           // e.g. "Currency Conversion", "Cash Exchange", "Expense", "Income"
+  rows: { label: string; value: string; highlight?: boolean }[];
+  notes?: string;
+  doneBy?: string;
+  approvedBy?: string;
+}
