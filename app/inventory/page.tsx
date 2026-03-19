@@ -43,6 +43,8 @@ type CarFormState = {
   engine: string;
   condition: string;
   features: string;
+  // Listing price (public site)
+  salePriceDzd: string;
   // Stock & publishing
   stockType: "axira" | "supplier";
   supplierName: string;
@@ -91,6 +93,7 @@ const emptyForm = (): CarFormState => ({
   engine: "",
   condition: "",
   features: "",
+  salePriceDzd: "",
   stockType: "axira",
   supplierName: "",
   isPublished: false,
@@ -269,6 +272,7 @@ export default function InventoryPage() {
       engine: car.engine || "",
       condition: car.condition || "",
       features: featuresArr.join(", "),
+      salePriceDzd: car.sale_price_dzd != null ? String(car.sale_price_dzd) : "",
       stockType: (car.stock_type as "axira" | "supplier") || "axira",
       supplierName: car.supplier_name || "",
       isPublished: car.is_published ?? false,
@@ -390,6 +394,8 @@ export default function InventoryPage() {
       engine: form.engine || null,
       condition: form.condition || null,
       features: featuresArr.length > 0 ? featuresArr : null,
+      // Listing price
+      sale_price_dzd: form.salePriceDzd ? Number(form.salePriceDzd) : null,
       // Stock & publishing
       stock_type: form.stockType,
       supplier_name: form.stockType === "supplier" ? form.supplierName : null,
@@ -1122,6 +1128,22 @@ export default function InventoryPage() {
                     placeholder="Client name" className={inputCls} />
                 </label>
               )}
+
+              {/* ── LISTING PRICE ── */}
+              {sectionHeader("Listing Price")}
+
+              <label className={`${labelCls} sm:col-span-2`}>
+                <span className="font-semibold">Sale Price (DZD) <span className="text-gray-400 font-normal text-xs">— shown on public site; leave blank for "Prix sur demande"</span></span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={form.salePriceDzd}
+                  onChange={(e) => updateField("salePriceDzd", e.target.value)}
+                  placeholder="e.g. 3500000"
+                  className={inputCls}
+                />
+              </label>
 
               {/* ── PUBLISHING & STATUS ── */}
               {sectionHeader("Publishing & Status")}

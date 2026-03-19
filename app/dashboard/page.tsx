@@ -37,6 +37,7 @@ type Commission = {
 };
 
 type RateKey = "rate_DZD" | "rate_EUR" | "rate_USD" | "rate_GBP";
+type ListingRateKey = "listing_usd_dzd" | "listing_eur_dzd";
 
 type RateInfo = {
   value: number;
@@ -140,6 +141,14 @@ export default function DashboardPage() {
   const [editingRateValue, setEditingRateValue] = useState<string>("");
   const [lastSavedRateKey, setLastSavedRateKey] = useState<RateKey | null>(null);
 
+  const [listingRates, setListingRates] = useState<Record<ListingRateKey, RateInfo>>({
+    listing_usd_dzd: { value: 0, updatedAt: null },
+    listing_eur_dzd: { value: 0, updatedAt: null },
+  });
+  const [editingListingRateKey, setEditingListingRateKey] = useState<ListingRateKey | null>(null);
+  const [editingListingRateValue, setEditingListingRateValue] = useState<string>("");
+  const [lastSavedListingRateKey, setLastSavedListingRateKey] = useState<ListingRateKey | null>(null);
+
   const [editingPocketId, setEditingPocketId] = useState<string | null>(null);
   const [editingAmount, setEditingAmount] = useState<string>("");
   const [updatingPocketId, setUpdatingPocketId] = useState<string | null>(null);
@@ -196,7 +205,7 @@ export default function DashboardPage() {
         supabase
           .from("app_settings")
           .select("key, value, updated_at")
-          .in("key", ["rate_DZD", "rate_EUR", "rate_USD", "rate_GBP"]),
+          .in("key", ["rate_DZD", "rate_EUR", "rate_USD", "rate_GBP", "listing_usd_dzd", "listing_eur_dzd"]),
       ]);
 
       if (
@@ -235,6 +244,10 @@ export default function DashboardPage() {
           rate_USD: { value: 0, updatedAt: null },
           rate_GBP: { value: 0, updatedAt: null },
         };
+        const nextListing: Record<ListingRateKey, RateInfo> = {
+          listing_usd_dzd: { value: 0, updatedAt: null },
+          listing_eur_dzd: { value: 0, updatedAt: null },
+        };
         for (const row of appSettingsData as {
           key: string;
           value: string | null;
@@ -252,8 +265,16 @@ export default function DashboardPage() {
               updatedAt: row.updated_at,
             };
           }
+          if (row.key === "listing_usd_dzd" || row.key === "listing_eur_dzd") {
+            const num = Number(row.value ?? "0");
+            nextListing[row.key] = {
+              value: Number.isFinite(num) ? num : 0,
+              updatedAt: row.updated_at,
+            };
+          }
         }
         setRates(next);
+        setListingRates(nextListing);
       }
 
       setIsLoading(false);
@@ -429,6 +450,27 @@ export default function DashboardPage() {
     setEditingRateValue("");
   };
 
+  const handleSaveListingRate = async () => {
+    if (!editingListingRateKey) return;
+    const value = Number(editingListingRateValue);
+    if (!Number.isFinite(value) || value <= 0) {
+      setError("Rate must be a positive number.");
+      return;
+    }
+    const { data, error: saveError } = await supabase
+      .from("app_settings")
+      .upsert({ key: editingListingRateKey, value: String(value), updated_at: new Date().toISOString() }, { onConflict: "key" })
+      .select("key, value, updated_at")
+      .single();
+    if (saveError) { setError("Failed to save listing rate."); return; }
+    const row2 = data as { key: ListingRateKey; value: string | null; updated_at: string | null };
+    const num2 = Number(row2.value ?? "0");
+    setListingRates((prev) => ({ ...prev, [row2.key]: { value: Number.isFinite(num2) ? num2 : 0, updatedAt: row2.updated_at } }));
+    setLastSavedListingRateKey(row2.key);
+    setEditingListingRateKey(null);
+    setEditingListingRateValue("");
+  };
+
   const handleStartEdit = (pocket: CashPosition) => {
     if (editingPocketId === pocket.id) return;
     setEditingPocketId(pocket.id);
@@ -566,6 +608,91 @@ export default function DashboardPage() {
                   <div className="mt-1 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
                     Last updated:{" "}
                     {info.updatedAt ? formatDate(info.updatedAt) : "—"}
+                  </div>
+                </div>
+              );
+            })}
+            </div>
+          </section>
+        </StaffBlurGate>
+
+        {/* Listing Rates for Public Site */}
+        <StaffBlurGate show={isStaff}>
+          <section className="space-y-3">
+            <h2
+              className="text-sm font-semibold uppercase tracking-wide"
+              style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
+            >
+              Listing Rates (Public Site)
+            </h2>
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Set daily exchange rates shown to customers on axiratrading.com — prices are listed in DZD and converted using these rates.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {[
+              { label: "1 USD = ? DZD", key: "listing_usd_dzd" as ListingRateKey, hint: "e.g. 135" },
+              { label: "1 EUR = ? DZD", key: "listing_eur_dzd" as ListingRateKey, hint: "e.g. 147" },
+            ].map(({ label, key, hint }) => {
+              const info = listingRates[key];
+              const isEditing = editingListingRateKey === key;
+              const justSaved = lastSavedListingRateKey === key;
+              return (
+                <div
+                  key={key}
+                  className="rounded-lg border p-4 text-sm card"
+                  style={{ borderColor: "var(--color-border)" }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div
+                      className="text-xs font-medium uppercase tracking-wide"
+                      style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}
+                    >
+                      {label}
+                    </div>
+                    {justSaved && (
+                      <div className="text-[11px] font-medium" style={{ color: "var(--color-accent)" }}>
+                        Saved ✓
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        min="1"
+                        step="any"
+                        autoFocus
+                        placeholder={hint}
+                        value={editingListingRateValue}
+                        onChange={(e) => setEditingListingRateValue(e.target.value)}
+                        className="input mr-2 w-full px-2 py-1 text-sm"
+                      />
+                    ) : (
+                      <span
+                        className="text-xl font-semibold"
+                        style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}
+                      >
+                        {info.value > 0 ? `${info.value} DZD` : "—"}
+                      </span>
+                    )}
+                    {isEditing ? (
+                      <div className="flex gap-1">
+                        <button type="button" onClick={handleSaveListingRate} className="btn-primary px-2 py-1 text-xs">Save</button>
+                        <button type="button" onClick={() => { setEditingListingRateKey(null); setEditingListingRateValue(""); }} className="btn-secondary px-2 py-1 text-xs">Cancel</button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setEditingListingRateKey(key); setEditingListingRateValue(info.value > 0 ? String(info.value) : ""); }}
+                        className="rounded-md border px-2 py-1 text-xs font-medium transition hover:opacity-90"
+                        style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-1 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                    Last updated: {info.updatedAt ? formatDate(info.updatedAt) : "—"}
                   </div>
                 </div>
               );

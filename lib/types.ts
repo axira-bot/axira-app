@@ -54,6 +54,7 @@ export interface Car {
   display_status?: string | null;   // 'available' | 'in_transit' | 'sold' (auto-computed)
   status_override?: string | null;  // null = auto | 'available' | 'in_transit' | 'sold'
   sold_at?: string | null;
+  sale_price_dzd?: number | null;   // Public listing price in DZD
 }
 
 export interface Rent {
