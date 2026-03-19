@@ -273,6 +273,45 @@ export default function ContainersPage() {
         entity_id: editingContainerId,
         description: `Container updated – ${newForm.ref.trim() || editingContainerId}`,
       });
+
+      // Sync car display_status when container status changes
+      const newContainerStatus = newForm.status;
+      if (
+        newContainerStatus === "In Transit" ||
+        newContainerStatus === "Arrived" ||
+        newContainerStatus === "Cleared"
+      ) {
+        const { data: containerCarsList } = await supabase
+          .from("container_cars")
+          .select("car_id")
+          .eq("container_id", editingContainerId)
+          .not("car_id", "is", null);
+
+        const carIds = ((containerCarsList ?? []) as { car_id: string | null }[])
+          .map((cc) => cc.car_id)
+          .filter(Boolean) as string[];
+
+        if (carIds.length > 0) {
+          // Only update cars that are not already sold and have no manual override
+          const { data: eligibleCars } = await supabase
+            .from("cars")
+            .select("id")
+            .in("id", carIds)
+            .neq("status", "sold")
+            .is("status_override", null);
+
+          const eligibleIds = ((eligibleCars ?? []) as { id: string }[]).map((c) => c.id);
+
+          if (eligibleIds.length > 0) {
+            const newDisplayStatus =
+              newContainerStatus === "In Transit" ? "in_transit" : "available";
+            await supabase
+              .from("cars")
+              .update({ display_status: newDisplayStatus })
+              .in("id", eligibleIds);
+          }
+        }
+      }
     } else {
       const { data: inserted, error: insertError } = await supabase.from("containers").insert({
         ref: newForm.ref.trim(),

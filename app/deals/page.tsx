@@ -606,7 +606,7 @@ export default function DealsPage() {
 
       const { error: carUpdateError } = await supabase
         .from("cars")
-        .update({ status: "sold" })
+        .update({ status: "sold", display_status: "sold", sold_at: new Date().toISOString() })
         .eq("id", form.carId);
       if (carUpdateError) {
         // eslint-disable-next-line no-console
@@ -826,6 +826,14 @@ export default function DealsPage() {
       amount: deal.sale_aed ?? undefined,
       currency: "AED",
     });
+
+    // Reset car display_status back to available when deal is deleted
+    if (deal.car_id) {
+      await supabase
+        .from("cars")
+        .update({ status: "available", display_status: "available", sold_at: null })
+        .eq("id", deal.car_id);
+    }
 
     setDeals((prev) => prev.filter((d) => d.id !== deal.id));
     if (viewDeal?.id === deal.id) {

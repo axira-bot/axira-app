@@ -35,6 +35,25 @@ export interface Car {
   supplier_owed?: number;
   country_of_origin?: string | null;
   photos?: string[] | null;
+  // Extended specs
+  transmission?: string | null;
+  fuel_type?: string | null;
+  engine?: string | null;
+  features?: string[] | null;
+  condition?: string | null;
+  // New inventory intelligence fields
+  is_published?: boolean | null;
+  stock_type?: 'axira' | 'supplier' | null;
+  supplier_name?: string | null;
+  body_type?: string | null;
+  drive_type?: string | null;
+  doors?: number | null;
+  seats?: number | null;
+  grade?: string | null;
+  body_issues?: string | null;
+  display_status?: string | null;   // 'available' | 'in_transit' | 'sold' (auto-computed)
+  status_override?: string | null;  // null = auto | 'available' | 'in_transit' | 'sold'
+  sold_at?: string | null;
 }
 
 export interface Rent {
