@@ -574,6 +574,21 @@ export default function InventoryPage() {
   const handleMarkSold = async (car: Car) => {
     const isAlreadySold = getEffectiveStatus(car) === "sold";
     if (isAlreadySold) {
+      // Block restore if there is an active deal — must delete the deal first
+      const { data: activeDeal } = await supabase
+        .from("deals")
+        .select("id, client_name")
+        .eq("car_id", car.id)
+        .limit(1)
+        .maybeSingle();
+      if (activeDeal) {
+        setError(
+          `Cannot restore: "${car.brand} ${car.model}" has an active deal` +
+          (activeDeal.client_name ? ` with ${activeDeal.client_name}` : "") +
+          `. Delete the deal first to make this car available again.`
+        );
+        return;
+      }
       if (!window.confirm("Mark this car as Available again?")) return;
       setIsMarkingSoldId(car.id);
       await supabase.from("cars").update({ display_status: "available", sold_at: null, status: "available", status_override: null }).eq("id", car.id);
@@ -898,9 +913,14 @@ export default function InventoryPage() {
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Country of Origin</span>
-                <input value={form.countryOfOrigin} onChange={(e) => updateField("countryOfOrigin", e.target.value)}
-                  placeholder="e.g. China, Japan, Korea, UAE" className={inputCls} />
+                <span className="font-semibold">Ships From <span className="text-gray-400 font-normal text-xs">(export location — sets public site tab)</span></span>
+                <select value={form.countryOfOrigin} onChange={(e) => updateField("countryOfOrigin", e.target.value)} className={inputCls}>
+                  <option value="">— Select export location —</option>
+                  <option value="UAE">UAE / Émirats Arabes Unis</option>
+                  <option value="Europe">Europe</option>
+                  <option value="China">China / Chine</option>
+                  <option value="Korea">Korea / Corée</option>
+                </select>
               </label>
 
               {/* ── SPECIFICATIONS ── */}
