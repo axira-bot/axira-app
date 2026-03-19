@@ -34,6 +34,7 @@ export interface Car {
   supplier_paid?: number;
   supplier_owed?: number;
   country_of_origin?: string | null;
+  photos?: string[] | null;
 }
 
 export interface Rent {

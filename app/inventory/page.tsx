@@ -142,6 +142,11 @@ export default function InventoryPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
 
+  // Photo upload state
+  const [carPhotos, setCarPhotos] = useState<string[]>([]);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoFolder, setPhotoFolder] = useState<string>("");
+
   const showRate = form.purchaseCurrency === "DZD" || form.purchaseCurrency === "USD" || form.purchaseCurrency === "EUR";
   const showClientName = form.owner === "Client";
   const supplierPaidNumeric = form.amountPaidToSupplier.trim()
@@ -190,12 +195,16 @@ export default function InventoryPage() {
   const openAddModal = () => {
     setEditingCarId(null);
     setForm(emptyForm());
+    setCarPhotos([]);
+    setPhotoFolder(crypto.randomUUID());
     setIsModalOpen(true);
     setError(null);
   };
 
   const openEditModal = (car: Car) => {
     setEditingCarId(car.id);
+    setCarPhotos((car.photos as string[]) || []);
+    setPhotoFolder(car.id);
     const purchasePrice = car.purchase_price ?? 0;
     const paid = car.supplier_paid ?? purchasePrice;
     setForm({
@@ -252,6 +261,36 @@ export default function InventoryPage() {
     return null;
   };
 
+  const handlePhotoUpload = async (files: FileList) => {
+    if (!files.length) return;
+    setIsUploadingPhoto(true);
+    const newUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${photoFolder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("car-photos")
+        .upload(path, file, { upsert: false, contentType: file.type });
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage.from("car-photos").getPublicUrl(path);
+        newUrls.push(urlData.publicUrl);
+      }
+    }
+    setCarPhotos((prev) => [...prev, ...newUrls]);
+    setIsUploadingPhoto(false);
+  };
+
+  const handleDeletePhoto = async (url: string, index: number) => {
+    // Extract storage path from public URL
+    const marker = "/car-photos/";
+    const markerIdx = url.indexOf(marker);
+    if (markerIdx !== -1) {
+      const storagePath = url.slice(markerIdx + marker.length);
+      await supabase.storage.from("car-photos").remove([storagePath]);
+    }
+    setCarPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSave = async () => {
     const message = validate();
     if (message) {
@@ -286,6 +325,7 @@ export default function InventoryPage() {
       supplier_paid: supplierPaidNum,
       supplier_owed: supplierOwedNum,
       country_of_origin: form.countryOfOrigin || null,
+      photos: carPhotos.length > 0 ? carPhotos : null,
     };
 
     const carLabel = `${form.brand} ${form.model} ${form.year}`.trim();
@@ -676,7 +716,7 @@ export default function InventoryPage() {
       {isModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={closeModal} />
-          <div className="relative w-full max-w-2xl rounded-lg border border-app surface p-4 shadow-xl">
+          <div className="relative w-full max-w-2xl rounded-lg border border-app surface p-4 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
                 <div className="text-lg font-semibold text-app">
@@ -950,6 +990,50 @@ export default function InventoryPage() {
                     rows={4}
                     className="w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
+                </label>
+              </div>
+
+              {/* Photos */}
+              <div className="sm:col-span-2 space-y-2 text-xs text-app">
+                <span className="font-semibold block">Photos</span>
+                {carPhotos.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {carPhotos.map((url, i) => (
+                      <div key={url} className="relative group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url}
+                          alt={`Car photo ${i + 1}`}
+                          className="h-20 w-20 rounded-md object-cover border border-app"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePhoto(url, i)}
+                          className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center w-5 h-5 bg-red-600 text-white rounded-full text-[11px] font-bold leading-none"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <label className="block cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => e.target.files && handlePhotoUpload(e.target.files)}
+                    disabled={isUploadingPhoto}
+                  />
+                  <div className={[
+                    "rounded-md border border-dashed border-app p-3 text-center text-muted transition",
+                    isUploadingPhoto
+                      ? "opacity-60 cursor-not-allowed"
+                      : "hover:border-[var(--color-accent)] hover:text-app cursor-pointer",
+                  ].join(" ")}>
+                    {isUploadingPhoto ? "Uploading..." : carPhotos.length > 0 ? "Add more photos" : "Click to upload photos"}
+                  </div>
                 </label>
               </div>
             </div>
