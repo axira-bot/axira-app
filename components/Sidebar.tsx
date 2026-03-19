@@ -74,6 +74,11 @@ const icons: Record<string, React.ReactNode> = {
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
     </svg>
   ),
+  "/inquiries": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  ),
   "/admin/users": (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
@@ -95,13 +100,14 @@ const navItems = [
   { href: "/investors",   label: "Investors" },
   { href: "/reports",     label: "Reports" },
   { href: "/clients",     label: "Clients" },
+  { href: "/inquiries",   label: "Inquiries" },
 ];
 
 /* Groups with subtle dividers */
 const groups = [
   ["/dashboard", "/activity"],
   ["/inventory", "/deals", "/containers", "/movements", "/transfers", "/debts"],
-  ["/employees", "/investors", "/reports", "/clients"],
+  ["/employees", "/investors", "/reports", "/clients", "/inquiries"],
 ];
 
 function roleLabel(role: string | null): string {
@@ -112,7 +118,7 @@ function roleLabel(role: string | null): string {
 function visibleHrefsForRole(role: string | null): Set<string> {
   if (!role) return new Set();
   if (role === "owner") return new Set(navItems.map((i) => i.href)).add("/admin/users");
-  if (role === "staff") return new Set(["/inventory", "/deals", "/clients"]);
+  if (role === "staff") return new Set(["/inventory", "/deals", "/clients", "/inquiries"]);
   if (role === "accountant") return new Set(["/movements", "/reports", "/activity"]);
   if (role === "investor") return new Set(["/investors"]);
   if (role === "manager") {
