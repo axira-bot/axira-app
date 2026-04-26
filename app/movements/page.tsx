@@ -407,20 +407,40 @@ export default function MovementsPage() {
       // 1) Reverse original movement using flipped type
       const reversedType =
         originalMovement.type.toLowerCase() === "in" ? "Out" : "In";
-      await updateCashPosition(
+      const okRev = await updateCashPosition(
         originalMovement.pocket,
         originalMovement.amount,
         originalMovement.currency,
         reversedType
       );
+      if (!okRev) {
+        setError("Could not reverse the original pocket balance. Nothing was changed.");
+        setIsSaving(false);
+        return;
+      }
 
       // 2) Apply new movement
-      await updateCashPosition(
-        form.pocket,
-        amount,
-        form.currency,
-        form.type
-      );
+      const okNew = await updateCashPosition(form.pocket, amount, form.currency, form.type);
+      if (!okNew) {
+        const okRestore = await updateCashPosition(
+          originalMovement.pocket,
+          originalMovement.amount,
+          originalMovement.currency,
+          originalMovement.type.toLowerCase() === "in" ? "In" : "Out"
+        );
+        if (!okRestore) {
+          setError(
+            "Critical: failed to apply new pocket balance and failed to restore original balance. Cash positions may now be inconsistent; please review balances immediately."
+          );
+          setIsSaving(false);
+          return;
+        }
+        setError(
+          "Could not apply the new pocket balance. Cash positions were reverted to match the original movement."
+        );
+        setIsSaving(false);
+        return;
+      }
 
       // 3) Update movement row itself
       const { data: updated, error: updateMovementError } = await supabase
@@ -489,10 +509,18 @@ export default function MovementsPage() {
       return;
     }
 
-    // 1) Apply new movement effect via helper
-    await updateCashPosition(form.pocket, amount, form.currency, form.type);
-
     const newMovement = inserted as Movement;
+
+    // 1) Apply new movement effect via helper (creates cash_positions row if missing)
+    const pocketOk = await updateCashPosition(form.pocket, amount, form.currency, form.type);
+    if (!pocketOk) {
+      await supabase.from("movements").delete().eq("id", newMovement.id);
+      setError(
+        "Could not update the pocket balance (cash_positions). The movement was not saved. Add a matching pocket/currency in cash_positions or check database permissions."
+      );
+      setIsSaving(false);
+      return;
+    }
     await logActivity({
       action: "created",
       entity: "movement",

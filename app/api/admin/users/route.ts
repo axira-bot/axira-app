@@ -150,9 +150,27 @@ export async function DELETE(request: NextRequest) {
   }
   try {
     const admin = createAdminClient();
-    const { error } = await admin.auth.admin.deleteUser(id);
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    // Delete auth user first; if this fails, profile remains consistent.
+    const { error: deleteAuthError } = await admin.auth.admin.deleteUser(id);
+    if (deleteAuthError) {
+      return NextResponse.json(
+        { error: `Failed to delete auth user: ${deleteAuthError.message}` },
+        { status: 400 }
+      );
+    }
+
+    const { error: deleteProfileError } = await admin
+      .from("user_profiles")
+      .delete()
+      .eq("id", id);
+
+    if (deleteProfileError) {
+      return NextResponse.json(
+        {
+          error: `Auth user deleted, but failed to delete profile: ${deleteProfileError.message}. Please clean up user_profiles manually.`,
+        },
+        { status: 500 }
+      );
     }
     return NextResponse.json({ ok: true });
   } catch (e) {

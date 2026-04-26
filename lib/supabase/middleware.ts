@@ -44,5 +44,18 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  // Hard gate admin users page to owner only.
+  if (path.startsWith("/admin/users")) {
+    const { data: profile, error: profileError } = await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError || (profile as { role?: string } | null)?.role !== "owner") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+  }
+
   return response;
 }

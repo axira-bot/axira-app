@@ -33,6 +33,13 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# axira-drive-bot secrets/runtime files
+axira-drive-bot/oauth-credentials.json
+axira-drive-bot/service-account.json
+axira-drive-bot/token.json
+axira-drive-bot/venv/
+axira-drive-bot/*.log
+
 # vercel
 .vercel
 
