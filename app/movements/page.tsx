@@ -309,43 +309,62 @@ export default function MovementsPage() {
     amount: number,
     currency: string | null | undefined,
     type: string | null | undefined
-  ) => {
-    if (!pocket || !currency || amount <= 0) return;
+  ): Promise<boolean> => {
+    if (!pocket || !currency || amount <= 0) return false;
 
-    const { data: row, error } = await supabase
+    const isIn = (type || "").toLowerCase() === "in";
+    const signed = isIn ? amount : -amount;
+
+    const { data: rows, error } = await supabase
       .from("cash_positions")
       .select("id, amount")
       .eq("pocket", pocket)
       .eq("currency", currency)
-      .maybeSingle();
+      .limit(1);
 
-    if (error || !row) {
+    if (error) {
       // eslint-disable-next-line no-console
-      if (error) console.log("Supabase fetch cash position error:", error);
-      return;
+      console.log("Supabase fetch cash position error:", error);
+      return false;
     }
 
-    const currentAmount = (row as { amount: number | null }).amount ?? 0;
-    const isIn = (type || "").toLowerCase() === "in";
-    const signed = isIn ? amount : -amount;
+    const row = rows?.[0] as { id: string; amount: number | null } | undefined;
+
+    if (!row) {
+      const { data: inserted, error: insertError } = await supabase
+        .from("cash_positions")
+        .insert({ pocket, currency, amount: signed })
+        .select("id, pocket, amount, currency")
+        .single();
+
+      if (insertError || !inserted) {
+        // eslint-disable-next-line no-console
+        console.log("Supabase insert cash position error:", insertError);
+        return false;
+      }
+
+      setCashPositions((prev) => [...prev, inserted as CashPosition]);
+      return true;
+    }
+
+    const currentAmount = row.amount ?? 0;
     const newAmount = currentAmount + signed;
 
     const { error: updateError } = await supabase
       .from("cash_positions")
       .update({ amount: newAmount })
-      .eq("id", (row as { id: string }).id);
+      .eq("id", row.id);
 
     if (updateError) {
       // eslint-disable-next-line no-console
       console.log("Supabase update cash position error:", updateError);
-      return;
+      return false;
     }
 
     setCashPositions((prev) =>
-      prev.map((p) =>
-        p.id === (row as { id: string }).id ? { ...p, amount: newAmount } : p
-      )
+      prev.map((p) => (p.id === row.id ? { ...p, amount: newAmount } : p))
     );
+    return true;
   };
 
   const openModal = () => {

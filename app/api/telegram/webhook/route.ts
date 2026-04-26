@@ -230,6 +230,52 @@ async function handleDocument(chatId: number, fileId: string, caption: string) {
   }
 }
 
+// ── Voice handler ─────────────────────────────────────────────────────────
+async function handleVoice(chatId: number, fileId: string) {
+  await sendMessage(chatId, "🎙 Transcribing...");
+
+  const fileUrl = await getFile(fileId);
+  if (!fileUrl) {
+    await sendMessage(chatId, "❌ Could not download the voice message.");
+    return;
+  }
+
+  // Download the OGG audio file
+  const fileRes = await fetch(fileUrl);
+  if (!fileRes.ok) {
+    await sendMessage(chatId, "❌ Could not fetch the voice file from Telegram. Please try again.");
+    return;
+  }
+  const buffer = Buffer.from(await fileRes.arrayBuffer());
+
+  // Transcribe via OpenAI Whisper
+  const formData = new FormData();
+  const blob = new Blob([buffer], { type: "audio/ogg" });
+  formData.append("file", blob, "voice.ogg");
+  formData.append("model", "whisper-1");
+
+  const whisperRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: formData,
+  });
+
+  if (!whisperRes.ok) {
+    await sendMessage(chatId, "❌ Could not transcribe voice message. Try typing instead.");
+    return;
+  }
+
+  const { text: transcript } = await whisperRes.json();
+  if (!transcript) {
+    await sendMessage(chatId, "❌ Empty transcription. Please try again.");
+    return;
+  }
+
+  await sendMessage(chatId, `🎙 _"${transcript}"_`);
+  const reply = await handleAIMessage(chatId, transcript);
+  await sendMessage(chatId, reply);
+}
+
 // ── Photo handler ─────────────────────────────────────────────────────────
 async function handlePhoto(chatId: number, fileId: string, caption: string) {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -312,6 +358,12 @@ export async function POST(req: NextRequest) {
     if (text === "/debts") {
       const reply = await handleAIMessage(chatId, "What are my current unpaid debts? Which ones are overdue?");
       await sendMessage(chatId, reply);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Handle voice messages
+    if (message.voice) {
+      await handleVoice(chatId, message.voice.file_id);
       return NextResponse.json({ ok: true });
     }
 
