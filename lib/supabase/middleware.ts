@@ -24,6 +24,7 @@ export async function updateSession(request: NextRequest) {
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
@@ -31,6 +32,16 @@ export async function updateSession(request: NextRequest) {
   // Let API routes handle their own auth
   if (path.startsWith("/api/")) {
     return response;
+  }
+
+  // Stale/invalid refresh token in cookies: clear Supabase auth cookies once, then continue as signed out.
+  if (authError?.code === "refresh_token_not_found") {
+    request.cookies
+      .getAll()
+      .filter((c) => c.name.startsWith("sb-"))
+      .forEach((c) => {
+        response.cookies.set(c.name, "", { path: "/", maxAge: 0 });
+      });
   }
 
   if (path === "/login") {

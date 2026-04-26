@@ -35,6 +35,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const isLogin = pathname === "/login";
   const [mobileOpen, setMobileOpen] = useState(false);
+  const prefetchTargets = [
+    "/dashboard",
+    "/inventory",
+    "/deals",
+    "/containers",
+    "/movements",
+    "/reports",
+  ] as const;
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
@@ -42,9 +50,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (loading) return;
     if (!user && !isLogin) {
       router.replace("/login");
-      router.refresh();
     }
   }, [loading, user, isLogin, router]);
+
+  useEffect(() => {
+    if (!user || loading || isLogin) return;
+    // Warm the most-used admin routes to reduce click-to-render latency.
+    prefetchTargets.forEach((href) => {
+      if (href !== pathname) router.prefetch(href);
+    });
+  }, [user, loading, isLogin, pathname, router]);
 
   if (loading) {
     return (

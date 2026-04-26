@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
 type UserProfile = {
@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const isLoadingUserRef = useRef(false);
 
   useEffect(() => {
     const supabase = createBrowserClient(
@@ -47,42 +48,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     async function loadUser() {
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
-      if (authUser) {
-        setUser(authUser);
-        const { data: profileRow } = await supabase
-          .from("user_profiles")
-          .select("*")
-          .eq("id", authUser.id)
-          .single();
-        const profileData: UserProfile = profileRow
-          ? {
-              id: profileRow.id,
-              name: profileRow.name ?? authUser.email ?? "",
-              role: profileRow.role ?? "owner",
-              employee_id: profileRow.employee_id,
-              investor_id: profileRow.investor_id,
-            }
-          : {
-              id: authUser.id,
-              name: authUser.email ?? "",
-              role: "owner",
-            };
-        setProfile(profileData);
-      } else {
-        setUser(null);
-        setProfile(null);
+      if (isLoadingUserRef.current) return;
+      isLoadingUserRef.current = true;
+      try {
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
+        if (authUser) {
+          setUser(authUser);
+          const { data: profileRow } = await supabase
+            .from("user_profiles")
+            .select("id, name, role, employee_id, investor_id")
+            .eq("id", authUser.id)
+            .single();
+          const profileData: UserProfile = profileRow
+            ? {
+                id: profileRow.id,
+                name: profileRow.name ?? authUser.email ?? "",
+                role: profileRow.role ?? "owner",
+                employee_id: profileRow.employee_id,
+                investor_id: profileRow.investor_id,
+              }
+            : {
+                id: authUser.id,
+                name: authUser.email ?? "",
+                role: "owner",
+              };
+          setProfile(profileData);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+        setLoading(false);
+      } finally {
+        isLoadingUserRef.current = false;
       }
-      setLoading(false);
     }
 
     loadUser();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
+    } = supabase.auth.onAuthStateChange((_event) => {
       loadUser();
     });
 

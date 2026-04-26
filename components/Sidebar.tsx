@@ -171,7 +171,6 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace("/login");
-    router.refresh();
   };
 
   const renderNavItem = (href: string, label: string) => {
@@ -181,6 +180,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       <Link
         key={href}
         href={href}
+        prefetch
         onClick={onClose}
         className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150"
         style={{
@@ -190,6 +190,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           paddingLeft: "0.625rem",
         }}
         onMouseEnter={(e) => {
+          router.prefetch(href);
           if (!isActive) {
             (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
             (e.currentTarget as HTMLElement).style.color = "#FFFFFF";
