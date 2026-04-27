@@ -55,6 +55,10 @@ export interface Car {
   status_override?: string | null;  // null = auto | 'available' | 'in_transit' | 'sold'
   sold_at?: string | null;
   sale_price_dzd?: number | null;   // Public listing price in DZD
+  inventory_lifecycle_status?: string | null;
+  linked_deal_id?: string | null;
+  supplier_id?: string | null;
+  supplier_catalog_id?: string | null;
 }
 
 export interface Rent {
@@ -98,4 +102,18 @@ export interface Deal {
   drive_link?: string | null;
   created_at?: string;
   sale_usd?: number | null;
+  source?: "STOCK" | "PRE_ORDER_CATALOG" | "PRE_ORDER_CUSTOM" | null;
+  lifecycle_status?: "PRE_ORDER" | "ORDERED" | "SHIPPED" | "ARRIVED" | "CLOSED" | "CANCELLED" | null;
+  cancellation_reason?: "customer_cancelled" | "supplier_unavailable" | "other" | null;
+  cancellation_note?: string | null;
+  agreed_delivery_date?: string | null;
+  inventory_car_id?: string | null;
+  source_cost?: number | null;
+  source_currency?: "USD" | "AED" | null;
+  source_rate_to_dzd?: number | null;
+  source_rate_to_aed?: number | null;
+  margin_dzd?: number | null;
+  margin_aed?: number | null;
+  margin_pct?: number | null;
+  custom_spec_signature?: string | null;
 }

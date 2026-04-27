@@ -119,6 +119,7 @@ export default function ReportsPage() {
   const [invStatus, setInvStatus] = useState<string>("All");
 
   const [dealsStatus, setDealsStatus] = useState<string>("All");
+  const [dealsSource, setDealsSource] = useState<string>("All");
   const [dealsFrom, setDealsFrom] = useState(() => {
     const d = new Date();
     d.setMonth(d.getMonth() - 1);
@@ -260,7 +261,13 @@ export default function ReportsPage() {
     return cars.filter((c) => {
       if (invLocation !== "All" && (c.location || "") !== invLocation)
         return false;
-      if (invStatus !== "All" && (c.status || "").toLowerCase() !== invStatus.toLowerCase())
+      const lifecycle = (c.inventory_lifecycle_status || "").toLowerCase();
+      const legacy = (c.status || "").toLowerCase();
+      if (
+        invStatus !== "All" &&
+        lifecycle !== invStatus.toLowerCase() &&
+        legacy !== invStatus.toLowerCase()
+      )
         return false;
       return true;
     });
@@ -268,18 +275,27 @@ export default function ReportsPage() {
 
   const invSummary = useMemo(() => {
     const total = cars.length;
-    const available = cars.filter(
-      (c) => (c.status || "").toLowerCase() === "available"
-    ).length;
-    const sold = cars.filter(
-      (c) => (c.status || "").toLowerCase() === "sold"
-    ).length;
-    const inTransit = cars.filter(
-      (c) => (c.location || "").toLowerCase().includes("transit")
-    ).length;
+    const available = cars.filter((c) => {
+      const s = (c.status || "").toLowerCase();
+      const l = (c.inventory_lifecycle_status || "").toLowerCase();
+      return s === "available" || l === "in_stock" || l === "arrived";
+    }).length;
+    const sold = cars.filter((c) => {
+      const s = (c.status || "").toLowerCase();
+      const l = (c.inventory_lifecycle_status || "").toLowerCase();
+      return s === "sold" || l === "delivered";
+    }).length;
+    const inTransit = cars.filter((c) => {
+      const l = (c.inventory_lifecycle_status || "").toLowerCase();
+      return l === "in_transit" || (c.location || "").toLowerCase().includes("transit");
+    }).length;
     let totalValue = 0;
     cars
-      .filter((c) => (c.status || "").toLowerCase() === "available")
+      .filter((c) => {
+        const s = (c.status || "").toLowerCase();
+        const l = (c.inventory_lifecycle_status || "").toLowerCase();
+        return s === "available" || l === "in_stock" || l === "arrived";
+      })
       .forEach((c) => {
         const price = c.purchase_price || 0;
         const curr = (c.purchase_currency || "AED").toUpperCase();
@@ -291,12 +307,19 @@ export default function ReportsPage() {
 
   const dealsFiltered = useMemo(() => {
     return deals.filter((d) => {
-      if (dealsStatus !== "All" && (d.status || "").toLowerCase() !== dealsStatus.toLowerCase())
+      const lifecycle = (d.lifecycle_status || "").toLowerCase();
+      const legacy = (d.status || "").toLowerCase();
+      if (
+        dealsStatus !== "All" &&
+        lifecycle !== dealsStatus.toLowerCase() &&
+        legacy !== dealsStatus.toLowerCase()
+      )
         return false;
+      if (dealsSource !== "All" && (d.source || "STOCK") !== dealsSource) return false;
       const date = d.date || "";
       return date >= dealsFrom && date <= dealsTo;
     });
-  }, [deals, dealsStatus, dealsFrom, dealsTo]);
+  }, [deals, dealsStatus, dealsSource, dealsFrom, dealsTo]);
 
   const dealsSummary = useMemo(() => {
     const total = dealsFiltered.length;
@@ -608,6 +631,8 @@ export default function ReportsPage() {
       "Collected DZD",
       "Pending DZD",
       "Status",
+      "Lifecycle",
+      "Source",
     ];
     const data: (string | number | null)[][] = [
       ["AXIRA TRADING FZE"],
@@ -626,6 +651,8 @@ export default function ReportsPage() {
         d.collected_dzd ?? 0,
         d.pending_dzd ?? 0,
         d.status ?? "",
+        d.lifecycle_status ?? "",
+        d.source ?? "STOCK",
       ]),
     ];
     const ws = XLSX.utils.aoa_to_sheet(data);
@@ -659,6 +686,8 @@ export default function ReportsPage() {
         d.collected_dzd ?? 0,
         d.pending_dzd ?? 0,
         d.status ?? "",
+        d.lifecycle_status ?? "",
+        d.source ?? "STOCK",
       ];
       row.forEach((val, cIdx) => {
         const style: CellStyle = {};
@@ -1015,8 +1044,13 @@ export default function ReportsPage() {
                     className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   >
                     <option value="All">All statuses</option>
-                    <option value="available">Available</option>
-                    <option value="sold">Sold</option>
+                    <option value="available">Available (legacy)</option>
+                    <option value="sold">Sold (legacy)</option>
+                    <option value="in_stock">IN_STOCK</option>
+                    <option value="incoming">INCOMING</option>
+                    <option value="in_transit">IN_TRANSIT</option>
+                    <option value="arrived">ARRIVED</option>
+                    <option value="delivered">DELIVERED</option>
                   </select>
                   <button
                     type="button"
@@ -1096,6 +1130,21 @@ export default function ReportsPage() {
                     <option value="All">All statuses</option>
                     <option value="pending">Pending</option>
                     <option value="closed">Closed</option>
+                    <option value="pre_order">PRE_ORDER</option>
+                    <option value="ordered">ORDERED</option>
+                    <option value="shipped">SHIPPED</option>
+                    <option value="arrived">ARRIVED</option>
+                    <option value="cancelled">CANCELLED</option>
+                  </select>
+                  <select
+                    value={dealsSource}
+                    onChange={(e) => setDealsSource(e.target.value)}
+                    className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+                  >
+                    <option value="All">All sources</option>
+                    <option value="STOCK">STOCK</option>
+                    <option value="PRE_ORDER_CATALOG">PRE_ORDER_CATALOG</option>
+                    <option value="PRE_ORDER_CUSTOM">PRE_ORDER_CUSTOM</option>
                   </select>
                   <label className="flex flex-col gap-1 text-xs text-muted">
                     From
@@ -1169,6 +1218,8 @@ export default function ReportsPage() {
                           <th className="px-4 py-3 text-right">Collected</th>
                           <th className="px-4 py-3 text-right">Pending</th>
                           <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3">Lifecycle</th>
+                          <th className="px-4 py-3">Source</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1199,6 +1250,8 @@ export default function ReportsPage() {
                               {formatNumber(d.pending_dzd ?? 0)}
                             </td>
                             <td className="px-4 py-3 text-app">{d.status ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{d.lifecycle_status ?? "-"}</td>
+                            <td className="px-4 py-3 text-app">{d.source ?? "STOCK"}</td>
                           </tr>
                         ))}
                       </tbody>

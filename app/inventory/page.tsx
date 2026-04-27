@@ -118,6 +118,16 @@ function getEffectiveStatus(car: Car): string {
 
 type StockTypeTab = "axira" | "supplier";
 type FilterTab = "All" | "Dubai" | "Algeria" | "In Transit" | "Sold";
+type ConditionTab = "brand_new" | "used";
+
+function normalizeCondition(condition: string | null | undefined): string {
+  return (condition || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function isBrandNewCondition(condition: string | null | undefined): boolean {
+  const normalized = normalizeCondition(condition);
+  return normalized === "brand new" || normalized === "new";
+}
 
 function DisplayStatusBadge({ status }: { status: string }) {
   if (status === "sold") return (
@@ -158,6 +168,7 @@ export default function InventoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [cars, setCars] = useState<Car[]>([]);
   const [stockTypeTab, setStockTypeTab] = useState<StockTypeTab>("axira");
+  const [conditionTab, setConditionTab] = useState<ConditionTab>("brand_new");
   const [activeTab, setActiveTab] = useState<FilterTab>("All");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -213,22 +224,34 @@ export default function InventoryPage() {
   // Filter by stock type first, then by location/status tab
   const filteredCars = useMemo(() => {
     const byStock = cars.filter((c) => (c.stock_type || "axira") === stockTypeTab);
+    const byCondition = byStock.filter((c) =>
+      conditionTab === "brand_new" ? isBrandNewCondition(c.condition) : !isBrandNewCondition(c.condition)
+    );
     const effectiveStatus = (c: Car) => getEffectiveStatus(c).toLowerCase();
 
-    if (activeTab === "Sold") return byStock.filter((c) => effectiveStatus(c) === "sold");
-    if (activeTab === "Dubai") return byStock.filter((c) => c.location === "Dubai Showroom");
-    if (activeTab === "Algeria") return byStock.filter((c) => c.location === "Algeria Showroom");
-    if (activeTab === "In Transit") return byStock.filter((c) => effectiveStatus(c) === "in_transit" || c.location === "In Transit");
-    return byStock;
-  }, [activeTab, stockTypeTab, cars]);
+    if (activeTab === "Sold") return byCondition.filter((c) => effectiveStatus(c) === "sold");
+    if (activeTab === "Dubai") return byCondition.filter((c) => c.location === "Dubai Showroom");
+    if (activeTab === "Algeria") return byCondition.filter((c) => c.location === "Algeria Showroom");
+    if (activeTab === "In Transit") return byCondition.filter((c) => effectiveStatus(c) === "in_transit" || c.location === "In Transit");
+    return byCondition;
+  }, [activeTab, conditionTab, stockTypeTab, cars]);
 
   const axiraCount = useMemo(() => cars.filter((c) => (c.stock_type || "axira") === "axira").length, [cars]);
   const supplierCount = useMemo(() => cars.filter((c) => c.stock_type === "supplier").length, [cars]);
+  const stockCountsByCondition = useMemo(() => {
+    const forStock = cars.filter((c) => (c.stock_type || "axira") === stockTypeTab);
+    const brandNew = forStock.filter((c) => isBrandNewCondition(c.condition)).length;
+    return {
+      brandNew,
+      used: Math.max(0, forStock.length - brandNew),
+    };
+  }, [cars, stockTypeTab]);
 
   const openAddModal = () => {
     setEditingCarId(null);
     const base = emptyForm();
     base.stockType = stockTypeTab;
+    base.condition = conditionTab === "brand_new" ? "Brand New" : "Used";
     setForm(base);
     setCarPhotos([]);
     setPhotoFolder(crypto.randomUUID());
@@ -679,6 +702,34 @@ export default function InventoryPage() {
           </button>
         </div>
 
+        {/* Condition tabs (user-defined only) */}
+        <div className="flex gap-0 rounded-lg border border-app overflow-hidden surface w-fit">
+          <button
+            type="button"
+            onClick={() => setConditionTab("brand_new")}
+            className={[
+              "px-4 py-2 text-xs font-semibold transition",
+              conditionTab === "brand_new"
+                ? "bg-[var(--color-accent)] text-white"
+                : "text-muted hover:text-app",
+            ].join(" ")}
+          >
+            Brand New ({stockCountsByCondition.brandNew})
+          </button>
+          <button
+            type="button"
+            onClick={() => setConditionTab("used")}
+            className={[
+              "px-4 py-2 text-xs font-semibold transition border-l border-app",
+              conditionTab === "used"
+                ? "bg-gray-700 text-white"
+                : "text-muted hover:text-app",
+            ].join(" ")}
+          >
+            Used ({stockCountsByCondition.used})
+          </button>
+        </div>
+
         {stockTypeTab === "supplier" && (
           <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
             ⚠️ Supplier listings are <strong>not included in financial reports</strong>. To record a sale, first convert the car to AXIRA Stock.
@@ -1010,9 +1061,8 @@ export default function InventoryPage() {
                 <span className="font-semibold">Condition</span>
                 <select value={form.condition} onChange={(e) => updateField("condition", e.target.value)} className={inputCls}>
                   <option value="">Select...</option>
-                  <option value="Excellent">Excellent</option>
-                  <option value="Good">Good</option>
-                  <option value="Fair">Fair</option>
+                  <option value="Brand New">Brand New</option>
+                  <option value="Used">Used</option>
                 </select>
               </label>
 

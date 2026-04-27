@@ -5,6 +5,7 @@ import type { Car, Deal } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 import dynamic from "next/dynamic";
+import PreorderDealModal from "@/components/preorders/PreorderDealModal";
 
 const InvoiceDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.InvoiceDownloadButton),
@@ -152,6 +153,7 @@ export default function DealsPage() {
   const [activeTab, setActiveTab] = useState<FilterTab>("All");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPreorderModalOpen, setIsPreorderModalOpen] = useState(false);
   const [editingDealId, setEditingDealId] = useState<string | null>(null);
   const [form, setForm] = useState<DealFormState>(emptyForm());
   const [isSaving, setIsSaving] = useState(false);
@@ -170,6 +172,7 @@ export default function DealsPage() {
   const [isAddingPayment, setIsAddingPayment] = useState(false);
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
+  const [lifecycleSaving, setLifecycleSaving] = useState(false);
 
   const fetchAll = async () => {
     setIsLoading(true);
@@ -1165,6 +1168,33 @@ export default function DealsPage() {
     setDeletingPaymentId(null);
   };
 
+  const handleLifecycleTransition = async (toStatus: "ORDERED" | "SHIPPED" | "ARRIVED" | "CLOSED" | "CANCELLED") => {
+    if (!viewDeal) return;
+    setLifecycleSaving(true);
+    setPaymentsError(null);
+    const res = await fetch(`/api/deals/${encodeURIComponent(viewDeal.id)}/transition`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to_status: toStatus }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setPaymentsError(data.error || "Failed to update lifecycle.");
+      setLifecycleSaving(false);
+      return;
+    }
+    const legacyStatus = toStatus === "CLOSED" ? "closed" : "pending";
+    setViewDeal((prev) =>
+      prev ? { ...prev, lifecycle_status: toStatus, status: legacyStatus } : prev
+    );
+    setDeals((prev) =>
+      prev.map((d) =>
+        d.id === viewDeal.id ? { ...d, lifecycle_status: toStatus, status: legacyStatus } : d
+      )
+    );
+    setLifecycleSaving(false);
+  };
+
   return (
     <div className="min-h-screen bg-app text-app">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
@@ -1173,13 +1203,22 @@ export default function DealsPage() {
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Deals</h1>
             <p className="text-sm font-medium text-[var(--color-accent)]">Sales & Profit</p>
           </div>
-          <button
-            type="button"
-            onClick={openAddModal}
-            className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-          >
-            Add Deal
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setIsPreorderModalOpen(true)}
+              className="inline-flex items-center justify-center rounded-md border border-[var(--color-accent)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10"
+            >
+              Add Pre-Order
+            </button>
+            <button
+              type="button"
+              onClick={openAddModal}
+              className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+            >
+              Add Deal
+            </button>
+          </div>
         </header>
 
         <div className="flex flex-wrap gap-2">
@@ -1224,6 +1263,8 @@ export default function DealsPage() {
                     <th className="px-4 py-3">Sale AED</th>
                     <th className="px-4 py-3 hidden sm:table-cell">Total Expenses</th>
                     <th className="px-4 py-3">Profit</th>
+                    <th className="px-4 py-3 hidden md:table-cell">Source</th>
+                    <th className="px-4 py-3 hidden md:table-cell">Lifecycle</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 w-10">Drive</th>
                     <th className="px-4 py-3">Actions</th>
@@ -1253,6 +1294,8 @@ export default function DealsPage() {
                         <td className="px-4 py-3 text-app">{formatMoney(d.sale_aed, "AED")}</td>
                         <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(total, "AED")}</td>
                         <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(d.profit, "AED")}</td>
+                        <td className="px-4 py-3 text-app hidden md:table-cell">{((d as Deal & { source?: string | null }).source || "STOCK").toString()}</td>
+                        <td className="px-4 py-3 text-app hidden md:table-cell">{((d as Deal & { lifecycle_status?: string | null }).lifecycle_status || (status === "closed" ? "CLOSED" : "PRE_ORDER")).toString()}</td>
                         <td className="px-4 py-3">
                           <span
                             className={[
@@ -1898,6 +1941,28 @@ export default function DealsPage() {
                 )}
               </div>
 
+              {(viewDeal.source === "PRE_ORDER_CATALOG" || viewDeal.source === "PRE_ORDER_CUSTOM") && (
+                <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Pre-order lifecycle</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {(["ORDERED", "SHIPPED", "ARRIVED", "CLOSED", "CANCELLED"] as const).map((status) => (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => handleLifecycleTransition(status)}
+                        disabled={lifecycleSaving}
+                        className="rounded border border-app bg-white px-2 py-1 text-[10px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-[11px] text-muted">
+                    Current: {(viewDeal.lifecycle_status || "PRE_ORDER").toUpperCase()}
+                  </div>
+                </div>
+              )}
+
               {(viewDeal as Deal & { drive_link?: string | null }).drive_link ? (
                 <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted">
@@ -1970,6 +2035,12 @@ export default function DealsPage() {
           </div>
         </div>
       )}
+
+      <PreorderDealModal
+        open={isPreorderModalOpen}
+        onClose={() => setIsPreorderModalOpen(false)}
+        onCreated={fetchAll}
+      />
     </div>
   );
 }

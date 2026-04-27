@@ -6,6 +6,7 @@ WITH required_tables AS (
   SELECT unnest(ARRAY[
     'cars','deals','movements','clients','containers','container_cars',
     'employees','commissions','investors','investor_returns',
+    'suppliers','supplier_catalog','deal_custom_specs',
     'user_profiles','rents','activity_log','inquiries',
     'cash_positions','payments','debts','debt_payments',
     'app_settings','salaries'
@@ -29,12 +30,21 @@ WITH required_columns AS (
     ('deals','sale_usd'),
     ('deals','handled_by'),
     ('deals','handled_by_name'),
+    ('deals','source'),
+    ('deals','lifecycle_status'),
+    ('deals','inventory_car_id'),
     ('cars','country_of_origin'),
     ('cars','photos'),
     ('cars','supplier_paid'),
     ('cars','supplier_owed'),
+    ('cars','inventory_lifecycle_status'),
+    ('cars','linked_deal_id'),
     ('employees','salary_currency'),
     ('movements','status'),
+    ('clients','passport_number'),
+    ('clients','algeria_address'),
+    ('payments','kind'),
+    ('payments','rate_snapshot'),
     ('user_profiles','employee_id'),
     ('user_profiles','investor_id')
   ) AS t(table_name,column_name)
