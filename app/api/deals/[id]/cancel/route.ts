@@ -80,20 +80,37 @@ export async function POST(
         .select("id")
         .single();
 
-      if (payIns.data?.id) {
-        await admin.from("movements").insert({
-          date: payDate,
-          type: direction,
-          category: "Other",
-          description: `Pre-order ${actionKind}`,
-          amount,
-          currency,
-          pocket,
-          payment_id: payIns.data.id,
-          deal_id: id,
-          reference: "PREORDER-CANCEL",
-        });
+      if (payIns.error || !payIns.data?.id) {
+        await admin
+          .from("deals")
+          .update({
+            lifecycle_status: deal.lifecycle_status,
+            status: deal.status ?? "pending",
+            cancellation_reason: null,
+            cancellation_note: null,
+          })
+          .eq("id", id);
+        return NextResponse.json(
+          {
+            error:
+              payIns.error?.message || "Failed to record deposit refund/forfeit payment",
+          },
+          { status: 400 }
+        );
       }
+
+      await admin.from("movements").insert({
+        date: payDate,
+        type: direction,
+        category: "Other",
+        description: `Pre-order ${actionKind}`,
+        amount,
+        currency,
+        pocket,
+        payment_id: payIns.data.id,
+        deal_id: id,
+        reference: "PREORDER-CANCEL",
+      });
     }
 
     if (deal.inventory_car_id) {
