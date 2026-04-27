@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Car, Deal } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
@@ -129,12 +130,33 @@ function formatDate(value: string | null | undefined): string {
   });
 }
 
+function truncateMarker(s: string, max: number): string {
+  const t = s.trim().replace(/\s+/g, " ");
+  if (!t) return "";
+  return t.length > max ? `${t.slice(0, max)}…` : t;
+}
+
+/** Dropdown + stored `car_label`: disambiguate duplicates with VIN tail, notes, color when present. */
 function carLabel(c: Car) {
-  const parts = [c.brand, c.model, c.year ? String(c.year) : null].filter(Boolean);
-  return parts.join(" ");
+  const base = [c.brand, c.model, c.year ? String(c.year) : null].filter(Boolean).join(" ");
+  const extras: string[] = [];
+  const vin = (c.vin || "").trim();
+  if (vin.length >= 6) extras.push(`VIN …${vin.slice(-6)}`);
+  else if (vin) extras.push(`VIN ${vin}`);
+  const marker = truncateMarker(c.notes || "", 36);
+  if (marker) extras.push(marker);
+  const color = (c.color || "").trim();
+  if (color) extras.push(color);
+  if (!extras.length) return base;
+  return `${base} · ${extras.join(" · ")}`;
 }
 
 export default function DealsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  /** Cleared when URL no longer has `addDeal=1`, so the same car can be deep-linked again after `router.replace`. */
+  const prefillCarIdProcessedRef = useRef<string>("");
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -184,7 +206,9 @@ export default function DealsPage() {
     ] = await Promise.all([
       supabase
         .from("cars")
-        .select("id, brand, model, year, purchase_price, status, client_name, color, vin, country_of_origin")
+        .select(
+          "id, brand, model, year, purchase_price, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name"
+        )
         .order("created_at", { ascending: false }),
       supabase.from("deals").select("*").order("date", { ascending: false }),
     ]);
@@ -251,6 +275,45 @@ export default function DealsPage() {
     }
     return ids;
   }, [deals]);
+
+  useEffect(() => {
+    if (searchParams.get("addDeal") !== "1") {
+      prefillCarIdProcessedRef.current = "";
+    }
+  }, [searchParams]);
+
+  // Inventory → Deals: ?addDeal=1&carId=uuid (strip query after handling; dedupe strict double-invoke)
+  useEffect(() => {
+    const addDeal = searchParams.get("addDeal");
+    const carIdParam = searchParams.get("carId")?.trim();
+    if (addDeal !== "1" || !carIdParam) return;
+    if (isLoading) return;
+    if (prefillCarIdProcessedRef.current === carIdParam) return;
+
+    prefillCarIdProcessedRef.current = carIdParam;
+    router.replace("/deals", { scroll: false });
+
+    const car = cars.find((c) => c.id === carIdParam);
+    if (!car) {
+      setError("Car not found or unavailable.");
+      return;
+    }
+    if (car.stock_type === "supplier") {
+      setError(
+        "Supplier listings cannot be used for deals. Convert the car to AXIRA Stock in Inventory first, then create the deal."
+      );
+      return;
+    }
+    if (usedCarIds.has(car.id)) {
+      setError("This car already has a deal. Open the existing deal or choose another car.");
+      return;
+    }
+
+    setEditingDealId(null);
+    setForm({ ...emptyForm(), carId: car.id });
+    setIsModalOpen(true);
+    setError(null);
+  }, [isLoading, cars, searchParams, router, usedCarIds]);
 
   const availableCars = useMemo(() => {
     return cars.filter((c) => {
@@ -373,6 +436,8 @@ export default function DealsPage() {
     setQuickAddClientOpen(false);
     setQuickAddName("");
     setQuickAddPhone("");
+    setClientDropdownOpen(false);
+    setClientSearchQuery(newClient.name?.trim() || "");
   };
 
   const updateField = <K extends keyof DealFormState>(key: K, value: DealFormState[K]) => {
@@ -381,6 +446,9 @@ export default function DealsPage() {
 
   const validate = () => {
     if (!form.clientId.trim()) return "Client is required.";
+    if (!clients.some((c) => c.id === form.clientId)) {
+      return "Select a valid client from the list, or add a new client before saving.";
+    }
     if (!form.date) return "Date is required.";
     if (!form.carId) return "Car is required.";
     if (!form.saleDzd.trim()) return "Sale Price DZD is required.";

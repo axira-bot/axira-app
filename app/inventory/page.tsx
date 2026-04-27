@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { Car } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
@@ -179,6 +180,7 @@ export default function InventoryPage() {
   const [isPublishingId, setIsPublishingId] = useState<string | null>(null);
   const [isMarkingSoldId, setIsMarkingSoldId] = useState<string | null>(null);
   const [isConvertingId, setIsConvertingId] = useState<string | null>(null);
+  const [createDealSupplierHint, setCreateDealSupplierHint] = useState<string | null>(null);
 
   // Photo upload state
   const [carPhotos, setCarPhotos] = useState<string[]>([]);
@@ -755,6 +757,12 @@ export default function InventoryPage() {
           ))}
         </div>
 
+        {createDealSupplierHint && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            {createDealSupplierHint}
+          </div>
+        )}
+
         {error && (
           <div className="rounded-md border border-app surface px-3 py-2 text-xs text-app">{error}</div>
         )}
@@ -860,6 +868,26 @@ export default function InventoryPage() {
                                 className="rounded-md border border-[var(--color-accent)]/50 bg-[var(--color-accent)]/5 px-3 py-1 text-[11px] font-semibold text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 disabled:opacity-50 transition"
                               >
                                 {isConvertingId === car.id ? "..." : "→ AXIRA Stock"}
+                              </button>
+                            )}
+                            {!isSupplierCar ? (
+                              <Link
+                                href={`/deals?addDeal=1&carId=${encodeURIComponent(car.id)}`}
+                                className="inline-flex items-center justify-center rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
+                              >
+                                Create Deal
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCreateDealSupplierHint(
+                                    "Supplier listings cannot be used for deals. Use \"→ AXIRA Stock\" first, then use Create Deal on the AXIRA stock row."
+                                  )
+                                }
+                                className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-400 hover:bg-gray-50"
+                              >
+                                Create Deal
                               </button>
                             )}
                             <button
@@ -1183,7 +1211,7 @@ export default function InventoryPage() {
               {sectionHeader("Listing Price")}
 
               <label className={`${labelCls} sm:col-span-2`}>
-                <span className="font-semibold">Sale Price (DZD) <span className="text-gray-400 font-normal text-xs">— shown on public site; leave blank for "Prix sur demande"</span></span>
+                <span className="font-semibold">Sale Price (DZD) <span className="text-gray-400 font-normal text-xs">— shown on public site; leave blank for Prix sur demande</span></span>
                 <input
                   type="number"
                   min="0"
