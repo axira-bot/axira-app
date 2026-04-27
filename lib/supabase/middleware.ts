@@ -6,6 +6,11 @@ const supabaseAnonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjb2RteGFtYWtva2x6ZXpqeHlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDExMzAsImV4cCI6MjA4ODU3NzEzMH0.ae3ueUIeEVtMfuGMB5xFokI47X_PvT5B_d0FJ_xRf-8";
 
+function isOwnerLikeRole(role: string | null | undefined): boolean {
+  const normalized = (role || "").toLowerCase();
+  return normalized === "owner" || normalized === "super_admin" || normalized === "admin";
+}
+
 export async function updateSession(request: NextRequest) {
   const response = NextResponse.next({ request });
 
@@ -63,7 +68,14 @@ export async function updateSession(request: NextRequest) {
       .eq("id", user.id)
       .maybeSingle();
 
-    if (profileError || (profile as { role?: string } | null)?.role !== "owner") {
+    const profileRole = (profile as { role?: string } | null)?.role ?? null;
+    const metadataRole =
+      (user.user_metadata as { role?: string } | null)?.role ??
+      (user.app_metadata as { role?: string } | null)?.role ??
+      null;
+    const effectiveRole = (profileRole || metadataRole || "").toLowerCase();
+
+    if (profileError || !isOwnerLikeRole(effectiveRole)) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }

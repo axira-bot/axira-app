@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-console.log("Service key exists:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-console.log("All env keys:", Object.keys(process.env).filter((k) => k.includes("SUPABASE")));
-
 export const dynamic = "force-dynamic";
+
+function isOwnerLikeRole(role: string | null | undefined): boolean {
+  const normalized = (role || "").toLowerCase();
+  return normalized === "owner" || normalized === "super_admin" || normalized === "admin";
+}
 
 type UserProfile = {
   id: string;
@@ -28,8 +30,14 @@ async function ensureOwner() {
     .from("user_profiles")
     .select("role")
     .eq("id", user.id)
-    .single();
-  if ((profile as { role?: string } | null)?.role !== "owner") {
+    .maybeSingle();
+  const profileRole = (profile as { role?: string } | null)?.role ?? null;
+  const metadataRole =
+    (user.user_metadata as { role?: string } | null)?.role ??
+    (user.app_metadata as { role?: string } | null)?.role ??
+    null;
+  const effectiveRole = (profileRole || metadataRole || "").toLowerCase();
+  if (!isOwnerLikeRole(effectiveRole)) {
     return { error: "Forbidden: owner only", status: 403 as const };
   }
   return { user };

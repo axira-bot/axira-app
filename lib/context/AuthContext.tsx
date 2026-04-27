@@ -56,11 +56,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } = await supabase.auth.getUser();
         if (authUser) {
           setUser(authUser);
-          const { data: profileRow } = await supabase
+          const { data: profileRow, error: profileError } = await supabase
             .from("user_profiles")
             .select("id, name, role, employee_id, investor_id")
             .eq("id", authUser.id)
-            .single();
+            .maybeSingle();
+          if (profileError) {
+            // Non-blocking fallback: keep session usable even if profile query fails.
+            console.warn("Failed to fetch user profile:", profileError.message);
+          }
           const profileData: UserProfile = profileRow
             ? {
                 id: profileRow.id,

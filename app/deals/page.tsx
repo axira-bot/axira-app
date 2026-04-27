@@ -178,30 +178,20 @@ export default function DealsPage() {
     const [
       { data: carsData, error: carsError },
       { data: dealsData, error: dealsError },
-      { data: clientsData, error: clientsError },
-      { data: employeesData, error: employeesError },
     ] = await Promise.all([
       supabase
         .from("cars")
         .select("id, brand, model, year, purchase_price, status, client_name, color, vin, country_of_origin")
         .order("created_at", { ascending: false }),
       supabase.from("deals").select("*").order("date", { ascending: false }),
-      supabase.from("clients").select("id, name, phone").order("name", { ascending: true }),
-      supabase
-        .from("employees")
-        .select("id, name, role, commission_per_deal, commission_per_managed_deal")
-        .eq("status", "active")
-        .order("name", { ascending: true }),
     ]);
 
-    if (carsError || dealsError || clientsError || employeesError) {
+    if (carsError || dealsError) {
       setError(
         [
           "Failed to load deals data.",
           carsError?.message,
           dealsError?.message,
-          clientsError?.message,
-          employeesError?.message,
         ]
           .filter(Boolean)
           .join(" ")
@@ -210,9 +200,33 @@ export default function DealsPage() {
 
     setCars((carsData as Car[]) ?? []);
     setDeals((dealsData as Deal[]) ?? []);
+    setIsLoading(false);
+
+    // Load secondary dropdown data after first paint to improve page transition speed.
+    const [{ data: clientsData, error: clientsError }, { data: employeesData, error: employeesError }] =
+      await Promise.all([
+        supabase.from("clients").select("id, name, phone").order("name", { ascending: true }),
+        supabase
+          .from("employees")
+          .select("id, name, role, commission_per_deal, commission_per_managed_deal")
+          .eq("status", "active")
+          .order("name", { ascending: true }),
+      ]);
+
+    if (clientsError || employeesError) {
+      setError((prev) =>
+        [
+          prev,
+          clientsError?.message ? `Clients: ${clientsError.message}` : null,
+          employeesError?.message ? `Employees: ${employeesError.message}` : null,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      );
+    }
+
     setClients((clientsData as ClientDeal[]) ?? []);
     setEmployees((employeesData as EmployeeOption[]) ?? []);
-    setIsLoading(false);
   };
 
   useEffect(() => {
