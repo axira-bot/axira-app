@@ -169,26 +169,32 @@ export async function POST(request: NextRequest) {
           const carStatus = initialStatus === "available" ? "available" : "in_transit";
           const lifecycle =
             initialStatus === "available" ? "IN_STOCK" : initialStatus === "arrived" ? "ARRIVED" : "INCOMING";
-          const carIns = await admin
-            .from("cars")
-            .insert({
-              brand: rawItem.brand.trim(),
-              model: rawItem.model.trim(),
-              year: rawItem.year ?? null,
-              color: rawItem.color?.trim() || null,
-              vin: quantity === 1 && i === 0 ? rawItem.vin?.trim() || null : null,
-              purchase_price: unitCost,
-              purchase_currency: body.currency || "USD",
-              location: "In Transit",
-              owner: "supplier",
-              status: carStatus,
-              inventory_lifecycle_status: lifecycle,
-              supplier_id: po.supplier_id || null,
-              purchase_order_id: poId,
-              purchase_order_item_id: (itemIns.data as { id: string }).id,
-            })
-            .select("id")
-            .single();
+          const carPayload = {
+            brand: rawItem.brand.trim(),
+            model: rawItem.model.trim(),
+            year: rawItem.year ?? null,
+            color: rawItem.color?.trim() || null,
+            vin: quantity === 1 && i === 0 ? rawItem.vin?.trim() || null : null,
+            purchase_price: unitCost,
+            purchase_currency: body.currency || "USD",
+            location: "In Transit",
+            owner: "supplier",
+            status: carStatus,
+            inventory_lifecycle_status: lifecycle,
+            supplier_id: po.supplier_id || null,
+            purchase_order_id: poId,
+            purchase_order_item_id: (itemIns.data as { id: string }).id,
+          };
+          let carIns = await admin.from("cars").insert(carPayload).select("id").single();
+          if (carIns.error && (carIns.error.message || "").includes("schema cache")) {
+            const fallbackPayload: Record<string, unknown> = { ...carPayload };
+            const msg = carIns.error.message || "";
+            if (msg.includes("supplier_id")) delete fallbackPayload.supplier_id;
+            if (msg.includes("inventory_lifecycle_status")) delete fallbackPayload.inventory_lifecycle_status;
+            if (msg.includes("purchase_order_id")) delete fallbackPayload.purchase_order_id;
+            if (msg.includes("purchase_order_item_id")) delete fallbackPayload.purchase_order_item_id;
+            carIns = await admin.from("cars").insert(fallbackPayload).select("id").single();
+          }
           if (carIns.error || !carIns.data) {
             return NextResponse.json({ error: carIns.error?.message ?? "Failed to create inventory placeholders." }, { status: 400 });
           }

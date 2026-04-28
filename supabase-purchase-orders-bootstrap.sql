@@ -66,6 +66,22 @@ CREATE TABLE IF NOT EXISTS purchase_order_payments (
 
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS purchase_order_id uuid;
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS purchase_order_item_id uuid;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS supplier_id uuid;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS inventory_lifecycle_status text;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'cars_inventory_lifecycle_status_check'
+  ) THEN
+    ALTER TABLE cars
+      ADD CONSTRAINT cars_inventory_lifecycle_status_check
+      CHECK (
+        inventory_lifecycle_status IS NULL
+        OR inventory_lifecycle_status IN ('IN_STOCK', 'INCOMING', 'IN_TRANSIT', 'ARRIVED', 'DELIVERED')
+      );
+  END IF;
+END$$;
 
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_supplier ON purchase_orders(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_status ON purchase_orders(status);
@@ -126,6 +142,19 @@ BEGIN
     EXCEPTION WHEN duplicate_object THEN
       NULL;
     END;
+
+    IF EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema='public' AND table_name='suppliers'
+    ) THEN
+      BEGIN
+        ALTER TABLE cars
+        ADD CONSTRAINT cars_supplier_id_fkey
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL;
+      EXCEPTION WHEN duplicate_object THEN
+        NULL;
+      END;
+    END IF;
   END IF;
 END$$;
 

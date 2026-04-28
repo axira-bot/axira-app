@@ -24,7 +24,7 @@ export async function GET(
   try {
     const { id } = await context.params;
     const admin = createAdminClient();
-    const [{ data: po, error: poErr }, { data: items }, { data: payments }, { data: links }, { data: linkedCars }] = await Promise.all([
+    const [{ data: po, error: poErr }, { data: items }, { data: payments }, { data: links }, linkedCarsQuery] = await Promise.all([
       admin.from("purchase_orders").select("*, suppliers(name)").eq("id", id).maybeSingle(),
       admin.from("purchase_order_items").select("*").eq("purchase_order_id", id).order("created_at", { ascending: true }),
       admin.from("purchase_order_payments").select("*").eq("purchase_order_id", id).order("date", { ascending: false }),
@@ -32,6 +32,26 @@ export async function GET(
       admin.from("cars").select("id, purchase_order_item_id, vin, status, inventory_lifecycle_status").eq("purchase_order_id", id),
     ]);
     if (poErr || !po) return NextResponse.json({ error: "PO not found" }, { status: 404 });
+    let linkedCars: Array<Record<string, unknown>> =
+      ((linkedCarsQuery.data as Array<Record<string, unknown>> | null) ?? []);
+    let linkedCarsErr = linkedCarsQuery.error;
+    if (linkedCarsErr) {
+      const msg = linkedCarsErr.message || "Failed to load linked inventory.";
+      if (msg.includes("schema cache")) {
+        const fallbackCars = await admin
+          .from("cars")
+          .select("id, purchase_order_item_id, vin, status")
+          .eq("purchase_order_id", id);
+        if (!fallbackCars.error) {
+          linkedCars = ((fallbackCars.data as Array<Record<string, unknown>> | null) ?? []).map((c) => ({
+            ...c,
+            inventory_lifecycle_status: null,
+          }));
+          linkedCarsErr = null;
+        }
+      }
+      if (linkedCarsErr) return NextResponse.json({ error: msg }, { status: 400 });
+    }
     return NextResponse.json({
       row: po,
       items: items ?? [],
