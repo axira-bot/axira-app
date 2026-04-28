@@ -76,3 +76,18 @@ LEFT JOIN information_schema.columns c
  AND c.table_name = rc.table_name
  AND c.column_name = rc.column_name
 ORDER BY rc.table_name, rc.column_name;
+
+-- 3) Required trigger for permanent employee code generation
+SELECT
+  CASE
+    WHEN EXISTS (
+      SELECT 1
+      FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      WHERE c.relname = 'employees'
+        AND t.tgname = 'trg_set_employee_code_if_missing'
+        AND NOT t.tgisinternal
+    )
+    THEN 'OK'
+    ELSE 'MISSING'
+  END AS employees_employee_code_trigger_status;

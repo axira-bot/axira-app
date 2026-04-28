@@ -209,9 +209,15 @@ export async function DELETE(request: NextRequest) {
   }
   try {
     const admin = createAdminClient();
-    // Delete auth user first; if this fails, profile remains consistent.
+    // Delete auth user first; if this fails for reasons other than "not found",
+    // keep profile untouched to preserve consistency.
     const { error: deleteAuthError } = await admin.auth.admin.deleteUser(id);
-    if (deleteAuthError) {
+    const authDeleteFailed =
+      deleteAuthError &&
+      !/not found|no rows|does not exist|user.*not.*found/i.test(
+        deleteAuthError.message || ""
+      );
+    if (authDeleteFailed) {
       return NextResponse.json(
         { error: `Failed to delete auth user: ${deleteAuthError.message}` },
         { status: 400 }
@@ -223,7 +229,10 @@ export async function DELETE(request: NextRequest) {
       .delete()
       .eq("id", id);
 
-    if (deleteProfileError) {
+    const profileDeleteFailed =
+      deleteProfileError &&
+      !/no rows|not found|does not exist/i.test(deleteProfileError.message || "");
+    if (profileDeleteFailed) {
       return NextResponse.json(
         {
           error: `Auth user deleted, but failed to delete profile: ${deleteProfileError.message}. Please clean up user_profiles manually.`,
@@ -231,7 +240,11 @@ export async function DELETE(request: NextRequest) {
         { status: 500 }
       );
     }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      auth_deleted: !deleteAuthError,
+      profile_deleted: !deleteProfileError,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error";
     return NextResponse.json({ error: message }, { status: 500 });

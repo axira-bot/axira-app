@@ -26,6 +26,53 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_employees_employee_code_unique
   ON employees(employee_code)
   WHERE employee_code IS NOT NULL;
 
+-- Backfill missing employee codes deterministically for existing rows.
+WITH missing AS (
+  SELECT
+    id,
+    row_number() OVER (
+      PARTITION BY EXTRACT(YEAR FROM COALESCE(created_at, now()))
+      ORDER BY COALESCE(created_at, now()), id
+    ) AS seq,
+    EXTRACT(YEAR FROM COALESCE(created_at, now()))::int AS yr
+  FROM employees
+  WHERE employee_code IS NULL OR employee_code = ''
+)
+UPDATE employees e
+SET employee_code = 'EMP-' || missing.yr || '-' || LPAD(missing.seq::text, 4, '0')
+FROM missing
+WHERE e.id = missing.id;
+
+-- Permanent DB-level auto-generation for future inserts.
+CREATE OR REPLACE FUNCTION set_employee_code_if_missing()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  yr int;
+  seq int;
+BEGIN
+  IF NEW.employee_code IS NOT NULL AND BTRIM(NEW.employee_code) <> '' THEN
+    RETURN NEW;
+  END IF;
+
+  yr := EXTRACT(YEAR FROM COALESCE(NEW.created_at, now()))::int;
+  SELECT COALESCE(MAX(NULLIF(SUBSTRING(employee_code FROM 10), '')::int), 0) + 1
+  INTO seq
+  FROM employees
+  WHERE employee_code LIKE ('EMP-' || yr || '-%');
+
+  NEW.employee_code := 'EMP-' || yr || '-' || LPAD(seq::text, 4, '0');
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_set_employee_code_if_missing ON employees;
+CREATE TRIGGER trg_set_employee_code_if_missing
+BEFORE INSERT ON employees
+FOR EACH ROW
+EXECUTE FUNCTION set_employee_code_if_missing();
+
 CREATE TABLE IF NOT EXISTS commissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id uuid REFERENCES employees(id) ON DELETE CASCADE,
