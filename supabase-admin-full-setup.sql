@@ -386,8 +386,9 @@ CREATE TABLE IF NOT EXISTS purchase_order_payments (
   pocket text,
   method text,
   notes text,
-  movement_id uuid REFERENCES movements(id) ON DELETE SET NULL,
-  payment_id uuid REFERENCES payments(id) ON DELETE SET NULL,
+  -- Keep these as text to avoid cross-project type mismatch (uuid vs bigint ids).
+  movement_id text,
+  payment_id text,
   created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at timestamptz DEFAULT now()
 );

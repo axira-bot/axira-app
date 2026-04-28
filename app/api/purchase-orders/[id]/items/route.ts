@@ -38,7 +38,7 @@ export async function POST(
     const admin = createAdminClient();
     const { data: po } = await admin
       .from("purchase_orders")
-      .select("id, supplier_id")
+      .select("id, supplier_id, currency")
       .eq("id", id)
       .maybeSingle();
     if (!po) return NextResponse.json({ error: "PO not found" }, { status: 404 });
@@ -78,7 +78,7 @@ export async function POST(
         const initialStatus = rawItem.inventory_status || "in_transit";
         const carStatus = initialStatus === "available" ? "available" : "in_transit";
         const lifecycle =
-          initialStatus === "available" ? "IN_STOCK" : initialStatus === "arrived" ? "ARRIVED" : "IN_TRANSIT";
+          initialStatus === "available" ? "IN_STOCK" : initialStatus === "arrived" ? "ARRIVED" : "INCOMING";
         const { data: car, error: carErr } = await admin
           .from("cars")
           .insert({
@@ -88,8 +88,8 @@ export async function POST(
             color: rawItem.color?.trim() || null,
             vin: quantity === 1 && i === 0 ? rawItem.vin?.trim() || null : null,
             purchase_price: unitCost,
-            purchase_currency: "USD",
-            location: "supplier",
+            purchase_currency: ((po as { currency?: string | null }).currency || "USD"),
+            location: "In Transit",
             owner: "supplier",
             status: carStatus,
             inventory_lifecycle_status: lifecycle,

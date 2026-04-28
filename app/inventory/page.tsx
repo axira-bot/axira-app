@@ -261,7 +261,14 @@ export default function InventoryPage() {
     if (poDealEligibility === "arrived_only") {
       return lifecycle === "ARRIVED" || lifecycle === "IN_STOCK" || status === "available";
     }
-    return lifecycle === "IN_TRANSIT" || lifecycle === "ARRIVED" || lifecycle === "IN_STOCK" || status === "in_transit" || status === "available";
+    return (
+      lifecycle === "IN_TRANSIT" ||
+      lifecycle === "INCOMING" ||
+      lifecycle === "ARRIVED" ||
+      lifecycle === "IN_STOCK" ||
+      status === "in_transit" ||
+      status === "available"
+    );
   };
 
   // Filter by stock type first, then by location/status tab

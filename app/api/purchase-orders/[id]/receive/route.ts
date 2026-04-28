@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 type Body = {
   mode?: "arrived" | "available";
   item_ids?: string[];
+  vin_assignments?: Array<{ car_id: string; vin: string }>;
 };
 
 export async function POST(
@@ -48,11 +49,22 @@ export async function POST(
       const { error: carErr } = await admin
         .from("cars")
         .update({
-          status: targetStatus === "available" ? "available" : "in_stock",
+          status: targetStatus === "available" ? "available" : "in_transit",
           inventory_lifecycle_status: lifecycle,
         })
         .in("id", carIds);
       if (carErr) return NextResponse.json({ error: carErr.message }, { status: 400 });
+    }
+
+    const vinAssignments = Array.isArray(body.vin_assignments) ? body.vin_assignments : [];
+    for (const assignment of vinAssignments) {
+      if (!assignment?.car_id || !assignment?.vin?.trim()) continue;
+      const { error: vinErr } = await admin
+        .from("cars")
+        .update({ vin: assignment.vin.trim() })
+        .eq("id", assignment.car_id)
+        .in("id", carIds);
+      if (vinErr) return NextResponse.json({ error: vinErr.message }, { status: 400 });
     }
 
     const [{ data: remainingTransit }, { error: poErr }] = await Promise.all([
@@ -60,7 +72,7 @@ export async function POST(
         .from("purchase_order_items")
         .select("id")
         .eq("purchase_order_id", id)
-        .in("inventory_status", ["in_transit"]),
+        .in("inventory_status", ["in_transit", "incoming"]),
       admin
         .from("purchase_orders")
         .update({

@@ -443,6 +443,7 @@ export default function DealsPage() {
     }
     return (
       lifecycle === "IN_TRANSIT" ||
+      lifecycle === "INCOMING" ||
       lifecycle === "ARRIVED" ||
       lifecycle === "IN_STOCK" ||
       availability === "in_transit" ||

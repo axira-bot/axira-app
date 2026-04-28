@@ -15,6 +15,9 @@ type PurchaseOrder = {
   expected_arrival_date: string | null;
   ordered_at: string | null;
   notes: string | null;
+  source_market?: string | null;
+  supplier_id?: string | null;
+  suppliers?: { name?: string | null } | null;
 };
 
 type Item = {
@@ -43,6 +46,13 @@ type Payment = {
 };
 
 type ItemCar = { purchase_order_item_id: string; car_id: string };
+type LinkedCar = {
+  id: string;
+  purchase_order_item_id: string | null;
+  vin: string | null;
+  status: string | null;
+  inventory_lifecycle_status: string | null;
+};
 
 const inputCls =
   "w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]";
@@ -60,11 +70,15 @@ export default function PurchaseOrderDetailPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [itemCars, setItemCars] = useState<ItemCar[]>([]);
+  const [cars, setCars] = useState<LinkedCar[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingItem, setSavingItem] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
   const [receiving, setReceiving] = useState(false);
+  const [receiveMode, setReceiveMode] = useState<"arrived" | "available">("arrived");
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [vinDraft, setVinDraft] = useState<Record<string, string>>({});
   const [itemForm, setItemForm] = useState({
     brand: "",
     model: "",
@@ -103,11 +117,13 @@ export default function PurchaseOrderDetailPage() {
       setItems([]);
       setPayments([]);
       setItemCars([]);
+      setCars([]);
     } else {
       setRow((data.row as PurchaseOrder) || null);
       setItems((data.items as Item[]) || []);
       setPayments((data.payments as Payment[]) || []);
       setItemCars((data.itemCars as ItemCar[]) || []);
+      setCars((data.cars as LinkedCar[]) || []);
     }
     setLoading(false);
   };
@@ -183,7 +199,13 @@ export default function PurchaseOrderDetailPage() {
     const res = await fetch(`/api/purchase-orders/${id}/receive`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode }),
+      body: JSON.stringify({
+        mode,
+        item_ids: selectedItemIds.length ? selectedItemIds : undefined,
+        vin_assignments: Object.entries(vinDraft)
+          .map(([car_id, vin]) => ({ car_id, vin: vin.trim() }))
+          .filter((x) => Boolean(x.vin)),
+      }),
     });
     const data = await res.json().catch(() => ({}));
     setReceiving(false);
@@ -193,6 +215,34 @@ export default function PurchaseOrderDetailPage() {
     }
     load();
   };
+
+  const parseSummaryAdjustments = (notes: string | null | undefined) => {
+    if (!notes) return { shipping: 0, fees: 0 };
+    const lines = notes.split("\n");
+    for (const line of lines) {
+      try {
+        const parsed = JSON.parse(line) as { po_summary_v1?: { shipping_estimate?: number; other_fees?: number } };
+        if (parsed?.po_summary_v1) {
+          return {
+            shipping: Number(parsed.po_summary_v1.shipping_estimate || 0),
+            fees: Number(parsed.po_summary_v1.other_fees || 0),
+          };
+        }
+      } catch {
+        continue;
+      }
+    }
+    return { shipping: 0, fees: 0 };
+  };
+
+  const itemsSubtotal = useMemo(
+    () => items.reduce((sum, it) => sum + Number(it.total_cost || 0), 0),
+    [items]
+  );
+  const adjustments = parseSummaryAdjustments(row?.notes);
+  const computedGrandTotal = itemsSubtotal + adjustments.shipping + adjustments.fees;
+  const paid = Number(row?.paid_amount || 0);
+  const owed = computedGrandTotal - paid;
 
   return (
     <main className="space-y-5 p-6 text-app">
@@ -207,14 +257,16 @@ export default function PurchaseOrderDetailPage() {
               <div>
                 <h1 className="text-xl font-bold">{row.po_number || row.id}</h1>
                 <p className="text-xs text-muted">
-                  Status: {row.status} · Ordered: {row.ordered_at || "-"} · ETA: {row.expected_arrival_date || "-"}
+                  Supplier: {row.suppliers?.name || row.supplier_id || "-"} · Market: {row.source_market || "-"} · Status: {row.status} · Ordered: {row.ordered_at || "-"} · ETA: {row.expected_arrival_date || "-"}
                 </p>
               </div>
               <div className="text-right text-sm">
-                <p>Total: {money(row.total_cost, row.currency)}</p>
-                <p>Paid: {money(row.paid_amount, row.currency)}</p>
-                <p className={row.supplier_owed <= 0 ? "text-emerald-600 font-semibold" : "text-amber-700 font-semibold"}>
-                  Owed: {money(row.supplier_owed, row.currency)}
+                <p>Items subtotal: {money(itemsSubtotal, row.currency)}</p>
+                <p>Shipping: {money(adjustments.shipping, row.currency)} · Other fees: {money(adjustments.fees, row.currency)}</p>
+                <p>Total: {money(computedGrandTotal, row.currency)}</p>
+                <p>Paid: {money(paid, row.currency)}</p>
+                <p className={owed <= 0 ? "text-emerald-600 font-semibold" : "text-amber-700 font-semibold"}>
+                  Owed: {money(owed, row.currency)}
                 </p>
               </div>
             </div>
@@ -260,6 +312,19 @@ export default function PurchaseOrderDetailPage() {
                       <td className="px-2 py-2">
                         {it.brand} {it.model} {it.year || ""} {it.color || ""}
                         {it.vin ? <div className="text-[11px] text-muted">VIN: {it.vin}</div> : null}
+                        {cars
+                          .filter((c) => c.purchase_order_item_id === it.id)
+                          .map((c) => (
+                            <div key={c.id} className="mt-1 rounded border border-app/40 px-2 py-1 text-[10px]">
+                              Car {c.id.slice(0, 8)} · {c.inventory_lifecycle_status || c.status || "-"}
+                              <input
+                                className={`${inputCls} mt-1`}
+                                placeholder="Assign VIN on receive (optional)"
+                                value={vinDraft[c.id] || ""}
+                                onChange={(e) => setVinDraft((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                              />
+                            </div>
+                          ))}
                       </td>
                       <td className="px-2 py-2 text-right">{it.quantity}</td>
                       <td className="px-2 py-2 text-right">{money(it.unit_cost, row.currency)}</td>
@@ -329,14 +394,43 @@ export default function PurchaseOrderDetailPage() {
           {isPrivileged && (
             <section className="rounded-xl border border-app bg-panel p-4">
               <h2 className="mb-3 text-base font-semibold">Receive Workflow</h2>
+              <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-muted">Mode:</span>
+                <select
+                  className={inputCls}
+                  value={receiveMode}
+                  onChange={(e) => setReceiveMode(e.target.value as "arrived" | "available")}
+                >
+                  <option value="arrived">Arrived</option>
+                  <option value="available">Available</option>
+                </select>
+              </div>
+              <div className="mb-3 grid gap-2 md:grid-cols-2">
+                {items.map((it) => (
+                  <label key={it.id} className="flex items-center gap-2 rounded border border-app/40 px-2 py-1 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={selectedItemIds.includes(it.id)}
+                      onChange={(e) =>
+                        setSelectedItemIds((prev) =>
+                          e.target.checked ? [...prev, it.id] : prev.filter((x) => x !== it.id)
+                        )
+                      }
+                    />
+                    <span>
+                      {it.brand} {it.model} · Qty {it.quantity}
+                    </span>
+                  </label>
+                ))}
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   disabled={receiving}
-                  onClick={() => receive("arrived")}
+                  onClick={() => receive(receiveMode)}
                   className="rounded-md border border-app px-4 py-2 text-sm hover:bg-white/70 disabled:opacity-50"
                 >
-                  Mark Arrived
+                  {receiving ? "Processing..." : `Mark ${receiveMode === "available" ? "Available" : "Arrived"}`}
                 </button>
                 <button
                   type="button"

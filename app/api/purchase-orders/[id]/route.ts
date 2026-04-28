@@ -24,11 +24,12 @@ export async function GET(
   try {
     const { id } = await context.params;
     const admin = createAdminClient();
-    const [{ data: po, error: poErr }, { data: items }, { data: payments }, { data: links }] = await Promise.all([
-      admin.from("purchase_orders").select("*").eq("id", id).maybeSingle(),
+    const [{ data: po, error: poErr }, { data: items }, { data: payments }, { data: links }, { data: linkedCars }] = await Promise.all([
+      admin.from("purchase_orders").select("*, suppliers(name)").eq("id", id).maybeSingle(),
       admin.from("purchase_order_items").select("*").eq("purchase_order_id", id).order("created_at", { ascending: true }),
       admin.from("purchase_order_payments").select("*").eq("purchase_order_id", id).order("date", { ascending: false }),
       admin.from("purchase_order_item_cars").select("purchase_order_item_id, car_id").order("created_at", { ascending: true }),
+      admin.from("cars").select("id, purchase_order_item_id, vin, status, inventory_lifecycle_status").eq("purchase_order_id", id),
     ]);
     if (poErr || !po) return NextResponse.json({ error: "PO not found" }, { status: 404 });
     return NextResponse.json({
@@ -36,6 +37,7 @@ export async function GET(
       items: items ?? [],
       payments: payments ?? [],
       itemCars: links ?? [],
+      cars: linkedCars ?? [],
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error";
