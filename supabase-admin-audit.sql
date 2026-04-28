@@ -8,6 +8,7 @@ WITH required_tables AS (
     'employees','commissions','investors','investor_returns',
     'suppliers','supplier_catalog','deal_custom_specs',
     'deal_costs','deal_edit_requests',
+    'purchase_orders','purchase_order_items','purchase_order_item_cars','purchase_order_payments',
     'role_feature_defaults','user_feature_permissions',
     'user_profiles','rents','activity_log','inquiries',
     'client_documents',
@@ -47,6 +48,20 @@ WITH required_columns AS (
     ('deal_edit_requests','requested_by'),
     ('deal_edit_requests','request_type'),
     ('deal_edit_requests','status'),
+    ('purchase_orders','supplier_id'),
+    ('purchase_orders','status'),
+    ('purchase_orders','total_cost'),
+    ('purchase_orders','paid_amount'),
+    ('purchase_orders','supplier_owed'),
+    ('purchase_order_items','purchase_order_id'),
+    ('purchase_order_items','quantity'),
+    ('purchase_order_items','unit_cost'),
+    ('purchase_order_items','total_cost'),
+    ('purchase_order_payments','purchase_order_id'),
+    ('purchase_order_payments','amount'),
+    ('purchase_order_payments','currency'),
+    ('cars','purchase_order_id'),
+    ('cars','purchase_order_item_id'),
     ('cars','country_of_origin'),
     ('cars','photos'),
     ('cars','supplier_paid'),
@@ -103,3 +118,32 @@ SELECT
     THEN 'OK'
     ELSE 'MISSING'
   END AS employees_employee_code_trigger_status;
+
+-- 4) Purchase order totals triggers
+SELECT
+  CASE
+    WHEN EXISTS (
+      SELECT 1
+      FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      WHERE c.relname = 'purchase_order_items'
+        AND t.tgname = 'trg_sync_purchase_order_totals_from_items'
+        AND NOT t.tgisinternal
+    )
+    THEN 'OK'
+    ELSE 'MISSING'
+  END AS po_items_totals_trigger_status;
+
+SELECT
+  CASE
+    WHEN EXISTS (
+      SELECT 1
+      FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      WHERE c.relname = 'purchase_order_payments'
+        AND t.tgname = 'trg_sync_purchase_order_totals_from_payments'
+        AND NOT t.tgisinternal
+    )
+    THEN 'OK'
+    ELSE 'MISSING'
+  END AS po_payments_totals_trigger_status;

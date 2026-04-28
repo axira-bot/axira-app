@@ -188,6 +188,9 @@ export default function DealsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [cars, setCars] = useState<Car[]>([]);
+  const [poDealEligibility, setPoDealEligibility] = useState<"in_transit_or_arrived" | "arrived_only">(
+    "in_transit_or_arrived"
+  );
   const [deals, setDeals] = useState<Deal[]>([]);
   const [clients, setClients] = useState<ClientDeal[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
@@ -252,14 +255,16 @@ export default function DealsPage() {
     const [
       { data: carsData, error: carsError },
       { data: dealsData, error: dealsError },
+      { data: poEligibilityData, error: poEligibilityErr },
     ] = await Promise.all([
       supabase
         .from("cars")
         .select(
-          "id, brand, model, year, purchase_price, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name"
+          "id, brand, model, year, purchase_price, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name, inventory_lifecycle_status, purchase_order_id, purchase_order_item_id"
         )
         .order("created_at", { ascending: false }),
       supabase.from("deals").select("*").order("date", { ascending: false }),
+      supabase.from("app_settings").select("value").eq("key", "po_deal_eligibility").maybeSingle(),
     ]);
 
     if (carsError || dealsError) {
@@ -276,6 +281,12 @@ export default function DealsPage() {
 
     setCars((carsData as Car[]) ?? []);
     setDeals((dealsData as Deal[]) ?? []);
+    if (!poEligibilityErr) {
+      const value = ((poEligibilityData as { value?: string | null } | null)?.value || "").trim();
+      if (value === "arrived_only" || value === "in_transit_or_arrived") {
+        setPoDealEligibility(value);
+      }
+    }
     setIsLoading(false);
 
     // Load secondary dropdown data after first paint to improve page transition speed.
@@ -423,6 +434,22 @@ export default function DealsPage() {
     }
   }, [searchParams]);
 
+  const isPoCarEligibleForDeal = (car: Car): boolean => {
+    if (!car.purchase_order_id) return true;
+    const lifecycle = (car.inventory_lifecycle_status || "").toUpperCase();
+    const availability = (car.status || "").toLowerCase();
+    if (poDealEligibility === "arrived_only") {
+      return lifecycle === "ARRIVED" || lifecycle === "IN_STOCK" || availability === "available";
+    }
+    return (
+      lifecycle === "IN_TRANSIT" ||
+      lifecycle === "ARRIVED" ||
+      lifecycle === "IN_STOCK" ||
+      availability === "in_transit" ||
+      availability === "available"
+    );
+  };
+
   // Inventory → Deals: ?addDeal=1&carId=uuid (strip query after handling; dedupe strict double-invoke)
   useEffect(() => {
     const addDeal = searchParams.get("addDeal");
@@ -439,10 +466,14 @@ export default function DealsPage() {
       setError("Car not found or unavailable.");
       return;
     }
-    if (car.stock_type === "supplier") {
+    if (car.stock_type === "supplier" && !car.purchase_order_id) {
       setError(
         "Supplier listings cannot be used for deals. Convert the car to AXIRA Stock in Inventory first, then create the deal."
       );
+      return;
+    }
+    if (!isPoCarEligibleForDeal(car)) {
+      setError("This purchase-order car is not eligible for deals under current PO setting.");
       return;
     }
     if (usedCarIds.has(car.id)) {
@@ -454,7 +485,7 @@ export default function DealsPage() {
     setForm({ ...emptyForm(), carId: car.id });
     setIsModalOpen(true);
     setError(null);
-  }, [isLoading, cars, searchParams, router, usedCarIds]);
+  }, [isLoading, cars, searchParams, router, usedCarIds, poDealEligibility]);
 
   const availableCars = useMemo(() => {
     return cars.filter((c) => {
@@ -465,9 +496,10 @@ export default function DealsPage() {
           return true;
         }
       }
+      if (!isPoCarEligibleForDeal(c)) return false;
       return !usedCarIds.has(c.id);
     });
-  }, [cars, deals, usedCarIds, editingDealId]);
+  }, [cars, deals, usedCarIds, editingDealId, poDealEligibility]);
 
   const selectedCar = useMemo(() => {
     if (!form.carId) return null;

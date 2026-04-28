@@ -59,6 +59,8 @@ export interface Car {
   linked_deal_id?: string | null;
   supplier_id?: string | null;
   supplier_catalog_id?: string | null;
+  purchase_order_id?: string | null;
+  purchase_order_item_id?: string | null;
 }
 
 export interface Employee {

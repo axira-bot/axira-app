@@ -35,6 +35,7 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   reports: "Reports",
   clients: "Clients",
   inquiries: "Inquiries",
+  purchase_orders: "Purchase Orders",
   admin_users: "Admin Users",
 };
 

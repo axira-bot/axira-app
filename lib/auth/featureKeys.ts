@@ -13,6 +13,7 @@ export const FEATURE_KEYS = [
   "reports",
   "clients",
   "inquiries",
+  "purchase_orders",
   "admin_users",
 ] as const;
 

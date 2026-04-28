@@ -168,6 +168,9 @@ export default function InventoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cars, setCars] = useState<Car[]>([]);
+  const [poDealEligibility, setPoDealEligibility] = useState<"in_transit_or_arrived" | "arrived_only">(
+    "in_transit_or_arrived"
+  );
   const [carIdsWithDeals, setCarIdsWithDeals] = useState<Set<string>>(new Set());
   const [stockTypeTab, setStockTypeTab] = useState<StockTypeTab>("axira");
   const [conditionTab, setConditionTab] = useState<ConditionTab>("brand_new");
@@ -209,12 +212,13 @@ export default function InventoryPage() {
   const fetchCars = async () => {
     setIsLoading(true);
     setError(null);
-    const [{ data, error: fetchError }, { data: dealsData, error: dealsError }] = await Promise.all([
+    const [{ data, error: fetchError }, { data: dealsData, error: dealsError }, { data: poEligibilityData, error: poEligibilityErr }] = await Promise.all([
       supabase
         .from("cars")
         .select("*")
         .order("created_at", { ascending: false }),
       supabase.from("deals").select("car_id").not("car_id", "is", null),
+      supabase.from("app_settings").select("value").eq("key", "po_deal_eligibility").maybeSingle(),
     ]);
 
     if (fetchError || dealsError) {
@@ -225,6 +229,10 @@ export default function InventoryPage() {
       return;
     }
     setCars((data as Car[]) ?? []);
+    if (!poEligibilityErr) {
+      const value = ((poEligibilityData as { value?: string | null } | null)?.value || "").trim();
+      if (value === "arrived_only" || value === "in_transit_or_arrived") setPoDealEligibility(value);
+    }
     const dealCarIds = new Set(
       ((dealsData as { car_id?: string | null }[] | null) ?? [])
         .map((d) => d.car_id)
@@ -245,6 +253,16 @@ export default function InventoryPage() {
     }, 300);
     return () => clearTimeout(t);
   }, [searchInput]);
+
+  const isPoCarEligibleForDeal = (car: Car): boolean => {
+    if (!car.purchase_order_id) return true;
+    const lifecycle = (car.inventory_lifecycle_status || "").toUpperCase();
+    const status = getEffectiveStatus(car).toLowerCase();
+    if (poDealEligibility === "arrived_only") {
+      return lifecycle === "ARRIVED" || lifecycle === "IN_STOCK" || status === "available";
+    }
+    return lifecycle === "IN_TRANSIT" || lifecycle === "ARRIVED" || lifecycle === "IN_STOCK" || status === "in_transit" || status === "available";
+  };
 
   // Filter by stock type first, then by location/status tab
   const filteredCars = useMemo(() => {
@@ -868,6 +886,11 @@ export default function InventoryPage() {
                           {isSupplierCar && car.supplier_name && (
                             <div className="mt-0.5 text-[11px] font-medium text-amber-600">Supplier: {car.supplier_name}</div>
                           )}
+                          {car.purchase_order_id && (
+                            <div className="mt-0.5 text-[11px] font-medium text-blue-700">
+                              PO: {car.purchase_order_id.slice(0, 8)} · {car.inventory_lifecycle_status || "IN_TRANSIT"}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-muted hidden sm:table-cell">
                           <div>{car.color || "-"}{car.body_type ? ` · ${car.body_type}` : ""}</div>
@@ -938,14 +961,14 @@ export default function InventoryPage() {
                                 {isConvertingId === car.id ? "..." : "→ AXIRA Stock"}
                               </button>
                             )}
-                            {!isSupplierCar && !hasDealAlready ? (
+                            {(!isSupplierCar || Boolean(car.purchase_order_id)) && !hasDealAlready && isPoCarEligibleForDeal(car) ? (
                               <Link
                                 href={`/deals?addDeal=1&carId=${encodeURIComponent(car.id)}`}
                                 className="inline-flex items-center justify-center rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                               >
                                 Create Deal
                               </Link>
-                            ) : isSupplierCar ? (
+                            ) : isSupplierCar && !car.purchase_order_id ? (
                               <button
                                 type="button"
                                 onClick={() =>
@@ -957,6 +980,10 @@ export default function InventoryPage() {
                               >
                                 Create Deal
                               </button>
+                            ) : car.purchase_order_id && !isPoCarEligibleForDeal(car) ? (
+                              <span className="rounded-md border border-app bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-400">
+                                Waiting Arrival
+                              </span>
                             ) : (
                               <span className="rounded-md border border-app bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-400">
                                 Deal Exists

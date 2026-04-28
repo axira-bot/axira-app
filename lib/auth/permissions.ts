@@ -23,6 +23,7 @@ function roleFallbackPermissions(role: string | null | undefined): FeaturePermis
     p.deals = true;
     p.clients = true;
     p.inquiries = true;
+    p.purchase_orders = true;
     return p;
   }
   if (normalized === "accountant") {
@@ -48,6 +49,7 @@ function roleFallbackPermissions(role: string | null | undefined): FeaturePermis
     p.reports = true;
     p.clients = true;
     p.inquiries = true;
+    p.purchase_orders = true;
     return p;
   }
   return p;

@@ -28,11 +28,12 @@ const ROUTE_FEATURE_GATES: Array<{ prefix: string; feature: FeatureKey }> = [
   { prefix: "/reports", feature: "reports" },
   { prefix: "/clients", feature: "clients" },
   { prefix: "/inquiries", feature: "inquiries" },
+  { prefix: "/purchase-orders", feature: "purchase_orders" },
 ];
 
 function roleFallbackAllows(role: string, feature: FeatureKey): boolean {
   if (isOwnerLikeRole(role)) return true;
-  if (role === "staff") return ["inventory", "deals", "clients", "inquiries"].includes(feature);
+  if (role === "staff") return ["inventory", "deals", "clients", "inquiries", "purchase_orders"].includes(feature);
   if (role === "accountant") return ["movements", "reports", "activity", "payroll"].includes(feature);
   if (role === "investor") return feature === "investors";
   if (role === "manager") {
@@ -48,6 +49,7 @@ function roleFallbackAllows(role: string, feature: FeatureKey): boolean {
       "reports",
       "clients",
       "inquiries",
+      "purchase_orders",
     ].includes(feature);
   }
   return false;
