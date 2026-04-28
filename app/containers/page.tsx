@@ -1339,9 +1339,9 @@ export default function ContainersPage() {
                       </tr>
                     ) : (
                       carsInContainer.map((cc) => {
-                        const car =
-                          cc.car_id &&
-                          cars.find((c) => c.id === cc.car_id as string);
+                        const car = cc.car_id
+                          ? cars.find((c) => c.id === (cc.car_id as string)) ?? null
+                          : null;
                         const owner = cc.is_partner ? "Partner" : "Axira";
                         return (
                           <tr
