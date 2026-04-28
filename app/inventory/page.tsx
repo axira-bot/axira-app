@@ -172,6 +172,11 @@ export default function InventoryPage() {
   const [stockTypeTab, setStockTypeTab] = useState<StockTypeTab>("axira");
   const [conditionTab, setConditionTab] = useState<ConditionTab>("brand_new");
   const [activeTab, setActiveTab] = useState<FilterTab>("All");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] = useState<"available_only" | "all">(
+    "available_only"
+  );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCarId, setEditingCarId] = useState<string | null>(null);
@@ -234,6 +239,13 @@ export default function InventoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim().toLowerCase());
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   // Filter by stock type first, then by location/status tab
   const filteredCars = useMemo(() => {
     const byStock = cars.filter((c) => (c.stock_type || "axira") === stockTypeTab);
@@ -242,12 +254,33 @@ export default function InventoryPage() {
     );
     const effectiveStatus = (c: Car) => getEffectiveStatus(c).toLowerCase();
 
-    if (activeTab === "Sold") return byCondition.filter((c) => effectiveStatus(c) === "sold");
-    if (activeTab === "Dubai") return byCondition.filter((c) => c.location === "Dubai Showroom");
-    if (activeTab === "Algeria") return byCondition.filter((c) => c.location === "Algeria Showroom");
-    if (activeTab === "In Transit") return byCondition.filter((c) => effectiveStatus(c) === "in_transit" || c.location === "In Transit");
-    return byCondition;
-  }, [activeTab, conditionTab, stockTypeTab, cars]);
+    let base = byCondition;
+    if (activeTab === "Sold") base = base.filter((c) => effectiveStatus(c) === "sold");
+    else if (activeTab === "Dubai") base = base.filter((c) => c.location === "Dubai Showroom");
+    else if (activeTab === "Algeria") base = base.filter((c) => c.location === "Algeria Showroom");
+    else if (activeTab === "In Transit") base = base.filter((c) => effectiveStatus(c) === "in_transit" || c.location === "In Transit");
+
+    if (availabilityFilter === "available_only") {
+      base = base.filter((c) => effectiveStatus(c) !== "sold");
+    }
+    if (debouncedSearch) {
+      base = base.filter((c) => {
+        const vin = (c.vin || "").toLowerCase();
+        const brand = (c.brand || "").toLowerCase();
+        const model = (c.model || "").toLowerCase();
+        const year = String(c.year || "").toLowerCase();
+        const color = (c.color || "").toLowerCase();
+        return (
+          vin.includes(debouncedSearch) ||
+          brand.includes(debouncedSearch) ||
+          model.includes(debouncedSearch) ||
+          year.includes(debouncedSearch) ||
+          color.includes(debouncedSearch)
+        );
+      });
+    }
+    return base;
+  }, [activeTab, availabilityFilter, conditionTab, stockTypeTab, cars, debouncedSearch]);
 
   const axiraCount = useMemo(() => cars.filter((c) => (c.stock_type || "axira") === "axira").length, [cars]);
   const supplierCount = useMemo(() => cars.filter((c) => c.stock_type === "supplier").length, [cars]);
@@ -766,6 +799,29 @@ export default function InventoryPage() {
               {filterTabLabels[tab]}
             </button>
           ))}
+        </div>
+
+        <div className="rounded-lg border border-app surface p-3">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-center">
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search VIN, brand, model, year, color"
+              className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+            />
+            <select
+              value={availabilityFilter}
+              onChange={(e) => setAvailabilityFilter(e.target.value as "available_only" | "all")}
+              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+            >
+              <option value="available_only">Available only</option>
+              <option value="all">All including sold</option>
+            </select>
+            <div className="text-xs font-semibold text-muted">
+              Results: <span className="text-app">{filteredCars.length}</span>
+            </div>
+          </div>
         </div>
 
         {createDealSupplierHint && (

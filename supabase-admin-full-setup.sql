@@ -303,6 +303,9 @@ ALTER TABLE deals ADD COLUMN IF NOT EXISTS lifecycle_status text;
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS cancellation_reason text;
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS cancellation_note text;
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS agreed_delivery_date date;
+ALTER TABLE deals ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE deals ADD COLUMN IF NOT EXISTS pending_completion boolean NOT NULL DEFAULT false;
+ALTER TABLE deals ADD COLUMN IF NOT EXISTS completion_notes text;
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS inventory_car_id uuid REFERENCES cars(id) ON DELETE SET NULL;
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS source_cost numeric;
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS source_currency text;
@@ -410,6 +413,251 @@ BEGIN
       ADD CONSTRAINT payments_kind_check
       CHECK (
         kind IS NULL OR kind IN ('customer_deposit', 'customer_settlement', 'supplier_payment', 'refund', 'forfeit')
+      );
+  END IF;
+END$$;
+
+-- ---------------------------------------------------------------------
+-- 7) Deals security and internal cost segregation
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS deal_costs (
+  deal_id uuid PRIMARY KEY REFERENCES deals(id) ON DELETE CASCADE,
+  purchase_cost numeric,
+  purchase_currency text CHECK (purchase_currency IN ('AED', 'USD', 'DZD', 'EUR')),
+  purchase_rate numeric,
+  shipping_cost numeric DEFAULT 0,
+  customs_cost numeric DEFAULT 0,
+  inspection_cost numeric DEFAULT 0,
+  recovery_cost numeric DEFAULT 0,
+  maintenance_cost numeric DEFAULT 0,
+  other_expenses numeric DEFAULT 0,
+  supplier_id uuid REFERENCES suppliers(id) ON DELETE SET NULL,
+  supplier_name text,
+  internal_notes text,
+  completed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  completed_at timestamptz,
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS deal_edit_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_id uuid NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+  requested_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  request_type text NOT NULL CHECK (request_type IN ('sale_change', 'car_change', 'client_change', 'cancel_request')),
+  requested_payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  reason text,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  reviewed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  reviewed_at timestamptz,
+  manager_note text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_deals_created_by ON deals(created_by);
+CREATE INDEX IF NOT EXISTS idx_deals_pending_completion ON deals(pending_completion);
+CREATE INDEX IF NOT EXISTS idx_deal_edit_requests_deal_id ON deal_edit_requests(deal_id);
+CREATE INDEX IF NOT EXISTS idx_deal_edit_requests_status ON deal_edit_requests(status);
+
+INSERT INTO deal_costs (
+  deal_id,
+  purchase_cost,
+  purchase_currency,
+  purchase_rate,
+  shipping_cost,
+  customs_cost,
+  inspection_cost,
+  recovery_cost,
+  maintenance_cost,
+  other_expenses,
+  updated_at
+)
+SELECT
+  d.id,
+  d.cost_car,
+  'AED',
+  NULL,
+  COALESCE(d.cost_shipping, 0),
+  0,
+  COALESCE(d.cost_inspection, 0),
+  COALESCE(d.cost_recovery, 0),
+  COALESCE(d.cost_maintenance, 0),
+  COALESCE(d.cost_other, 0),
+  now()
+FROM deals d
+ON CONFLICT (deal_id) DO NOTHING;
+
+DO $$
+DECLARE
+  fallback_owner uuid;
+BEGIN
+  SELECT id
+  INTO fallback_owner
+  FROM user_profiles
+  WHERE role IN ('owner', 'manager')
+  ORDER BY
+    CASE WHEN role = 'owner' THEN 0 ELSE 1 END,
+    created_at ASC NULLS LAST
+  LIMIT 1;
+
+  IF fallback_owner IS NOT NULL THEN
+    UPDATE deals
+    SET created_by = fallback_owner
+    WHERE created_by IS NULL;
+  END IF;
+END$$;
+
+UPDATE deals SET pending_completion = false WHERE pending_completion IS NULL;
+
+ALTER TABLE deals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deal_costs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deal_edit_requests ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'deals' AND policyname = 'Staff own deals select'
+  ) THEN
+    CREATE POLICY "Staff own deals select"
+      ON deals FOR SELECT TO authenticated
+      USING (
+        created_by = auth.uid()
+        OR EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+        )
+      );
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'deals' AND policyname = 'Staff own deals insert'
+  ) THEN
+    CREATE POLICY "Staff own deals insert"
+      ON deals FOR INSERT TO authenticated
+      WITH CHECK (
+        created_by = auth.uid()
+        OR EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+        )
+      );
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'deals' AND policyname = 'Staff own deals update'
+  ) THEN
+    CREATE POLICY "Staff own deals update"
+      ON deals FOR UPDATE TO authenticated
+      USING (
+        created_by = auth.uid()
+        OR EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+        )
+      )
+      WITH CHECK (
+        created_by = auth.uid()
+        OR EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+        )
+      );
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'deal_costs' AND policyname = 'Managers owner only deal costs'
+  ) THEN
+    CREATE POLICY "Managers owner only deal costs"
+      ON deal_costs FOR ALL TO authenticated
+      USING (
+        EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+        )
+      )
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+        )
+      );
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'deal_edit_requests' AND policyname = 'Deal edit requests create'
+  ) THEN
+    CREATE POLICY "Deal edit requests create"
+      ON deal_edit_requests FOR INSERT TO authenticated
+      WITH CHECK (
+        requested_by = auth.uid()
+        AND EXISTS (
+          SELECT 1 FROM deals d
+          WHERE d.id = deal_id
+            AND (
+              d.created_by = auth.uid()
+              OR EXISTS (
+                SELECT 1 FROM user_profiles up
+                WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+              )
+            )
+        )
+      );
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'deal_edit_requests' AND policyname = 'Deal edit requests select'
+  ) THEN
+    CREATE POLICY "Deal edit requests select"
+      ON deal_edit_requests FOR SELECT TO authenticated
+      USING (
+        requested_by = auth.uid()
+        OR EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+        )
+      );
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'deal_edit_requests' AND policyname = 'Deal edit requests manager review'
+  ) THEN
+    CREATE POLICY "Deal edit requests manager review"
+      ON deal_edit_requests FOR UPDATE TO authenticated
+      USING (
+        EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+        )
+      )
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+        )
       );
   END IF;
 END$$;

@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 import dynamic from "next/dynamic";
 import PreorderDealModal from "@/components/preorders/PreorderDealModal";
+import { useAuth } from "@/lib/context/AuthContext";
 
 const InvoiceDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.InvoiceDownloadButton),
@@ -32,6 +33,7 @@ type ClientDeal = {
   id: string;
   name: string | null;
   phone: string | null;
+  passport_number?: string | null;
 };
 
 type EmployeeOption = {
@@ -168,9 +170,17 @@ function carLabel(c: Car) {
   return `${base} · ${extras.join(" · ")}`;
 }
 
+function formatVinShort(vin: string | null | undefined): string {
+  const value = (vin || "").trim();
+  if (!value) return "VIN: pending";
+  const tail = value.slice(-6);
+  return `...${tail}`;
+}
+
 export default function DealsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, role, isStaff } = useAuth();
   /** Cleared when URL no longer has `addDeal=1`, so the same car can be deep-linked again after `router.replace`. */
   const prefillCarIdProcessedRef = useRef<string>("");
 
@@ -230,6 +240,10 @@ export default function DealsPage() {
     exportTo: "Algeria",
     notes: "",
   });
+  const [customerSearchInput, setCustomerSearchInput] = useState("");
+  const [customerSearchDebounced, setCustomerSearchDebounced] = useState("");
+  const [copiedVinDealId, setCopiedVinDealId] = useState<string | null>(null);
+  const isPrivilegedRole = ["owner", "manager", "admin", "super_admin"].includes((role || "").toLowerCase());
 
   const fetchAll = async () => {
     setIsLoading(true);
@@ -271,7 +285,7 @@ export default function DealsPage() {
       dummyDocsRes,
     ] =
       await Promise.all([
-        supabase.from("clients").select("id, name, phone").order("name", { ascending: true }),
+        supabase.from("clients").select("id, name, phone, passport_number").order("name", { ascending: true }),
         supabase
           .from("employees")
           .select("id, name, role, commission_per_deal, commission_per_managed_deal")
@@ -347,6 +361,13 @@ export default function DealsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setCustomerSearchDebounced(customerSearchInput.trim().toLowerCase());
+    }, 300);
+    return () => clearTimeout(t);
+  }, [customerSearchInput]);
+
   const filteredDeals = useMemo(() => {
     const selectedClientId = (searchParams.get("clientId") || "").trim();
     const selectedClientName = (searchParams.get("clientName") || "").trim().toLowerCase();
@@ -361,8 +382,32 @@ export default function DealsPage() {
     } else if (selectedClientName) {
       base = base.filter((d) => (d.client_name || "").trim().toLowerCase() === selectedClientName);
     }
+    if (isStaff && user?.id) {
+      base = base.filter((d) => ((d as Deal & { created_by?: string | null }).created_by || "") === user.id);
+    }
+    if (customerSearchDebounced) {
+      base = base.filter((d) => {
+        const client = clients.find((c) => c.id === (d as Deal & { client_id?: string | null }).client_id);
+        const name = (d.client_name || "").toLowerCase();
+        const phone = (client?.phone || "").toLowerCase();
+        const passport = (client?.passport_number || "").toLowerCase();
+        return (
+          name.includes(customerSearchDebounced) ||
+          phone.includes(customerSearchDebounced) ||
+          passport.includes(customerSearchDebounced)
+        );
+      });
+    }
     return base;
-  }, [activeTab, deals, searchParams]);
+  }, [activeTab, deals, searchParams, isStaff, user?.id, customerSearchDebounced, clients]);
+
+  const pendingCompletionCount = useMemo(
+    () =>
+      deals.filter(
+        (d) => Boolean((d as Deal & { pending_completion?: boolean | null }).pending_completion)
+      ).length,
+    [deals]
+  );
 
   const usedCarIds = useMemo(() => {
     const ids = new Set<string>();
@@ -548,8 +593,10 @@ export default function DealsPage() {
     if (!form.date) return "Date is required.";
     if (!form.carId) return "Car is required.";
     if (!form.saleDzd.trim()) return "Sale Price DZD is required.";
-    if (!form.rate.trim()) return "Rate at Deal is required.";
-    if (rate <= 0) return "Rate at Deal must be > 0.";
+    if (!isStaff) {
+      if (!form.rate.trim()) return "Rate at Deal is required.";
+      if (rate <= 0) return "Rate at Deal must be > 0.";
+    }
     return null;
   };
 
@@ -596,6 +643,8 @@ export default function DealsPage() {
       notes: form.notes || null,
       drive_link: form.driveLink.trim() || null,
       sale_usd: parseNum(form.saleUsd) || null,
+      created_by: user?.id || null,
+      pending_completion: isStaff ? true : false,
     };
 
     if (editingDealId) {
@@ -604,16 +653,39 @@ export default function DealsPage() {
       const previousEmployeeId = existingExt?.handled_by ?? null;
       const newEmployeeId = form.employeeId || null;
 
-      const { error: updateError } = await supabase.from("deals").update(payload).eq("id", editingDealId);
+      const staffPayload = {
+        notes: payload.notes,
+        collected_dzd: payload.collected_dzd,
+        pending_dzd: payload.pending_dzd,
+        status: payload.status,
+      };
+      const staffRes = isStaff
+        ? await fetch(`/api/deals/${editingDealId}/staff-update`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(staffPayload),
+          })
+        : null;
+      const updateError = isStaff
+        ? (!staffRes || !staffRes.ok ? new Error((await staffRes?.json().catch(() => ({})))?.error || "Failed to update deal") : null)
+        : (await supabase.from("deals").update(payload).eq("id", editingDealId)).error;
       if (updateError) {
+        const updateDetails =
+          typeof updateError === "object" && updateError && "details" in updateError
+            ? String((updateError as { details?: unknown }).details || "")
+            : null;
+        const updateHint =
+          typeof updateError === "object" && updateError && "hint" in updateError
+            ? String((updateError as { hint?: unknown }).hint || "")
+            : null;
         // eslint-disable-next-line no-console
         console.log("Supabase deal update error:", updateError);
         setError(
           [
             "Failed to update deal.",
             updateError.message,
-            updateError.details,
-            updateError.hint,
+            updateDetails,
+            updateHint,
           ]
             .filter(Boolean)
             .join(" ")
@@ -739,20 +811,44 @@ export default function DealsPage() {
         }
       }
     } else {
-      const { data: inserted, error: insertError } = await supabase
-        .from("deals")
-        .insert(payload)
-        .select("*")
-        .single();
+      const insertedRes = isStaff
+        ? await fetch("/api/deals", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          })
+        : null;
+      const directInsert = !isStaff
+        ? await supabase
+            .from("deals")
+            .insert(payload)
+            .select("*")
+            .single()
+        : null;
+      const insertedPayload = isStaff
+        ? await insertedRes?.json().catch(() => ({}))
+        : null;
+      const inserted = isStaff ? insertedPayload?.row : directInsert?.data;
+      const insertError = isStaff
+        ? (!insertedRes || !insertedRes.ok ? new Error(insertedPayload?.error || "Failed to create deal") : null)
+        : directInsert?.error ?? null;
       if (insertError) {
+        const insertDetails =
+          typeof insertError === "object" && insertError && "details" in insertError
+            ? String((insertError as { details?: unknown }).details || "")
+            : null;
+        const insertHint =
+          typeof insertError === "object" && insertError && "hint" in insertError
+            ? String((insertError as { hint?: unknown }).hint || "")
+            : null;
         // eslint-disable-next-line no-console
         console.log("Supabase deal insert error:", insertError);
         setError(
           [
             "Failed to add deal.",
             insertError.message,
-            insertError.details,
-            insertError.hint,
+            insertDetails,
+            insertHint,
           ]
             .filter(Boolean)
             .join(" ")
@@ -1431,6 +1527,27 @@ export default function DealsPage() {
           </div>
         )}
 
+        <div className="rounded-lg border border-app surface p-3">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+            <input
+              type="text"
+              value={customerSearchInput}
+              onChange={(e) => setCustomerSearchInput(e.target.value)}
+              placeholder="Search customer name, passport, or phone"
+              className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+            />
+            <div className="text-xs font-semibold text-muted">
+              Results: <span className="text-app">{filteredDeals.length}</span>
+            </div>
+          </div>
+        </div>
+
+        {!isStaff && pendingCompletionCount > 0 && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Pending Completion queue: <strong>{pendingCompletionCount}</strong> deal(s) need manager internal completion.
+          </div>
+        )}
+
         {error && (
           <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
             {error}
@@ -1449,14 +1566,15 @@ export default function DealsPage() {
                   <tr>
                     <th className="px-4 py-3">Client</th>
                     <th className="px-4 py-3">Car</th>
+                    <th className="px-4 py-3">VIN</th>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Sale DZD</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Rate</th>
-                    <th className="px-4 py-3">Sale AED</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Total Expenses</th>
-                    <th className="px-4 py-3">Profit</th>
-                    <th className="px-4 py-3 hidden md:table-cell">Source</th>
-                    <th className="px-4 py-3 hidden md:table-cell">Lifecycle</th>
+                    {!isStaff && <th className="px-4 py-3 hidden sm:table-cell">Rate</th>}
+                    {!isStaff && <th className="px-4 py-3">Sale AED</th>}
+                    {!isStaff && <th className="px-4 py-3 hidden sm:table-cell">Total Expenses</th>}
+                    {!isStaff && <th className="px-4 py-3">Profit</th>}
+                    {!isStaff && <th className="px-4 py-3 hidden md:table-cell">Source</th>}
+                    {!isStaff && <th className="px-4 py-3 hidden md:table-cell">Lifecycle</th>}
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 w-10">Drive</th>
                     <th className="px-4 py-3">Actions</th>
@@ -1480,14 +1598,40 @@ export default function DealsPage() {
                         <td className="px-4 py-3 text-app">
                           {d.car_label || "-"}
                         </td>
+                        <td className="px-4 py-3 text-app">
+                          {(() => {
+                            const dealCar = cars.find((c) => c.id === d.car_id);
+                            const fullVin = (dealCar?.vin || "").trim();
+                            const shortVin = formatVinShort(fullVin);
+                            if (!fullVin) return <span className="text-muted">VIN: pending</span>;
+                            return (
+                              <button
+                                type="button"
+                                title={fullVin}
+                                onClick={async () => {
+                                  try {
+                                    await navigator.clipboard.writeText(fullVin);
+                                    setCopiedVinDealId(d.id);
+                                    setTimeout(() => setCopiedVinDealId((prev) => (prev === d.id ? null : prev)), 1200);
+                                  } catch {
+                                    setError("Failed to copy VIN.");
+                                  }
+                                }}
+                                className="rounded border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:bg-gray-50"
+                              >
+                                {copiedVinDealId === d.id ? "Copied" : shortVin}
+                              </button>
+                            );
+                          })()}
+                        </td>
                         <td className="px-4 py-3 text-app">{formatDate(d.date ?? d.created_at)}</td>
                         <td className="px-4 py-3 text-app">{formatMoney(d.sale_dzd, "DZD")}</td>
-                        <td className="px-4 py-3 text-app hidden sm:table-cell">{d.rate != null ? formatNumber(d.rate) : "-"}</td>
-                        <td className="px-4 py-3 text-app">{formatMoney(d.sale_aed, "AED")}</td>
-                        <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(total, "AED")}</td>
-                        <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(d.profit, "AED")}</td>
-                        <td className="px-4 py-3 text-app hidden md:table-cell">{((d as Deal & { source?: string | null }).source || "STOCK").toString()}</td>
-                        <td className="px-4 py-3 text-app hidden md:table-cell">{((d as Deal & { lifecycle_status?: string | null }).lifecycle_status || (status === "closed" ? "CLOSED" : "PRE_ORDER")).toString()}</td>
+                        {!isStaff && <td className="px-4 py-3 text-app hidden sm:table-cell">{d.rate != null ? formatNumber(d.rate) : "-"}</td>}
+                        {!isStaff && <td className="px-4 py-3 text-app">{formatMoney(d.sale_aed, "AED")}</td>}
+                        {!isStaff && <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(total, "AED")}</td>}
+                        {!isStaff && <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(d.profit, "AED")}</td>}
+                        {!isStaff && <td className="px-4 py-3 text-app hidden md:table-cell">{((d as Deal & { source?: string | null }).source || "STOCK").toString()}</td>}
+                        {!isStaff && <td className="px-4 py-3 text-app hidden md:table-cell">{((d as Deal & { lifecycle_status?: string | null }).lifecycle_status || (status === "closed" ? "CLOSED" : "PRE_ORDER")).toString()}</td>}
                         <td className="px-4 py-3">
                           <span
                             className={[
@@ -1508,6 +1652,7 @@ export default function DealsPage() {
                             <button
                               type="button"
                               onClick={() => openEditModal(d)}
+                              disabled={isStaff && !isPrivilegedRole}
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
                               Edit
@@ -1515,7 +1660,7 @@ export default function DealsPage() {
                             <button
                               type="button"
                               onClick={() => handleDelete(d)}
-                              disabled={isDeletingId === d.id}
+                              disabled={isStaff || isDeletingId === d.id}
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
                             >
                               {isDeletingId === d.id ? "Deleting..." : "Delete"}
@@ -1740,22 +1885,26 @@ export default function DealsPage() {
                 </div>
               </div>
 
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Rate at Deal (DZD/AED)</span>
-                <input
-                  type="number"
-                  value={form.rate}
-                  onChange={(e) => updateField("rate", e.target.value)}
-                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
-                />
-              </label>
+              {!isStaff && (
+                <>
+                  <label className="space-y-1 text-xs text-app">
+                    <span className="font-semibold">Rate at Deal (DZD/AED)</span>
+                    <input
+                      type="number"
+                      value={form.rate}
+                      onChange={(e) => updateField("rate", e.target.value)}
+                      className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
 
-              <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="font-semibold text-app">Sale AED</span>
-                  <span className="text-app">{formatMoney(saleAed, "AED")}</span>
-                </div>
-              </div>
+                  <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="font-semibold text-app">Sale AED</span>
+                      <span className="text-app">{formatMoney(saleAed, "AED")}</span>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">Sale Price USD <span className="text-[10px] font-normal text-zinc-400">(for invoice &amp; agreement)</span></span>
@@ -1768,98 +1917,102 @@ export default function DealsPage() {
                 />
               </label>
 
-              <div className="sm:col-span-2">
-                <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                  Expenses (AED)
-                </div>
-              </div>
+              {!isStaff && (
+                <>
+                  <div className="sm:col-span-2">
+                    <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                      Expenses (AED)
+                    </div>
+                  </div>
 
-              <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="font-semibold text-app">Car Cost AED</span>
-                  <span className="text-app">{formatMoney(carCostAed, "AED")}</span>
-                </div>
-                <div className="mt-1 text-[11px] text-gray-400">
-                  Auto-filled from selected car purchase price.
-                </div>
-              </div>
+                  <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="font-semibold text-app">Car Cost AED</span>
+                      <span className="text-app">{formatMoney(carCostAed, "AED")}</span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-gray-400">
+                      Auto-filled from selected car purchase price.
+                    </div>
+                  </div>
 
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Shipping AED</span>
-                <input
-                  type="number"
-                  value={form.shippingAed}
-                  onChange={(e) => updateField("shippingAed", e.target.value)}
-                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
-                />
-              </label>
+                  <label className="space-y-1 text-xs text-app">
+                    <span className="font-semibold">Shipping AED</span>
+                    <input
+                      type="number"
+                      value={form.shippingAed}
+                      onChange={(e) => updateField("shippingAed", e.target.value)}
+                      className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
 
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Inspection AED</span>
-                <input
-                  type="number"
-                  value={form.inspectionAed}
-                  onChange={(e) => updateField("inspectionAed", e.target.value)}
-                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
-                />
-              </label>
+                  <label className="space-y-1 text-xs text-app">
+                    <span className="font-semibold">Inspection AED</span>
+                    <input
+                      type="number"
+                      value={form.inspectionAed}
+                      onChange={(e) => updateField("inspectionAed", e.target.value)}
+                      className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
 
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Recovery AED</span>
-                <input
-                  type="number"
-                  value={form.recoveryAed}
-                  onChange={(e) => updateField("recoveryAed", e.target.value)}
-                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
-                />
-              </label>
+                  <label className="space-y-1 text-xs text-app">
+                    <span className="font-semibold">Recovery AED</span>
+                    <input
+                      type="number"
+                      value={form.recoveryAed}
+                      onChange={(e) => updateField("recoveryAed", e.target.value)}
+                      className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
 
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Maintenance AED</span>
-                <input
-                  type="number"
-                  value={form.maintenanceAed}
-                  onChange={(e) => updateField("maintenanceAed", e.target.value)}
-                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
-                />
-              </label>
+                  <label className="space-y-1 text-xs text-app">
+                    <span className="font-semibold">Maintenance AED</span>
+                    <input
+                      type="number"
+                      value={form.maintenanceAed}
+                      onChange={(e) => updateField("maintenanceAed", e.target.value)}
+                      className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
 
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Other AED</span>
-                <input
-                  type="number"
-                  value={form.otherAed}
-                  onChange={(e) => updateField("otherAed", e.target.value)}
-                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
-                />
-              </label>
+                  <label className="space-y-1 text-xs text-app">
+                    <span className="font-semibold">Other AED</span>
+                    <input
+                      type="number"
+                      value={form.otherAed}
+                      onChange={(e) => updateField("otherAed", e.target.value)}
+                      className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
 
-              <label className="flex items-center justify-between gap-3 rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Shipping Paid</span>
-                <button
-                  type="button"
-                  onClick={() => updateField("shippingPaid", !form.shippingPaid)}
-                  className={[
-                    "rounded-full border px-3 py-1 text-[11px] font-semibold transition",
-                    form.shippingPaid
-                      ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
-                      : "border-app surface text-app",
-                  ].join(" ")}
-                >
-                  {form.shippingPaid ? "Yes" : "No"}
-                </button>
-              </label>
+                  <label className="flex items-center justify-between gap-3 rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
+                    <span className="font-semibold">Shipping Paid</span>
+                    <button
+                      type="button"
+                      onClick={() => updateField("shippingPaid", !form.shippingPaid)}
+                      className={[
+                        "rounded-full border px-3 py-1 text-[11px] font-semibold transition",
+                        form.shippingPaid
+                          ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
+                          : "border-app surface text-app",
+                      ].join(" ")}
+                    >
+                      {form.shippingPaid ? "Yes" : "No"}
+                    </button>
+                  </label>
 
-              <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="font-semibold text-app">Live Profit Preview</span>
-                  <span className="text-[var(--color-accent)]">{formatMoney(profitPreview, "AED")}</span>
-                </div>
-                <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
-                  <span>Total expenses</span>
-                  <span>{formatMoney(totalExpenses, "AED")}</span>
-                </div>
-              </div>
+                  <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="font-semibold text-app">Live Profit Preview</span>
+                      <span className="text-[var(--color-accent)]">{formatMoney(profitPreview, "AED")}</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
+                      <span>Total expenses</span>
+                      <span>{formatMoney(totalExpenses, "AED")}</span>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">Status</span>
@@ -1930,6 +2083,31 @@ export default function DealsPage() {
                   {viewDeal.client_name || "-"} • {viewDeal.car_label || "-"} •{" "}
                   {formatDate(viewDeal.date ?? viewDeal.created_at)}
                 </div>
+                <div className="mt-2 text-xs text-app">
+                  {(() => {
+                    const dealCar = cars.find((c) => c.id === viewDeal.car_id);
+                    const fullVin = (dealCar?.vin || "").trim();
+                    if (!fullVin) return <span className="text-muted">VIN: pending</span>;
+                    return (
+                      <button
+                        type="button"
+                        title={fullVin}
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(fullVin);
+                            setCopiedVinDealId(viewDeal.id);
+                            setTimeout(() => setCopiedVinDealId((prev) => (prev === viewDeal.id ? null : prev)), 1200);
+                          } catch {
+                            setError("Failed to copy VIN.");
+                          }
+                        }}
+                        className="rounded border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:bg-gray-50"
+                      >
+                        {copiedVinDealId === viewDeal.id ? "Copied" : formatVinShort(fullVin)}
+                      </button>
+                    );
+                  })()}
+                </div>
               </div>
               <button
                 type="button"
@@ -1946,31 +2124,49 @@ export default function DealsPage() {
                   <span className="font-semibold text-app">Sale</span>
                   <span className="text-app">{formatMoney(viewDeal.sale_dzd, "DZD")}</span>
                 </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                  <span>Rate</span>
-                  <span>{viewDeal.rate != null ? formatNumber(viewDeal.rate) : "-"}</span>
-                </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                  <span>Sale AED</span>
-                  <span>{formatMoney(viewDeal.sale_aed, "AED")}</span>
-                </div>
+                {!isStaff && (
+                  <>
+                    <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
+                      <span>Rate</span>
+                      <span>{viewDeal.rate != null ? formatNumber(viewDeal.rate) : "-"}</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
+                      <span>Sale AED</span>
+                      <span>{formatMoney(viewDeal.sale_aed, "AED")}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
-              <div className="rounded-md border border-app bg-white p-3 text-xs text-app">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-app">Profit</span>
-                  <span className="text-[var(--color-accent)]">{formatMoney(viewDeal.profit, "AED")}</span>
+              {!isStaff ? (
+                <div className="rounded-md border border-app bg-white p-3 text-xs text-app">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-app">Profit</span>
+                    <span className="text-[var(--color-accent)]">{formatMoney(viewDeal.profit, "AED")}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
+                    <span>Status</span>
+                    <span className="text-app">{(viewDeal.status || "pending").toLowerCase()}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
+                    <span>Shipping Paid</span>
+                    <span className="text-app">{viewDeal.shipping_paid ? "Yes" : "No"}</span>
+                  </div>
                 </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                  <span>Status</span>
-                  <span className="text-app">{(viewDeal.status || "pending").toLowerCase()}</span>
+              ) : (
+                <div className="rounded-md border border-app bg-white p-3 text-xs text-app">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-app">Status</span>
+                    <span className="text-app">{(viewDeal.status || "pending").toLowerCase()}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
+                    <span>Shipping Paid</span>
+                    <span className="text-app">{viewDeal.shipping_paid ? "Yes" : "No"}</span>
+                  </div>
                 </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                  <span>Shipping Paid</span>
-                  <span className="text-app">{viewDeal.shipping_paid ? "Yes" : "No"}</span>
-                </div>
-              </div>
+              )}
 
+              {!isStaff && (
               <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                   Expenses (AED)
@@ -2002,6 +2198,7 @@ export default function DealsPage() {
                   </div>
                 </div>
               </div>
+              )}
 
               <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                 <div className="flex items-center justify-between gap-2">
