@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/context/AuthContext";
+import { type FeatureKey } from "@/lib/auth/featureKeys";
 
 /* ── Nav Icons ─────────────────────────────────────────────── */
 const icons: Record<string, React.ReactNode> = {
@@ -58,6 +59,11 @@ const icons: Record<string, React.ReactNode> = {
       <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
     </svg>
   ),
+  "/payroll": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="12" y1="16" x2="16" y2="16"/>
+    </svg>
+  ),
   "/investors": (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
@@ -97,6 +103,7 @@ const navItems = [
   { href: "/transfers",   label: "Transfers" },
   { href: "/debts",       label: "Debts" },
   { href: "/employees",   label: "Employees" },
+  { href: "/payroll",     label: "Payroll" },
   { href: "/investors",   label: "Investors" },
   { href: "/reports",     label: "Reports" },
   { href: "/clients",     label: "Clients" },
@@ -107,7 +114,7 @@ const navItems = [
 const groups = [
   ["/dashboard", "/activity"],
   ["/inventory", "/deals", "/containers", "/movements", "/transfers", "/debts"],
-  ["/employees", "/investors", "/reports", "/clients", "/inquiries"],
+  ["/employees", "/payroll", "/investors", "/reports", "/clients", "/inquiries"],
 ];
 
 function roleLabel(role: string | null): string {
@@ -115,20 +122,35 @@ function roleLabel(role: string | null): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
-function visibleHrefsForRole(role: string | null): Set<string> {
-  if (!role) return new Set();
-  if (role === "owner") return new Set(navItems.map((i) => i.href)).add("/admin/users");
-  if (role === "staff") return new Set(["/inventory", "/deals", "/clients", "/inquiries"]);
-  if (role === "accountant") return new Set(["/movements", "/reports", "/activity"]);
-  if (role === "investor") return new Set(["/investors"]);
-  if (role === "manager") {
-    return new Set(
-      navItems
-        .filter((i) => i.href !== "/transfers" && i.href !== "/employees" && i.href !== "/investors")
-        .map((i) => i.href)
-    );
-  }
-  return new Set();
+const ROUTE_FEATURE_MAP: Record<string, FeatureKey> = {
+  "/dashboard": "dashboard",
+  "/activity": "activity",
+  "/inventory": "inventory",
+  "/deals": "deals",
+  "/containers": "containers",
+  "/movements": "movements",
+  "/transfers": "transfers",
+  "/debts": "debts",
+  "/employees": "employees",
+  "/payroll": "payroll",
+  "/investors": "investors",
+  "/reports": "reports",
+  "/clients": "clients",
+  "/inquiries": "inquiries",
+  "/admin/users": "admin_users",
+};
+
+function visibleHrefsForPermissions(
+  role: string | null,
+  permissions: Partial<Record<FeatureKey, boolean>>
+): Set<string> {
+  if (!role) return new Set<string>();
+  if (role === "owner") return new Set(Object.keys(ROUTE_FEATURE_MAP));
+  return new Set(
+    Object.entries(ROUTE_FEATURE_MAP)
+      .filter(([, key]) => Boolean(permissions[key]))
+      .map(([href]) => href)
+  );
 }
 
 /* ── Logo ──────────────────────────────────────────────────── */
@@ -165,8 +187,8 @@ export function MobileMenuButton({ onClick }: { onClick: () => void }) {
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { profile, role } = useAuth();
-  const visibleHrefs = visibleHrefsForRole(role);
+  const { profile, role, permissions } = useAuth();
+  const visibleHrefs = visibleHrefsForPermissions(role, permissions);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

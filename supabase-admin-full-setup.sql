@@ -21,6 +21,10 @@ CREATE TABLE IF NOT EXISTS employees (
 );
 
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS salary_currency text DEFAULT 'AED';
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS employee_code text;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_employees_employee_code_unique
+  ON employees(employee_code)
+  WHERE employee_code IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS commissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -32,6 +36,9 @@ CREATE TABLE IF NOT EXISTS commissions (
   month text,
   created_at timestamptz DEFAULT now()
 );
+ALTER TABLE commissions ADD COLUMN IF NOT EXISTS currency text DEFAULT 'DZD';
+ALTER TABLE commissions ADD COLUMN IF NOT EXISTS rate_snapshot numeric;
+UPDATE commissions SET currency = 'DZD' WHERE currency IS NULL;
 
 CREATE TABLE IF NOT EXISTS investors (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -132,8 +139,13 @@ CREATE TABLE IF NOT EXISTS inquiries (
   created_at timestamptz DEFAULT now()
 );
 
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS source_channel text DEFAULT 'public_website';
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS whatsapp_ref text;
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS assigned_employee_id uuid REFERENCES employees(id) ON DELETE SET NULL;
+
 CREATE INDEX IF NOT EXISTS inquiries_status_idx ON inquiries(status);
 CREATE INDEX IF NOT EXISTS inquiries_created_at_idx ON inquiries(created_at DESC);
+CREATE INDEX IF NOT EXISTS inquiries_assigned_employee_idx ON inquiries(assigned_employee_id);
 
 ALTER TABLE inquiries ENABLE ROW LEVEL SECURITY;
 
@@ -147,6 +159,66 @@ BEGIN
       ON inquiries FOR INSERT TO anon WITH CHECK (true);
   END IF;
 END$$;
+
+CREATE TABLE IF NOT EXISTS client_documents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_name text NOT NULL,
+  client_phone text,
+  client_passport text,
+  car_brand text NOT NULL,
+  car_model text NOT NULL,
+  car_year integer,
+  car_color text,
+  car_vin text,
+  country_of_origin text,
+  amount_usd numeric NOT NULL DEFAULT 0,
+  export_to text DEFAULT 'Algeria',
+  notes text,
+  created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS client_documents_created_at_idx ON client_documents(created_at DESC);
+
+-- ---------------------------------------------------------------------
+-- 6) Feature permissions (owner-controlled visibility matrix)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS role_feature_defaults (
+  role text NOT NULL,
+  feature_key text NOT NULL,
+  allowed boolean NOT NULL DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  PRIMARY KEY (role, feature_key)
+);
+
+CREATE TABLE IF NOT EXISTS user_feature_permissions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  feature_key text NOT NULL,
+  allowed boolean NOT NULL DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (user_id, feature_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_feature_permissions_user_id
+  ON user_feature_permissions(user_id);
+
+INSERT INTO role_feature_defaults (role, feature_key, allowed)
+SELECT *
+FROM (
+  VALUES
+    ('owner','dashboard',true),('owner','activity',true),('owner','inventory',true),('owner','deals',true),
+    ('owner','containers',true),('owner','movements',true),('owner','transfers',true),('owner','debts',true),
+    ('owner','employees',true),('owner','payroll',true),('owner','investors',true),('owner','reports',true),
+    ('owner','clients',true),('owner','inquiries',true),('owner','admin_users',true),
+    ('manager','dashboard',true),('manager','activity',true),('manager','inventory',true),('manager','deals',true),
+    ('manager','containers',true),('manager','movements',true),('manager','debts',true),('manager','payroll',true),
+    ('manager','reports',true),('manager','clients',true),('manager','inquiries',true),
+    ('staff','inventory',true),('staff','deals',true),('staff','clients',true),('staff','inquiries',true),
+    ('accountant','activity',true),('accountant','movements',true),('accountant','reports',true),('accountant','payroll',true),
+    ('investor','investors',true)
+) AS defaults(role, feature_key, allowed)
+ON CONFLICT (role, feature_key) DO UPDATE
+SET allowed = EXCLUDED.allowed;
 
 -- ---------------------------------------------------------------------
 -- 5) Pre-order system (supplier catalog + deal lifecycle)

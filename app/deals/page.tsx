@@ -42,6 +42,23 @@ type EmployeeOption = {
   commission_per_managed_deal: number | null;
 };
 
+type DummyDocRow = {
+  id: string;
+  client_name: string;
+  client_phone: string | null;
+  client_passport: string | null;
+  car_brand: string;
+  car_model: string;
+  car_year: number | null;
+  car_color: string | null;
+  car_vin: string | null;
+  country_of_origin: string | null;
+  amount_usd: number;
+  export_to: string | null;
+  notes: string | null;
+  created_at: string | null;
+};
+
 type DealFormState = {
   clientId: string;
   date: string; // YYYY-MM-DD
@@ -195,6 +212,24 @@ export default function DealsPage() {
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [lifecycleSaving, setLifecycleSaving] = useState(false);
+  const [isDummyDocsOpen, setIsDummyDocsOpen] = useState(false);
+  const [dummyDocs, setDummyDocs] = useState<DummyDocRow[]>([]);
+  const [dummySaving, setDummySaving] = useState(false);
+  const [dummyError, setDummyError] = useState<string | null>(null);
+  const [dummyForm, setDummyForm] = useState({
+    clientName: "",
+    clientPhone: "",
+    clientPassport: "",
+    carBrand: "",
+    carModel: "",
+    carYear: "",
+    carColor: "",
+    carVin: "",
+    countryOfOrigin: "",
+    amountUsd: "",
+    exportTo: "Algeria",
+    notes: "",
+  });
 
   const fetchAll = async () => {
     setIsLoading(true);
@@ -230,7 +265,11 @@ export default function DealsPage() {
     setIsLoading(false);
 
     // Load secondary dropdown data after first paint to improve page transition speed.
-    const [{ data: clientsData, error: clientsError }, { data: employeesData, error: employeesError }] =
+    const [
+      { data: clientsData, error: clientsError },
+      { data: employeesData, error: employeesError },
+      dummyDocsRes,
+    ] =
       await Promise.all([
         supabase.from("clients").select("id, name, phone").order("name", { ascending: true }),
         supabase
@@ -238,6 +277,7 @@ export default function DealsPage() {
           .select("id, name, role, commission_per_deal, commission_per_managed_deal")
           .eq("status", "active")
           .order("name", { ascending: true }),
+        fetch("/api/deals/dummy-docs", { cache: "no-store" }).then((r) => r.json()).catch(() => ({ rows: [] })),
       ]);
 
     if (clientsError || employeesError) {
@@ -254,6 +294,52 @@ export default function DealsPage() {
 
     setClients((clientsData as ClientDeal[]) ?? []);
     setEmployees((employeesData as EmployeeOption[]) ?? []);
+    setDummyDocs((dummyDocsRes?.rows as DummyDocRow[] | undefined) ?? []);
+  };
+
+  const saveDummyDoc = async () => {
+    if (!dummyForm.clientName.trim()) {
+      setDummyError("Client name is required.");
+      return;
+    }
+    if (!dummyForm.carBrand.trim() || !dummyForm.carModel.trim()) {
+      setDummyError("Car brand and model are required.");
+      return;
+    }
+    const amountUsd = parseNum(dummyForm.amountUsd);
+    if (amountUsd <= 0) {
+      setDummyError("Amount USD must be greater than zero.");
+      return;
+    }
+    setDummySaving(true);
+    setDummyError(null);
+    const res = await fetch("/api/deals/dummy-docs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_name: dummyForm.clientName,
+        client_phone: dummyForm.clientPhone || null,
+        client_passport: dummyForm.clientPassport || null,
+        car_brand: dummyForm.carBrand,
+        car_model: dummyForm.carModel,
+        car_year: dummyForm.carYear ? Number(dummyForm.carYear) : null,
+        car_color: dummyForm.carColor || null,
+        car_vin: dummyForm.carVin || null,
+        country_of_origin: dummyForm.countryOfOrigin || null,
+        amount_usd: amountUsd,
+        export_to: dummyForm.exportTo || "Algeria",
+        notes: dummyForm.notes || null,
+      }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setDummyError(payload.error || "Failed to save dummy document.");
+      setDummySaving(false);
+      return;
+    }
+    const row = payload.row as DummyDocRow;
+    setDummyDocs((prev) => [row, ...prev]);
+    setDummySaving(false);
   };
 
   useEffect(() => {
@@ -262,11 +348,21 @@ export default function DealsPage() {
   }, []);
 
   const filteredDeals = useMemo(() => {
-    if (activeTab === "All") return deals;
-    if (activeTab === "Pending")
-      return deals.filter((d) => (d.status || "pending").toLowerCase() === "pending");
-    return deals.filter((d) => (d.status || "").toLowerCase() === "closed");
-  }, [activeTab, deals]);
+    const selectedClientId = (searchParams.get("clientId") || "").trim();
+    const selectedClientName = (searchParams.get("clientName") || "").trim().toLowerCase();
+    let base = deals;
+    if (activeTab === "Pending") {
+      base = base.filter((d) => (d.status || "pending").toLowerCase() === "pending");
+    } else if (activeTab === "Closed") {
+      base = base.filter((d) => (d.status || "").toLowerCase() === "closed");
+    }
+    if (selectedClientId) {
+      base = base.filter((d) => ((d as Deal & { client_id?: string | null }).client_id || "") === selectedClientId);
+    } else if (selectedClientName) {
+      base = base.filter((d) => (d.client_name || "").trim().toLowerCase() === selectedClientName);
+    }
+    return base;
+  }, [activeTab, deals, searchParams]);
 
   const usedCarIds = useMemo(() => {
     const ids = new Set<string>();
@@ -580,6 +676,8 @@ export default function DealsPage() {
                   employee_id: newEmployeeId,
                   deal_id: editingDealId,
                   amount,
+                  currency: "DZD",
+                  rate_snapshot: rate > 0 ? rate : null,
                   type: "per_deal",
                   status: "pending",
                   month,
@@ -620,6 +718,8 @@ export default function DealsPage() {
                 employee_id: newEmployeeId,
                 deal_id: editingDealId,
                 amount,
+                currency: "DZD",
+                rate_snapshot: rate > 0 ? rate : null,
                 type: "per_deal",
                 status: "pending",
                 month,
@@ -735,6 +835,8 @@ export default function DealsPage() {
                 employee_id: employeeId,
                 deal_id: dealId,
                 amount,
+                currency: "DZD",
+                rate_snapshot: rate > 0 ? rate : null,
                 type: "per_deal",
                 status: "pending",
                 month,
@@ -1281,6 +1383,16 @@ export default function DealsPage() {
             </button>
             <button
               type="button"
+              onClick={() => {
+                setDummyError(null);
+                setIsDummyDocsOpen(true);
+              }}
+              className="inline-flex items-center justify-center rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Dummy Docs
+            </button>
+            <button
+              type="button"
               onClick={openAddModal}
               className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
             >
@@ -1306,6 +1418,18 @@ export default function DealsPage() {
             </button>
           ))}
         </div>
+        {(searchParams.get("clientId") || searchParams.get("clientName")) && (
+          <div className="flex items-center gap-2 text-xs text-muted">
+            <span>Filtered by client</span>
+            <button
+              type="button"
+              onClick={() => router.replace("/deals")}
+              className="rounded-md border border-app bg-white px-2 py-1 font-semibold text-app"
+            >
+              Clear filter
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -2109,6 +2233,62 @@ export default function DealsPage() {
         onClose={() => setIsPreorderModalOpen(false)}
         onCreated={fetchAll}
       />
+
+      {isDummyDocsOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setIsDummyDocsOpen(false)} />
+          <div className="relative flex w-full max-w-4xl max-h-screen flex-col overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
+            <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
+              <div>
+                <div className="text-lg font-semibold text-app">Dummy Invoice + Agreement</div>
+                <div className="text-xs text-muted">For client-loaded cars without creating full sale deals.</div>
+              </div>
+              <button type="button" onClick={() => setIsDummyDocsOpen(false)} className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app">Close</button>
+            </div>
+            {dummyError ? <div className="mt-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">{dummyError}</div> : null}
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <input placeholder="Client name" value={dummyForm.clientName} onChange={(e) => setDummyForm((p) => ({ ...p, clientName: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder="Client phone" value={dummyForm.clientPhone} onChange={(e) => setDummyForm((p) => ({ ...p, clientPhone: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder="Passport / ID" value={dummyForm.clientPassport} onChange={(e) => setDummyForm((p) => ({ ...p, clientPassport: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder="Car brand" value={dummyForm.carBrand} onChange={(e) => setDummyForm((p) => ({ ...p, carBrand: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder="Car model" value={dummyForm.carModel} onChange={(e) => setDummyForm((p) => ({ ...p, carModel: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder="Year" value={dummyForm.carYear} onChange={(e) => setDummyForm((p) => ({ ...p, carYear: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder="Color" value={dummyForm.carColor} onChange={(e) => setDummyForm((p) => ({ ...p, carColor: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder="VIN" value={dummyForm.carVin} onChange={(e) => setDummyForm((p) => ({ ...p, carVin: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder="Country of origin" value={dummyForm.countryOfOrigin} onChange={(e) => setDummyForm((p) => ({ ...p, countryOfOrigin: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder="Amount USD" value={dummyForm.amountUsd} onChange={(e) => setDummyForm((p) => ({ ...p, amountUsd: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder="Export to" value={dummyForm.exportTo} onChange={(e) => setDummyForm((p) => ({ ...p, exportTo: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app sm:col-span-2" />
+              <textarea placeholder="Notes" value={dummyForm.notes} onChange={(e) => setDummyForm((p) => ({ ...p, notes: e.target.value }))} rows={2} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app sm:col-span-2" />
+            </div>
+            <div className="mt-3 flex justify-end">
+              <button type="button" onClick={saveDummyDoc} disabled={dummySaving} className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {dummySaving ? "Saving..." : "Save Dummy Doc"}
+              </button>
+            </div>
+            <div className="mt-4 space-y-2">
+              {dummyDocs.slice(0, 12).map((doc) => {
+                const date = formatDate(doc.created_at);
+                const invoiceNumber = `DINV-${doc.id.slice(0, 8).toUpperCase()}`;
+                return (
+                  <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-app bg-white px-3 py-2 text-xs text-app">
+                    <div>{doc.client_name} - {doc.car_brand} {doc.car_model} ({date})</div>
+                    <div className="flex gap-2">
+                      <InvoiceDownloadButton
+                        filename={`Dummy-Invoice-${doc.client_name}-${date}.pdf`}
+                        data={{ invoiceNumber, date, clientName: doc.client_name, carBrand: doc.car_brand, carModel: doc.car_model, carYear: doc.car_year, carColor: doc.car_color, carVin: doc.car_vin, countryOfOrigin: doc.country_of_origin, saleUsd: doc.amount_usd, exportTo: doc.export_to || "Algeria" }}
+                      />
+                      <AgreementDownloadButton
+                        filename={`Dummy-Agreement-${doc.client_name}-${date}.pdf`}
+                        data={{ date, clientName: doc.client_name, clientPassport: doc.client_passport, carBrand: doc.car_brand, carModel: doc.car_model, carYear: doc.car_year, carColor: doc.car_color, carVin: doc.car_vin, countryOfOrigin: doc.country_of_origin, totalAmountUsd: doc.amount_usd, advanceUsd: 0, balanceUsd: doc.amount_usd }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -178,7 +178,7 @@ export default function ContainersPage() {
       supabase.from("container_cars").select("*"),
       supabase
         .from("cars")
-        .select("id, brand, model, year, color, location, owner, client_name"),
+        .select("id, brand, model, year, color, vin, location, owner, client_name"),
       supabase
         .from("deals")
         .select(
@@ -1316,9 +1316,9 @@ export default function ContainersPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-app bg-black">
+              <div className="rounded-md border border-zinc-700 bg-zinc-900/70">
                 <table className="w-full text-left text-[11px]">
-                  <thead className="border-b border-app text-[10px] uppercase tracking-wide text-muted">
+                  <thead className="border-b border-zinc-700 text-[10px] uppercase tracking-wide text-zinc-300">
                     <tr>
                       <th className="px-3 py-2">Car</th>
                       <th className="px-3 py-2">Owner</th>
@@ -1332,7 +1332,7 @@ export default function ContainersPage() {
                       <tr>
                         <td
                           colSpan={5}
-                          className="px-3 py-3 text-xs text-muted"
+                          className="px-3 py-3 text-xs text-zinc-300"
                         >
                           No cars yet.
                         </td>
@@ -1346,7 +1346,7 @@ export default function ContainersPage() {
                         return (
                           <tr
                             key={cc.id}
-                            className="border-b border-app last:border-b-0"
+                            className="border-b border-zinc-700 last:border-b-0"
                           >
                             <td className="px-3 py-2 text-app">
                               {cc.car_label ||
@@ -1355,6 +1355,11 @@ export default function ContainersPage() {
                                       car.year || ""
                                     }`.trim()
                                   : "-")}
+                              {car?.vin ? (
+                                <span className="mt-0.5 block text-[10px] text-zinc-300">
+                                  VIN: {car.vin}
+                                </span>
+                              ) : null}
                             </td>
                             <td className="px-3 py-2 text-app">
                               {owner}
@@ -1385,7 +1390,7 @@ export default function ContainersPage() {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveCar(cc)}
-                                className="rounded-md border border-app bg-white px-2 py-1 text-[10px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300"
+                                className="rounded-md border border-red-400/60 bg-red-950/20 px-2 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-900/30 hover:border-red-300"
                               >
                                 Remove
                               </button>

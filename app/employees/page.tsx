@@ -6,11 +6,12 @@ import { supabase } from "@/lib/supabase";
 
 const ROLES = ["Sales Staff", "Manager", "Accountant", "Operations"] as const;
 const STATUSES = ["Active", "Inactive"] as const;
-const SALARY_CURRENCIES = ["AED", "DZD"] as const;
+const SALARY_CURRENCIES = ["DZD"] as const;
 const COMMISSION_POCKETS = ["Algeria Cash", "Algeria Bank"] as const;
 
 type Employee = {
   id: string;
+  employee_code?: string | null;
   name: string | null;
   role: string | null;
   phone: string | null;
@@ -29,6 +30,8 @@ type Commission = {
   employee_id: string;
   deal_id: string;
   amount: number | null;
+  currency?: string | null;
+  rate_snapshot?: number | null;
   type: string | null;
   status: string | null;
   month: string | null;
@@ -137,6 +140,24 @@ export default function EmployeesPage() {
   const [paySalaryNotes, setPaySalaryNotes] = useState<string>("");
   const [isSavingSalary, setIsSavingSalary] = useState(false);
 
+  const generateEmployeeCode = async () => {
+    const year = new Date().getFullYear();
+    const prefix = `EMP-${year}-`;
+    const { data: rows, error } = await supabase
+      .from("employees")
+      .select("employee_code")
+      .ilike("employee_code", `${prefix}%`);
+    if (error) throw new Error(error.message);
+    let maxSeq = 0;
+    ((rows as { employee_code?: string | null }[] | null) ?? []).forEach((r) => {
+      const code = (r.employee_code || "").trim();
+      const raw = code.startsWith(prefix) ? code.slice(prefix.length) : "";
+      const seq = Number(raw);
+      if (Number.isFinite(seq) && seq > maxSeq) maxSeq = seq;
+    });
+    return `${prefix}${String(maxSeq + 1).padStart(4, "0")}`;
+  };
+
   const fetchAll = async () => {
     setIsLoading(true);
     setError(null);
@@ -225,7 +246,7 @@ export default function EmployeesPage() {
       phone: e.phone ?? "",
       email: e.email ?? "",
       baseSalary: e.base_salary != null ? String(e.base_salary) : "",
-      salaryCurrency: (e.salary_currency === "AED" ? "AED" : "DZD") as (typeof SALARY_CURRENCIES)[number],
+      salaryCurrency: "DZD",
       commissionPerDeal: e.commission_per_deal != null ? String(e.commission_per_deal) : "0",
       commissionPerManagedDeal: e.commission_per_managed_deal != null ? String(e.commission_per_managed_deal) : "0",
       startDate: (e.start_date || new Date().toISOString().slice(0, 10)).slice(0, 10),
@@ -259,7 +280,7 @@ export default function EmployeesPage() {
       phone: form.phone.trim() || null,
       email: form.email.trim() || null,
       base_salary: baseSalary,
-      salary_currency: form.salaryCurrency,
+      salary_currency: "DZD",
       commission_per_deal: commissionPerDeal,
       commission_per_managed_deal: form.role === "Manager" ? commissionPerManagedDeal : null,
       start_date: form.startDate || null,
@@ -283,9 +304,17 @@ export default function EmployeesPage() {
         prev.map((e) => (e.id === editingId ? { ...e, ...payload } : e))
       );
     } else {
+      let employeeCode: string;
+      try {
+        employeeCode = await generateEmployeeCode();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to generate employee code.");
+        setIsSaving(false);
+        return;
+      }
       const { data: inserted, error: insertErr } = await supabase
         .from("employees")
-        .insert(payload)
+        .insert({ ...payload, employee_code: employeeCode })
         .select("*")
         .single();
       if (insertErr) {
@@ -579,13 +608,16 @@ export default function EmployeesPage() {
                   <tbody>
                     {employees.map((e) => (
                       <tr key={e.id} className="border-b border-app last:border-0">
-                        <td className="px-4 py-3 text-app">{e.name ?? "—"}</td>
+                        <td className="px-4 py-3 text-app">
+                          <div className="font-medium">{e.name ?? "—"}</div>
+                          <div className="text-[11px] text-muted">{e.employee_code || "No ID"}</div>
+                        </td>
                         <td className="px-4 py-3 text-app hidden sm:table-cell">{e.role ?? "—"}</td>
                         <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(e.base_salary, e.salary_currency ?? "DZD")}</td>
                         <td className="px-4 py-3 text-app">
                           {e.role === "Manager" && e.commission_per_managed_deal != null
-                            ? `${formatNumber(e.commission_per_deal ?? 0)} / ${formatNumber(e.commission_per_managed_deal)} (managed)`
-                            : formatMoney(e.commission_per_deal, "AED") + " / deal"}
+                            ? `${formatMoney(e.commission_per_deal, "DZD")} / ${formatMoney(e.commission_per_managed_deal, "DZD")} (managed)`
+                            : formatMoney(e.commission_per_deal, "DZD") + " / deal"}
                         </td>
                         <td className="px-4 py-3 hidden sm:table-cell">
                           <span
@@ -623,19 +655,7 @@ export default function EmployeesPage() {
                               {deletingId === e.id ? "Deleting..." : "Delete"}
                             </button>
                             {(e.status || "").toLowerCase() === "active" && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPaySalaryEmployee(e);
-                                  setPaySalaryMonth(monthFromDate(new Date().toISOString()));
-                                  setPaySalaryPocket(COMMISSION_POCKETS[0]);
-                                  setPaySalaryDate(new Date().toISOString().slice(0, 10));
-                                  setPaySalaryNotes("");
-                                }}
-                                className="text-emerald-400 hover:underline"
-                              >
-                                Pay Salary
-                              </button>
+                              <span className="text-[11px] text-muted">Use Payroll page for payouts</span>
                             )}
                           </div>
                         </td>
@@ -690,16 +710,7 @@ export default function EmployeesPage() {
                     <li key={e.id} className="flex items-center justify-between gap-4">
                       <span className="text-app">{e.name ?? "—"}</span>
                       <span className="text-[var(--color-accent)]">{formatMoney(pending, "DZD")}</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openPayAllModal(e.id)}
-                          disabled={payAllSaving && payAllEmployeeId === e.id}
-                          className="rounded bg-[var(--color-accent)] px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
-                        >
-                          {payAllSaving && payAllEmployeeId === e.id ? "Paying..." : "Pay All Pending"}
-                        </button>
-                      </div>
+                      <div className="text-[11px] text-muted">Pay from Payroll page</div>
                     </li>
                   );
                 })}
@@ -766,9 +777,9 @@ export default function EmployeesPage() {
               <div><dt className="text-gray-400">Phone</dt><dd className="text-app">{viewEmployee.phone ?? "—"}</dd></div>
               <div><dt className="text-gray-400">Email</dt><dd className="text-app">{viewEmployee.email ?? "—"}</dd></div>
               <div><dt className="text-gray-400">Base salary</dt><dd className="text-app">{formatMoney(viewEmployee.base_salary, viewEmployee.salary_currency ?? "DZD")}</dd></div>
-              <div><dt className="text-gray-400">Commission per deal</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_deal, "AED")}</dd></div>
+              <div><dt className="text-gray-400">Commission per deal</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_deal, "DZD")}</dd></div>
               {viewEmployee.role === "Manager" && (
-                <div><dt className="text-gray-400">Commission (managed)</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_managed_deal, "AED")}</dd></div>
+                <div><dt className="text-gray-400">Commission (managed)</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_managed_deal, "DZD")}</dd></div>
               )}
               <div><dt className="text-gray-400">Start date</dt><dd className="text-app">{formatDate(viewEmployee.start_date)}</dd></div>
               <div><dt className="text-gray-400">Status</dt><dd className="text-app">{viewEmployee.status ?? "—"}</dd></div>
@@ -1077,7 +1088,7 @@ export default function EmployeesPage() {
                 </div>
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Commission per deal as staff (AED)</span>
+                <span className="font-semibold">Commission per deal as staff (DZD)</span>
                 <input
                   type="number"
                   min="0"
@@ -1089,7 +1100,7 @@ export default function EmployeesPage() {
               </label>
               {form.role === "Manager" && (
                 <label className="space-y-1 text-xs text-app sm:col-span-2">
-                  <span className="font-semibold">Commission per deal as manager/fully managed (AED)</span>
+                  <span className="font-semibold">Commission per deal as manager/fully managed (DZD)</span>
                   <input
                     type="number"
                     min="0"

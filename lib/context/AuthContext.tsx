@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { FEATURE_KEYS, type FeaturePermissions } from "@/lib/auth/featureKeys";
+import type { User } from "@supabase/supabase-js";
 
 type UserProfile = {
   id: string;
@@ -12,7 +14,7 @@ type UserProfile = {
 };
 
 type AuthContextType = {
-  user: any;
+  user: User | null;
   profile: UserProfile | null;
   loading: boolean;
   role: string | null;
@@ -21,7 +23,13 @@ type AuthContextType = {
   isStaff: boolean;
   isAccountant: boolean;
   isInvestor: boolean;
+  permissions: FeaturePermissions;
 };
+
+const EMPTY_PERMISSIONS = FEATURE_KEYS.reduce((acc, key) => {
+  acc[key] = false;
+  return acc;
+}, {} as FeaturePermissions);
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -33,12 +41,14 @@ const AuthContext = createContext<AuthContextType>({
   isStaff: false,
   isAccountant: false,
   isInvestor: false,
+  permissions: EMPTY_PERMISSIONS,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [permissions, setPermissions] = useState<FeaturePermissions>(EMPTY_PERMISSIONS);
   const isLoadingUserRef = useRef(false);
 
   useEffect(() => {
@@ -79,9 +89,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 role: "owner",
               };
           setProfile(profileData);
+          const permRes = await fetch("/api/auth/permissions", { cache: "no-store" });
+          const permData = await permRes.json().catch(() => ({}));
+          if (permRes.ok && permData?.permissions) {
+            setPermissions({ ...EMPTY_PERMISSIONS, ...permData.permissions });
+          } else {
+            setPermissions(EMPTY_PERMISSIONS);
+          }
         } else {
           setUser(null);
           setProfile(null);
+          setPermissions(EMPTY_PERMISSIONS);
         }
         setLoading(false);
       } finally {
@@ -93,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event) => {
+    } = supabase.auth.onAuthStateChange(() => {
       loadUser();
     });
 
@@ -114,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isStaff: role === "staff",
         isAccountant: role === "accountant",
         isInvestor: role === "investor",
+        permissions,
       }}
     >
       {children}

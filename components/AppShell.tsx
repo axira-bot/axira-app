@@ -16,6 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/transfers":   "Transfers",
   "/debts":       "Debts",
   "/employees":   "Employees",
+  "/payroll":     "Payroll",
   "/investors":   "Investors",
   "/reports":     "Reports",
   "/clients":     "Clients",
@@ -42,6 +43,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     "/containers",
     "/movements",
     "/reports",
+    "/payroll",
   ] as const;
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);

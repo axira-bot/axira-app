@@ -61,6 +61,36 @@ export interface Car {
   supplier_catalog_id?: string | null;
 }
 
+export interface Employee {
+  id: string;
+  employee_code?: string | null;
+  name: string | null;
+  role: string | null;
+  phone?: string | null;
+  email?: string | null;
+  base_salary?: number | null;
+  salary_currency?: "DZD" | string | null;
+  commission_per_deal?: number | null;
+  commission_per_managed_deal?: number | null;
+  start_date?: string | null;
+  notes?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+}
+
+export interface Commission {
+  id: string;
+  employee_id: string;
+  deal_id: string;
+  amount: number | null;
+  currency?: "DZD" | string | null;
+  rate_snapshot?: number | null;
+  type?: string | null;
+  status?: string | null;
+  month?: string | null;
+  created_at?: string | null;
+}
+
 export interface Rent {
   id: string;
   description: string;

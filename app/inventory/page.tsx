@@ -168,6 +168,7 @@ export default function InventoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cars, setCars] = useState<Car[]>([]);
+  const [carIdsWithDeals, setCarIdsWithDeals] = useState<Set<string>>(new Set());
   const [stockTypeTab, setStockTypeTab] = useState<StockTypeTab>("axira");
   const [conditionTab, setConditionTab] = useState<ConditionTab>("brand_new");
   const [activeTab, setActiveTab] = useState<FilterTab>("All");
@@ -203,18 +204,28 @@ export default function InventoryPage() {
   const fetchCars = async () => {
     setIsLoading(true);
     setError(null);
-    const { data, error: fetchError } = await supabase
-      .from("cars")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [{ data, error: fetchError }, { data: dealsData, error: dealsError }] = await Promise.all([
+      supabase
+        .from("cars")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabase.from("deals").select("car_id").not("car_id", "is", null),
+    ]);
 
-    if (fetchError) {
+    if (fetchError || dealsError) {
       setError("Failed to load cars.");
       setCars([]);
+      setCarIdsWithDeals(new Set());
       setIsLoading(false);
       return;
     }
     setCars((data as Car[]) ?? []);
+    const dealCarIds = new Set(
+      ((dealsData as { car_id?: string | null }[] | null) ?? [])
+        .map((d) => d.car_id)
+        .filter((id): id is string => Boolean(id))
+    );
+    setCarIdsWithDeals(dealCarIds);
     setIsLoading(false);
   };
 
@@ -791,6 +802,7 @@ export default function InventoryPage() {
                     const carTitle = `${car.brand || ""} ${car.model || ""} ${car.year || ""}`.trim();
                     const effectiveStatus = getEffectiveStatus(car).toLowerCase();
                     const isSupplierCar = car.stock_type === "supplier";
+                    const hasDealAlready = carIdsWithDeals.has(car.id);
                     return (
                       <tr key={car.id} className={["border-b border-app last:border-b-0", isSupplierCar ? "bg-amber-50/30" : ""].join(" ")}>
                         <td className="px-4 py-3">
@@ -870,14 +882,14 @@ export default function InventoryPage() {
                                 {isConvertingId === car.id ? "..." : "→ AXIRA Stock"}
                               </button>
                             )}
-                            {!isSupplierCar ? (
+                            {!isSupplierCar && !hasDealAlready ? (
                               <Link
                                 href={`/deals?addDeal=1&carId=${encodeURIComponent(car.id)}`}
                                 className="inline-flex items-center justify-center rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                               >
                                 Create Deal
                               </Link>
-                            ) : (
+                            ) : isSupplierCar ? (
                               <button
                                 type="button"
                                 onClick={() =>
@@ -889,6 +901,10 @@ export default function InventoryPage() {
                               >
                                 Create Deal
                               </button>
+                            ) : (
+                              <span className="rounded-md border border-app bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-400">
+                                Deal Exists
+                              </span>
                             )}
                             <button
                               type="button"

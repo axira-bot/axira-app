@@ -272,9 +272,6 @@ export function SalesAgreementPDF({ data }: { data: SalesAgreementPDFData }) {
 
         </View>
 
-        {/* Watermark — rendered last so it floats over body */}
-        <Image src={LOGO_SRC} style={styles.watermark} />
-
         {/* Footer */}
         <View style={styles.footer}>
           <View style={styles.footerGoldLine} />

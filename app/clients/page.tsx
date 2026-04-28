@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 
@@ -58,10 +59,12 @@ function DriveLinkIcon({ href }: { href: string }) {
 }
 
 export default function ClientsPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [clients, setClients] = useState<Client[]>([]);
+  const [clientDealCounts, setClientDealCounts] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useState<Tab>("Clients");
   const [search, setSearch] = useState("");
 
@@ -96,6 +99,16 @@ export default function ClientsPage() {
     }
 
     setClients((data as Client[]) ?? []);
+    const { data: dealsData } = await supabase
+      .from("deals")
+      .select("client_id, client_name");
+    const counts: Record<string, number> = {};
+    ((dealsData as { client_id?: string | null; client_name?: string | null }[] | null) ?? []).forEach((d) => {
+      const key = (d.client_id || d.client_name || "").trim();
+      if (!key) return;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    setClientDealCounts(counts);
     setIsLoading(false);
   };
 
@@ -397,6 +410,21 @@ export default function ClientsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                router.push(
+                                  `/deals?clientId=${encodeURIComponent(client.id)}&clientName=${encodeURIComponent(client.name || "")}`
+                                )
+                              }
+                              disabled={
+                                !clientDealCounts[client.id] &&
+                                !clientDealCounts[(client.name || "").trim()]
+                              }
+                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                            >
+                              View Deals
+                            </button>
                             <button
                               type="button"
                               onClick={() => openEditModal(client)}

@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { resolvePermissions } from "@/lib/auth/permissions";
+import { type FeatureKey } from "@/lib/auth/featureKeys";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://rcodmxamakoklzezjxyi.supabase.co";
 const supabaseAnonKey =
@@ -9,6 +11,46 @@ const supabaseAnonKey =
 function isOwnerLikeRole(role: string | null | undefined): boolean {
   const normalized = (role || "").toLowerCase();
   return normalized === "owner" || normalized === "super_admin" || normalized === "admin";
+}
+
+const ROUTE_FEATURE_GATES: Array<{ prefix: string; feature: FeatureKey }> = [
+  { prefix: "/dashboard", feature: "dashboard" },
+  { prefix: "/activity", feature: "activity" },
+  { prefix: "/inventory", feature: "inventory" },
+  { prefix: "/deals", feature: "deals" },
+  { prefix: "/containers", feature: "containers" },
+  { prefix: "/movements", feature: "movements" },
+  { prefix: "/transfers", feature: "transfers" },
+  { prefix: "/debts", feature: "debts" },
+  { prefix: "/employees", feature: "employees" },
+  { prefix: "/payroll", feature: "payroll" },
+  { prefix: "/investors", feature: "investors" },
+  { prefix: "/reports", feature: "reports" },
+  { prefix: "/clients", feature: "clients" },
+  { prefix: "/inquiries", feature: "inquiries" },
+];
+
+function roleFallbackAllows(role: string, feature: FeatureKey): boolean {
+  if (isOwnerLikeRole(role)) return true;
+  if (role === "staff") return ["inventory", "deals", "clients", "inquiries"].includes(feature);
+  if (role === "accountant") return ["movements", "reports", "activity", "payroll"].includes(feature);
+  if (role === "investor") return feature === "investors";
+  if (role === "manager") {
+    return [
+      "dashboard",
+      "activity",
+      "inventory",
+      "deals",
+      "containers",
+      "movements",
+      "debts",
+      "payroll",
+      "reports",
+      "clients",
+      "inquiries",
+    ].includes(feature);
+  }
+  return false;
 }
 
 export async function updateSession(request: NextRequest) {
@@ -61,22 +103,37 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Hard gate admin users page to owner only.
+  const { data: profile, error: profileError } = await supabase
+    .from("user_profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  const profileRole = (profile as { role?: string } | null)?.role ?? null;
+  const metadataRole =
+    (user.user_metadata as { role?: string } | null)?.role ??
+    (user.app_metadata as { role?: string } | null)?.role ??
+    null;
+  const effectiveRole = (profileRole || metadataRole || "").toLowerCase();
+
   if (path.startsWith("/admin/users")) {
-    const { data: profile, error: profileError } = await supabase
-      .from("user_profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const profileRole = (profile as { role?: string } | null)?.role ?? null;
-    const metadataRole =
-      (user.user_metadata as { role?: string } | null)?.role ??
-      (user.app_metadata as { role?: string } | null)?.role ??
-      null;
-    const effectiveRole = (profileRole || metadataRole || "").toLowerCase();
-
     if (profileError || !isOwnerLikeRole(effectiveRole)) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+  }
+
+  if (!profileError && !isOwnerLikeRole(effectiveRole)) {
+    const gate = ROUTE_FEATURE_GATES.find((r) => path.startsWith(r.prefix));
+    if (gate) {
+      let allowed = roleFallbackAllows(effectiveRole, gate.feature);
+      try {
+        const permissions = await resolvePermissions(user.id, effectiveRole);
+        allowed = Boolean(permissions[gate.feature]);
+      } catch {
+        // Keep role-based fallback when permission table/client is unavailable.
+      }
+      if (!allowed) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
     }
   }
 

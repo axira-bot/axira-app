@@ -13,8 +13,13 @@ type Inquiry = {
   message?: string | null;
   status: string;
   notes?: string | null;
+  source_channel?: string | null;
+  whatsapp_ref?: string | null;
+  assigned_employee_id?: string | null;
   created_at: string;
 };
+
+type EmployeeOption = { id: string; name: string | null; role: string | null };
 
 const STATUS_OPTIONS = ["new", "contacted", "done", "cancelled"];
 
@@ -40,14 +45,28 @@ export default function InquiriesPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notesEdit, setNotesEdit] = useState<Record<string, string>>({});
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [newWa, setNewWa] = useState({
+    name: "",
+    phone: "",
+    message: "",
+    carLabel: "",
+    whatsappRef: "",
+    assignedEmployeeId: "",
+  });
+  const [waError, setWaError] = useState<string | null>(null);
 
   const fetchInquiries = async () => {
     setIsLoading(true);
-    const { data } = await supabase
-      .from("inquiries")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [{ data }, { data: emps }] = await Promise.all([
+      supabase
+        .from("inquiries")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabase.from("employees").select("id, name, role").eq("status", "active").order("name", { ascending: true }),
+    ]);
     setInquiries((data as Inquiry[]) || []);
+    setEmployees((emps as EmployeeOption[]) || []);
     setIsLoading(false);
   };
 
@@ -66,6 +85,76 @@ export default function InquiriesPage() {
     await supabase.from("inquiries").update({ notes }).eq("id", id);
     setInquiries((prev) => prev.map((i) => i.id === id ? { ...i, notes } : i));
     setUpdatingId(null);
+  };
+
+  const assignInquiry = async (id: string, employeeId: string) => {
+    setUpdatingId(id);
+    const res = await fetch("/api/inquiries", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, assigned_employee_id: employeeId || null }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setUpdatingId(null);
+      setWaError(payload.error || "Failed to assign inquiry.");
+      return;
+    }
+    setInquiries((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, assigned_employee_id: employeeId || null } : i))
+    );
+    setUpdatingId(null);
+  };
+
+  const createWhatsAppInquiry = async () => {
+    if (!newWa.name.trim() || !newWa.phone.trim()) {
+      setWaError("Client name and phone are required.");
+      return;
+    }
+    setWaError(null);
+
+    const basePayload = {
+      name: newWa.name.trim(),
+      phone: newWa.phone.trim(),
+      message: newWa.message.trim() || null,
+      car_label: newWa.carLabel.trim() || null,
+      status: "new",
+      source: "whatsapp",
+      notes: newWa.whatsappRef.trim() ? `WA_REF:${newWa.whatsappRef.trim()}` : null,
+    };
+
+    const extendedPayload = {
+      ...basePayload,
+      source_channel: "whatsapp",
+      whatsapp_ref: newWa.whatsappRef.trim() || null,
+      assigned_employee_id: newWa.assignedEmployeeId || null,
+    };
+
+    const res = await fetch("/api/inquiries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: basePayload.name,
+        phone: basePayload.phone,
+        message: basePayload.message,
+        car_label: basePayload.car_label,
+        whatsapp_ref: newWa.whatsappRef.trim() || null,
+        assigned_employee_id: newWa.assignedEmployeeId || null,
+      }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setWaError(payload.error || "Failed to create WhatsApp inquiry.");
+      return;
+    }
+
+    const row = payload.row as Inquiry | undefined;
+    if (!row) {
+      setWaError("Failed to create WhatsApp inquiry.");
+      return;
+    }
+    setInquiries((prev) => [row, ...prev]);
+    setNewWa({ name: "", phone: "", message: "", carLabel: "", whatsappRef: "", assignedEmployeeId: "" });
   };
 
   const filtered = filter === "all" ? inquiries : inquiries.filter((i) => i.status === filter);
@@ -107,6 +196,27 @@ export default function InquiriesPage() {
           ))}
         </div>
 
+        <div className="rounded-lg border border-app surface p-4">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">WhatsApp Intake</div>
+          {waError ? (
+            <div className="mb-2 rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700">
+              {waError}
+            </div>
+          ) : null}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <input placeholder="Client name" value={newWa.name} onChange={(e) => setNewWa((p) => ({ ...p, name: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app" />
+            <input placeholder="Phone" value={newWa.phone} onChange={(e) => setNewWa((p) => ({ ...p, phone: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app" />
+            <input placeholder="WhatsApp ref / thread id" value={newWa.whatsappRef} onChange={(e) => setNewWa((p) => ({ ...p, whatsappRef: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app" />
+            <input placeholder="Car label" value={newWa.carLabel} onChange={(e) => setNewWa((p) => ({ ...p, carLabel: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app" />
+            <input placeholder="Message" value={newWa.message} onChange={(e) => setNewWa((p) => ({ ...p, message: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2" />
+            <select value={newWa.assignedEmployeeId} onChange={(e) => setNewWa((p) => ({ ...p, assignedEmployeeId: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app">
+              <option value="">Assign later</option>
+              {employees.map((e) => <option key={e.id} value={e.id}>{e.name || "—"}</option>)}
+            </select>
+          </div>
+          <button type="button" onClick={createWhatsAppInquiry} className="mt-2 rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white">Create WhatsApp Inquiry</button>
+        </div>
+
         {/* List */}
         <div className="flex flex-col gap-3">
           {isLoading ? (
@@ -145,6 +255,17 @@ export default function InquiriesPage() {
 
                     <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                       <select
+                        value={inq.assigned_employee_id || ""}
+                        onChange={(e) => assignInquiry(inq.id, e.target.value)}
+                        disabled={updatingId === inq.id}
+                        className="rounded-full border border-app px-2 py-0.5 text-[11px] font-semibold outline-none"
+                      >
+                        <option value="">Unassigned</option>
+                        {employees.map((emp) => (
+                          <option key={emp.id} value={emp.id}>{emp.name || "—"}</option>
+                        ))}
+                      </select>
+                      <select
                         value={inq.status}
                         onChange={(e) => updateStatus(inq.id, e.target.value)}
                         disabled={updatingId === inq.id}
@@ -169,6 +290,11 @@ export default function InquiriesPage() {
                           <p className="text-sm text-app bg-gray-50 rounded-md p-3">{inq.message}</p>
                         </div>
                       )}
+                      <div className="grid grid-cols-1 gap-1 text-[11px] text-muted sm:grid-cols-2">
+                        <span>Source: {inq.source_channel || "public_website"}</span>
+                        <span>WhatsApp Ref: {inq.whatsapp_ref || "—"}</span>
+                        <span>Assigned: {employees.find((e) => e.id === inq.assigned_employee_id)?.name || "Unassigned"}</span>
+                      </div>
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-1">Internal Notes</p>
                         <textarea
