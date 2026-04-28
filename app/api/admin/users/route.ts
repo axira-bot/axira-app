@@ -211,7 +211,14 @@ export async function DELETE(request: NextRequest) {
     const admin = createAdminClient();
     // Delete auth user first; if this fails for reasons other than "not found",
     // keep profile untouched to preserve consistency.
-    const { error: deleteAuthError } = await admin.auth.admin.deleteUser(id);
+    const hardDelete = await admin.auth.admin.deleteUser(id);
+    let deleteAuthError = hardDelete.error;
+    // Supabase can return "Database error deleting user" for hard delete in some projects.
+    // Fallback to soft-delete to reliably disable/remove access.
+    if (deleteAuthError && /database error deleting user/i.test(deleteAuthError.message || "")) {
+      const softDelete = await admin.auth.admin.deleteUser(id, true);
+      deleteAuthError = softDelete.error;
+    }
     const authDeleteFailed =
       deleteAuthError &&
       !/not found|no rows|does not exist|user.*not.*found/i.test(
@@ -219,7 +226,7 @@ export async function DELETE(request: NextRequest) {
       );
     if (authDeleteFailed) {
       return NextResponse.json(
-        { error: `Failed to delete auth user: ${deleteAuthError.message}` },
+        { error: `Failed to delete auth user: ${deleteAuthError?.message || "Unknown error"}` },
         { status: 400 }
       );
     }

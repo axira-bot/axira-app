@@ -326,8 +326,18 @@ export default function InvestorsPage() {
           (investors.find((i) => i.id === editingId)?.investment_aed ?? 0) +
           investmentAed
         : baseTotalCapital + investmentAed;
-    const share =
-      newTotalCapital > 0 ? (investmentAed / newTotalCapital) * 100 : 0;
+    const share = parseNum(form.profitSharePercent);
+    if (share < 0 || share > 100) {
+      setError("Profit share % must be between 0 and 100.");
+      return;
+    }
+    const otherSharesTotal = investors
+      .filter((i) => i.id !== editingId)
+      .reduce((s, i) => s + (i.profit_share_percent ?? 0), 0);
+    if (otherSharesTotal + share > 100) {
+      setError("Total investor profit share cannot exceed 100%.");
+      return;
+    }
     setIsSaving(true);
     setError(null);
     const payload = {
@@ -385,9 +395,8 @@ export default function InvestorsPage() {
 
   const getInvestorProfitEarned = (investorId: string) => {
     const inv = investors.find((i) => i.id === investorId);
-    if (!inv || effectiveTotalCapital <= 0) return 0;
-    const capital = inv.investment_aed ?? 0;
-    const ratio = capital / effectiveTotalCapital;
+    if (!inv) return 0;
+    const ratio = (inv.profit_share_percent ?? 0) / 100;
     return Object.values(profitByMonth).reduce(
       (s, totalProfit) => s + totalProfit * ratio,
       0
@@ -627,11 +636,7 @@ export default function InvestorsPage() {
                       const earned = getInvestorProfitEarned(i.id);
                       const withdrawn = getInvestorWithdrawn(i.id);
                       const balance = earned - withdrawn;
-                      const capital = i.investment_aed ?? 0;
-                      const sharePct =
-                        effectiveTotalCapital > 0
-                          ? (capital / effectiveTotalCapital) * 100
-                          : 0;
+                      const sharePct = i.profit_share_percent ?? 0;
                       return (
                         <tr key={i.id} className="border-b border-app last:border-0">
                           <td className="px-4 py-3 text-app">{i.name ?? "—"}</td>
@@ -728,11 +733,7 @@ export default function InvestorsPage() {
                   {monthsSorted.flatMap((month) => {
                     const totalProfit = profitByMonth[month] ?? 0;
                     return investors.map((inv) => {
-                      const capital = inv.investment_aed ?? 0;
-                      const ratio =
-                        effectiveTotalCapital > 0
-                          ? capital / effectiveTotalCapital
-                          : 0;
+                      const ratio = (inv.profit_share_percent ?? 0) / 100;
                       const share = totalProfit * ratio;
                       const key = `${inv.id}-${month}`;
                       const ret = returnByKey[key];
