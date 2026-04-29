@@ -14,7 +14,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requirePoAccess({ write: true });
+  const auth = await requirePoAccess({ write: true, ownerOnly: true });
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     const { id } = await context.params;

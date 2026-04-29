@@ -23,7 +23,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  const auth = await requirePoAccess({ write: true });
+  const auth = await requirePoAccess({ write: true, ownerOnly: true });
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const body = (await request.json()) as { po_deal_eligibility?: string };
   const value = (body.po_deal_eligibility || "").trim();

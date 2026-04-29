@@ -24,13 +24,20 @@ export async function GET(
   try {
     const { id } = await context.params;
     const admin = createAdminClient();
-    const [{ data: po, error: poErr }, { data: items }, { data: payments }, { data: links }, linkedCarsQuery] = await Promise.all([
+    const [{ data: poWithSupplier, error: poWithSupplierErr }, { data: items }, { data: payments }, { data: links }, linkedCarsQuery] = await Promise.all([
       admin.from("purchase_orders").select("*, suppliers(name)").eq("id", id).maybeSingle(),
       admin.from("purchase_order_items").select("*").eq("purchase_order_id", id).order("created_at", { ascending: true }),
       admin.from("purchase_order_payments").select("*").eq("purchase_order_id", id).order("date", { ascending: false }),
       admin.from("purchase_order_item_cars").select("purchase_order_item_id, car_id").order("created_at", { ascending: true }),
       admin.from("cars").select("id, purchase_order_item_id, vin, status, inventory_lifecycle_status").eq("purchase_order_id", id),
     ]);
+    let po = poWithSupplier;
+    let poErr = poWithSupplierErr;
+    if (poErr && (poErr.message || "").includes("Could not find a relationship")) {
+      const fallbackPo = await admin.from("purchase_orders").select("*").eq("id", id).maybeSingle();
+      po = fallbackPo.data;
+      poErr = fallbackPo.error;
+    }
     if (poErr || !po) return NextResponse.json({ error: "PO not found" }, { status: 404 });
     let linkedCars: Array<Record<string, unknown>> =
       ((linkedCarsQuery.data as Array<Record<string, unknown>> | null) ?? []);
@@ -69,7 +76,7 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requirePoAccess({ write: true });
+  const auth = await requirePoAccess({ write: true, ownerOnly: true });
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     const { id } = await context.params;
@@ -106,7 +113,7 @@ export async function DELETE(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requirePoAccess({ write: true });
+  const auth = await requirePoAccess({ write: true, ownerOnly: true });
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     const { id } = await context.params;

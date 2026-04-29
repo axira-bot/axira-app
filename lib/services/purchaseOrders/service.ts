@@ -4,7 +4,7 @@ import { normalizeRole } from "@/lib/auth/roles";
 
 export type PoRole = "owner" | "manager" | "staff" | "other";
 
-export async function requirePoAccess(options?: { write?: boolean }) {
+export async function requirePoAccess(options?: { write?: boolean; ownerOnly?: boolean }) {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -32,8 +32,10 @@ export async function requirePoAccess(options?: { write?: boolean }) {
 
   const canRead = poRole === "owner" || poRole === "manager" || poRole === "staff";
   const canWrite = poRole === "owner" || poRole === "manager";
+  const isOwner = poRole === "owner";
   if (!canRead) return { ok: false as const, status: 403, error: "Forbidden" };
   if (options?.write && !canWrite) return { ok: false as const, status: 403, error: "Forbidden" };
+  if (options?.ownerOnly && !isOwner) return { ok: false as const, status: 403, error: "Owner only action" };
   return { ok: true as const, user, role: poRole };
 }
 

@@ -48,6 +48,7 @@ function formatMoney(amount: number, currency: string) {
 export default function PurchaseOrdersPage() {
   const { role } = useAuth();
   const isPrivileged = ["owner", "manager", "admin", "super_admin"].includes((role || "").toLowerCase());
+  const isOwner = ["owner", "admin", "super_admin"].includes((role || "").toLowerCase());
   const [rows, setRows] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [catalogRows, setCatalogRows] = useState<SupplierCatalog[]>([]);
@@ -188,7 +189,7 @@ export default function PurchaseOrdersPage() {
   };
 
   const saveEligibility = async (nextValue: "in_transit_or_arrived" | "arrived_only") => {
-    if (!isPrivileged) return;
+    if (!isOwner) return;
     setSavingEligibility(true);
     setEligibility(nextValue);
     const res = await fetch("/api/purchase-orders/settings", {
@@ -201,6 +202,19 @@ export default function PurchaseOrdersPage() {
     if (!res.ok) {
       setError(data.error || "Failed to save deal eligibility setting");
     }
+  };
+
+  const removePo = async (id: string) => {
+    if (!isOwner) return;
+    if (!window.confirm("Delete this purchase order? This is blocked if linked inventory cars exist.")) return;
+    setError(null);
+    const res = await fetch(`/api/purchase-orders/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Failed to delete PO");
+      return;
+    }
+    fetchAll();
   };
 
   const stats = useMemo(() => {
@@ -322,7 +336,7 @@ export default function PurchaseOrdersPage() {
           <select
             className={inputCls}
             value={eligibility}
-            disabled={!isPrivileged || savingEligibility}
+            disabled={!isOwner || savingEligibility}
             onChange={(e) => saveEligibility(e.target.value as "in_transit_or_arrived" | "arrived_only")}
           >
             <option value="in_transit_or_arrived">In Transit or Arrived</option>
@@ -331,7 +345,7 @@ export default function PurchaseOrdersPage() {
         </label>
       </section>
 
-      {isPrivileged && (
+      {isOwner && (
         <section className="rounded-xl border border-app bg-panel p-4">
           <h2 className="mb-3 text-base font-semibold">Create Purchase Order</h2>
           <form className="grid gap-3 md:grid-cols-5" onSubmit={createPo}>
@@ -558,18 +572,19 @@ export default function PurchaseOrdersPage() {
               <th className="px-3 py-2 text-right">Owed</th>
               <th className="px-3 py-2 text-left">ETA</th>
               <th className="px-3 py-2 text-left">Created</th>
+              {isOwner && <th className="px-3 py-2 text-left">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td className="px-3 py-4 text-muted" colSpan={8}>
+                <td className="px-3 py-4 text-muted" colSpan={isOwner ? 9 : 8}>
                   Loading...
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-4 text-muted" colSpan={8}>
+                <td className="px-3 py-4 text-muted" colSpan={isOwner ? 9 : 8}>
                   No purchase orders yet.
                 </td>
               </tr>
@@ -588,6 +603,17 @@ export default function PurchaseOrdersPage() {
                   <td className="px-3 py-2 text-right">{formatMoney(row.supplier_owed, row.currency)}</td>
                   <td className="px-3 py-2">{row.expected_arrival_date || "-"}</td>
                   <td className="px-3 py-2">{row.created_at ? new Date(row.created_at).toLocaleDateString() : "-"}</td>
+                  {isOwner && (
+                    <td className="px-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => removePo(row.id)}
+                        className="rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}

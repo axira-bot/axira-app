@@ -20,7 +20,7 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string; itemId: string }> }
 ) {
-  const auth = await requirePoAccess({ write: true });
+  const auth = await requirePoAccess({ write: true, ownerOnly: true });
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     const { id, itemId } = await context.params;

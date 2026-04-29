@@ -65,7 +65,7 @@ export default function PurchaseOrderDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const { role } = useAuth();
-  const isPrivileged = ["owner", "manager", "admin", "super_admin"].includes((role || "").toLowerCase());
+  const isOwner = ["owner", "admin", "super_admin"].includes((role || "").toLowerCase());
   const [row, setRow] = useState<PurchaseOrder | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -135,7 +135,7 @@ export default function PurchaseOrderDetailPage() {
 
   const addItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !isPrivileged) return;
+    if (!id || !isOwner) return;
     setSavingItem(true);
     const res = await fetch(`/api/purchase-orders/${id}/items`, {
       method: "POST",
@@ -168,7 +168,7 @@ export default function PurchaseOrderDetailPage() {
 
   const addPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !isPrivileged) return;
+    if (!id || !isOwner) return;
     setSavingPayment(true);
     const res = await fetch(`/api/purchase-orders/${id}/payments`, {
       method: "POST",
@@ -194,7 +194,7 @@ export default function PurchaseOrderDetailPage() {
   };
 
   const receive = async (mode: "arrived" | "available") => {
-    if (!id || !isPrivileged) return;
+    if (!id || !isOwner) return;
     setReceiving(true);
     const res = await fetch(`/api/purchase-orders/${id}/receive`, {
       method: "POST",
@@ -275,7 +275,7 @@ export default function PurchaseOrderDetailPage() {
 
           <section className="rounded-xl border border-app bg-panel p-4">
             <h2 className="mb-3 text-base font-semibold">Line Items</h2>
-            {isPrivileged && (
+            {isOwner && (
               <form className="mb-4 grid gap-2 md:grid-cols-8" onSubmit={addItem}>
                 <input className={inputCls} placeholder="Brand" value={itemForm.brand} onChange={(e) => setItemForm((p) => ({ ...p, brand: e.target.value }))} />
                 <input className={inputCls} placeholder="Model" value={itemForm.model} onChange={(e) => setItemForm((p) => ({ ...p, model: e.target.value }))} />
@@ -340,7 +340,7 @@ export default function PurchaseOrderDetailPage() {
 
           <section className="rounded-xl border border-app bg-panel p-4">
             <h2 className="mb-3 text-base font-semibold">Payment Ledger</h2>
-            {isPrivileged && (
+            {isOwner && (
               <form className="mb-4 grid gap-2 md:grid-cols-7" onSubmit={addPayment}>
                 <input className={inputCls} type="date" value={paymentForm.date} onChange={(e) => setPaymentForm((p) => ({ ...p, date: e.target.value }))} />
                 <input className={inputCls} placeholder="Amount" value={paymentForm.amount} onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))} />
@@ -391,7 +391,7 @@ export default function PurchaseOrderDetailPage() {
             </div>
           </section>
 
-          {isPrivileged && (
+          {isOwner && (
             <section className="rounded-xl border border-app bg-panel p-4">
               <h2 className="mb-3 text-base font-semibold">Receive Workflow</h2>
               <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">

@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requirePoAccess({ write: true });
+  const auth = await requirePoAccess({ write: true, ownerOnly: true });
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     const body = (await request.json()) as PoCreateBody;
@@ -177,6 +177,9 @@ export async function POST(request: NextRequest) {
             vin: quantity === 1 && i === 0 ? rawItem.vin?.trim() || null : null,
             purchase_price: unitCost,
             purchase_currency: body.currency || "USD",
+            mileage: 0,
+            condition: "brand new",
+            stock_type: "axira",
             location: "In Transit",
             owner: "supplier",
             status: carStatus,
