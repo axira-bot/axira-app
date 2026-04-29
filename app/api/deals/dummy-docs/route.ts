@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 type DummyDocPayload = {
+  id?: string;
   client_name?: string;
   client_phone?: string | null;
   client_passport?: string | null;
@@ -14,6 +15,8 @@ type DummyDocPayload = {
   car_color?: string | null;
   car_vin?: string | null;
   country_of_origin?: string | null;
+  invoice_date?: string | null;
+  agreement_date?: string | null;
   amount_usd?: number;
   export_to?: string | null;
   notes?: string | null;
@@ -30,6 +33,8 @@ type DummyDocRow = {
   car_color: string | null;
   car_vin: string | null;
   country_of_origin: string | null;
+  invoice_date: string | null;
+  agreement_date: string | null;
   amount_usd: number;
   export_to: string | null;
   notes: string | null;
@@ -120,6 +125,8 @@ export async function POST(req: Request) {
         car_color: body.car_color?.trim() || null,
         car_vin: body.car_vin?.trim() || null,
         country_of_origin: body.country_of_origin?.trim() || null,
+        invoice_date: body.invoice_date || null,
+        agreement_date: body.agreement_date || null,
         amount_usd: amountUsd,
         export_to: body.export_to?.trim() || "Algeria",
         notes: body.notes?.trim() || null,
@@ -154,6 +161,8 @@ export async function POST(req: Request) {
         car_color: body.car_color?.trim() || null,
         car_vin: body.car_vin?.trim() || null,
         country_of_origin: body.country_of_origin?.trim() || null,
+        invoice_date: body.invoice_date || null,
+        agreement_date: body.agreement_date || null,
         amount_usd: amountUsd,
         export_to: body.export_to?.trim() || "Algeria",
         notes: body.notes?.trim() || null,
@@ -177,6 +186,132 @@ export async function POST(req: Request) {
       return NextResponse.json({ row }, { status: 201 });
     }
     return NextResponse.json({ row: data }, { status: 201 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Server error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await createServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const body = (await req.json()) as DummyDocPayload;
+    if (!body.id) return NextResponse.json({ error: "Document id is required." }, { status: 400 });
+    if (!body.client_name?.trim()) return NextResponse.json({ error: "Client name is required." }, { status: 400 });
+    if (!body.car_brand?.trim() || !body.car_model?.trim()) {
+      return NextResponse.json({ error: "Car brand and model are required." }, { status: 400 });
+    }
+    const amountUsd = Number(body.amount_usd ?? 0);
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+      return NextResponse.json({ error: "Amount USD must be greater than zero." }, { status: 400 });
+    }
+
+    const admin = createAdminClient();
+    const updatePayload = {
+      client_name: body.client_name.trim(),
+      client_phone: body.client_phone?.trim() || null,
+      client_passport: body.client_passport?.trim() || null,
+      car_brand: body.car_brand.trim(),
+      car_model: body.car_model.trim(),
+      car_year: body.car_year ?? null,
+      car_color: body.car_color?.trim() || null,
+      car_vin: body.car_vin?.trim() || null,
+      country_of_origin: body.country_of_origin?.trim() || null,
+      invoice_date: body.invoice_date || null,
+      agreement_date: body.agreement_date || null,
+      amount_usd: amountUsd,
+      export_to: body.export_to?.trim() || "Algeria",
+      notes: body.notes?.trim() || null,
+    };
+
+    const { data, error } = await admin
+      .from("client_documents")
+      .update(updatePayload)
+      .eq("id", body.id)
+      .select("*")
+      .maybeSingle();
+    if (!error && data) return NextResponse.json({ row: data });
+
+    const isMissingTable = error && (error.code === "42P01" || /client_documents/i.test(error.message || ""));
+    if (!isMissingTable) return NextResponse.json({ error: error?.message || "Failed to update document." }, { status: 500 });
+
+    const { data: fallbackRow, error: fallbackLoadError } = await admin
+      .from("app_settings")
+      .select("value")
+      .eq("key", DUMMY_DOCS_FALLBACK_KEY)
+      .maybeSingle();
+    if (fallbackLoadError) return NextResponse.json({ error: fallbackLoadError.message }, { status: 500 });
+    const existing = parseFallbackRows((fallbackRow as { value?: string | null } | null)?.value);
+    const idx = existing.findIndex((row) => row.id === body.id);
+    if (idx < 0) return NextResponse.json({ error: "Document not found." }, { status: 404 });
+
+    const updated: DummyDocRow = {
+      ...existing[idx],
+      ...updatePayload,
+    };
+    const next = [...existing];
+    next[idx] = updated;
+    const { error: fallbackSaveError } = await admin
+      .from("app_settings")
+      .upsert(
+        {
+          key: DUMMY_DOCS_FALLBACK_KEY,
+          value: JSON.stringify(next.slice(0, 250)),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "key" }
+      );
+    if (fallbackSaveError) return NextResponse.json({ error: fallbackSaveError.message }, { status: 500 });
+    return NextResponse.json({ row: updated });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Server error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const supabase = await createServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { searchParams } = new URL(req.url);
+    const id = (searchParams.get("id") || "").trim();
+    if (!id) return NextResponse.json({ error: "Document id is required." }, { status: 400 });
+
+    const admin = createAdminClient();
+    const { error } = await admin.from("client_documents").delete().eq("id", id);
+    if (!error) return NextResponse.json({ ok: true });
+
+    const isMissingTable = error.code === "42P01" || /client_documents/i.test(error.message || "");
+    if (!isMissingTable) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const { data: fallbackRow, error: fallbackLoadError } = await admin
+      .from("app_settings")
+      .select("value")
+      .eq("key", DUMMY_DOCS_FALLBACK_KEY)
+      .maybeSingle();
+    if (fallbackLoadError) return NextResponse.json({ error: fallbackLoadError.message }, { status: 500 });
+    const existing = parseFallbackRows((fallbackRow as { value?: string | null } | null)?.value);
+    const next = existing.filter((row) => row.id !== id);
+    const { error: fallbackSaveError } = await admin
+      .from("app_settings")
+      .upsert(
+        {
+          key: DUMMY_DOCS_FALLBACK_KEY,
+          value: JSON.stringify(next.slice(0, 250)),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "key" }
+      );
+    if (fallbackSaveError) return NextResponse.json({ error: fallbackSaveError.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error";
     return NextResponse.json({ error: message }, { status: 500 });

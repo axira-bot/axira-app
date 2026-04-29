@@ -83,6 +83,8 @@ WITH required_columns AS (
     ('client_documents','client_name'),
     ('client_documents','car_brand'),
     ('client_documents','car_model'),
+    ('client_documents','invoice_date'),
+    ('client_documents','agreement_date'),
     ('client_documents','amount_usd'),
     ('movements','status'),
     ('clients','passport_number'),

@@ -55,6 +55,8 @@ type DummyDocRow = {
   car_color: string | null;
   car_vin: string | null;
   country_of_origin: string | null;
+  invoice_date: string | null;
+  agreement_date: string | null;
   amount_usd: number;
   export_to: string | null;
   notes: string | null;
@@ -230,6 +232,7 @@ export default function DealsPage() {
   const [dummySaving, setDummySaving] = useState(false);
   const [dummyError, setDummyError] = useState<string | null>(null);
   const [dummyForm, setDummyForm] = useState({
+    id: "",
     clientName: "",
     clientPhone: "",
     clientPassport: "",
@@ -239,6 +242,8 @@ export default function DealsPage() {
     carColor: "",
     carVin: "",
     countryOfOrigin: "",
+    invoiceDate: "",
+    agreementDate: "",
     amountUsd: "",
     exportTo: "Algeria",
     notes: "",
@@ -338,10 +343,12 @@ export default function DealsPage() {
     }
     setDummySaving(true);
     setDummyError(null);
-    const res = await fetch("/api/deals/dummy-docs", {
-      method: "POST",
+    const editing = Boolean(dummyForm.id);
+    const res = await fetch(editing ? "/api/deals/dummy-docs" : "/api/deals/dummy-docs", {
+      method: editing ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        id: dummyForm.id || undefined,
         client_name: dummyForm.clientName,
         client_phone: dummyForm.clientPhone || null,
         client_passport: dummyForm.clientPassport || null,
@@ -351,6 +358,8 @@ export default function DealsPage() {
         car_color: dummyForm.carColor || null,
         car_vin: dummyForm.carVin || null,
         country_of_origin: dummyForm.countryOfOrigin || null,
+        invoice_date: dummyForm.invoiceDate || null,
+        agreement_date: dummyForm.agreementDate || null,
         amount_usd: amountUsd,
         export_to: dummyForm.exportTo || "Algeria",
         notes: dummyForm.notes || null,
@@ -358,13 +367,88 @@ export default function DealsPage() {
     });
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setDummyError(payload.error || "Failed to save dummy document.");
+      setDummyError(payload.error || `Failed to ${editing ? "update" : "save"} dummy document.`);
       setDummySaving(false);
       return;
     }
     const row = payload.row as DummyDocRow;
-    setDummyDocs((prev) => [row, ...prev]);
+    setDummyDocs((prev) => {
+      if (editing) return prev.map((x) => (x.id === row.id ? row : x));
+      return [row, ...prev];
+    });
+    setDummyForm({
+      id: "",
+      clientName: "",
+      clientPhone: "",
+      clientPassport: "",
+      carBrand: "",
+      carModel: "",
+      carYear: "",
+      carColor: "",
+      carVin: "",
+      countryOfOrigin: "",
+      invoiceDate: "",
+      agreementDate: "",
+      amountUsd: "",
+      exportTo: "Algeria",
+      notes: "",
+    });
     setDummySaving(false);
+  };
+
+  const startEditDummyDoc = (doc: DummyDocRow) => {
+    setDummyError(null);
+    setDummyForm({
+      id: doc.id,
+      clientName: doc.client_name || "",
+      clientPhone: doc.client_phone || "",
+      clientPassport: doc.client_passport || "",
+      carBrand: doc.car_brand || "",
+      carModel: doc.car_model || "",
+      carYear: doc.car_year ? String(doc.car_year) : "",
+      carColor: doc.car_color || "",
+      carVin: doc.car_vin || "",
+      countryOfOrigin: doc.country_of_origin || "",
+      invoiceDate: doc.invoice_date || "",
+      agreementDate: doc.agreement_date || "",
+      amountUsd: String(doc.amount_usd || ""),
+      exportTo: doc.export_to || "Algeria",
+      notes: doc.notes || "",
+    });
+  };
+
+  const cancelEditDummyDoc = () => {
+    setDummyError(null);
+    setDummyForm({
+      id: "",
+      clientName: "",
+      clientPhone: "",
+      clientPassport: "",
+      carBrand: "",
+      carModel: "",
+      carYear: "",
+      carColor: "",
+      carVin: "",
+      countryOfOrigin: "",
+      invoiceDate: "",
+      agreementDate: "",
+      amountUsd: "",
+      exportTo: "Algeria",
+      notes: "",
+    });
+  };
+
+  const deleteDummyDoc = async (id: string) => {
+    if (!window.confirm("Delete this dummy document?")) return;
+    setDummyError(null);
+    const res = await fetch(`/api/deals/dummy-docs?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setDummyError(payload.error || "Failed to delete dummy document.");
+      return;
+    }
+    setDummyDocs((prev) => prev.filter((x) => x.id !== id));
+    if (dummyForm.id === id) cancelEditDummyDoc();
   };
 
   useEffect(() => {
@@ -2486,30 +2570,54 @@ export default function DealsPage() {
               <input placeholder="Color" value={dummyForm.carColor} onChange={(e) => setDummyForm((p) => ({ ...p, carColor: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
               <input placeholder="VIN" value={dummyForm.carVin} onChange={(e) => setDummyForm((p) => ({ ...p, carVin: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
               <input placeholder="Country of origin" value={dummyForm.countryOfOrigin} onChange={(e) => setDummyForm((p) => ({ ...p, countryOfOrigin: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <label className="space-y-1">
+                <span className="text-[11px] text-muted">Invoice date</span>
+                <input type="date" value={dummyForm.invoiceDate} onChange={(e) => setDummyForm((p) => ({ ...p, invoiceDate: e.target.value }))} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px] text-muted">Agreement date</span>
+                <input type="date" value={dummyForm.agreementDate} onChange={(e) => setDummyForm((p) => ({ ...p, agreementDate: e.target.value }))} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              </label>
               <input placeholder="Amount USD" value={dummyForm.amountUsd} onChange={(e) => setDummyForm((p) => ({ ...p, amountUsd: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
               <input placeholder="Export to" value={dummyForm.exportTo} onChange={(e) => setDummyForm((p) => ({ ...p, exportTo: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app sm:col-span-2" />
               <textarea placeholder="Notes" value={dummyForm.notes} onChange={(e) => setDummyForm((p) => ({ ...p, notes: e.target.value }))} rows={2} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app sm:col-span-2" />
             </div>
             <div className="mt-3 flex justify-end">
+              {dummyForm.id ? (
+                <button type="button" onClick={cancelEditDummyDoc} className="mr-2 rounded-md border border-app px-4 py-2 text-sm font-semibold text-app">
+                  Cancel edit
+                </button>
+              ) : null}
               <button type="button" onClick={saveDummyDoc} disabled={dummySaving} className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-                {dummySaving ? "Saving..." : "Save Dummy Doc"}
+                {dummySaving ? "Saving..." : dummyForm.id ? "Update Dummy Doc" : "Save Dummy Doc"}
               </button>
             </div>
             <div className="mt-4 space-y-2">
               {dummyDocs.slice(0, 12).map((doc) => {
                 const date = formatDate(doc.created_at);
                 const invoiceNumber = `DINV-${doc.id.slice(0, 8).toUpperCase()}`;
+                const invoiceDate = formatDate(doc.invoice_date || doc.created_at);
+                const agreementDate = formatDate(doc.agreement_date || doc.created_at);
                 return (
                   <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-app bg-white px-3 py-2 text-xs text-app">
-                    <div>{doc.client_name} - {doc.car_brand} {doc.car_model} ({date})</div>
+                    <div>
+                      {doc.client_name} - {doc.car_brand} {doc.car_model} ({date})
+                      <div className="text-[10px] text-muted">Invoice: {invoiceDate} · Agreement: {agreementDate}</div>
+                    </div>
                     <div className="flex gap-2">
+                      <button type="button" onClick={() => startEditDummyDoc(doc)} className="rounded border border-app px-2 py-1 text-[11px] font-semibold text-app hover:bg-gray-50">
+                        Edit
+                      </button>
+                      <button type="button" onClick={() => deleteDummyDoc(doc.id)} className="rounded border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50">
+                        Delete
+                      </button>
                       <InvoiceDownloadButton
-                        filename={`Dummy-Invoice-${doc.client_name}-${date}.pdf`}
-                        data={{ invoiceNumber, date, clientName: doc.client_name, carBrand: doc.car_brand, carModel: doc.car_model, carYear: doc.car_year, carColor: doc.car_color, carVin: doc.car_vin, countryOfOrigin: doc.country_of_origin, saleUsd: doc.amount_usd, exportTo: doc.export_to || "Algeria" }}
+                        filename={`Dummy-Invoice-${doc.client_name}-${invoiceDate}.pdf`}
+                        data={{ invoiceNumber, date: invoiceDate, clientName: doc.client_name, carBrand: doc.car_brand, carModel: doc.car_model, carYear: doc.car_year, carColor: doc.car_color, carVin: doc.car_vin, countryOfOrigin: doc.country_of_origin, saleUsd: doc.amount_usd, exportTo: doc.export_to || "Algeria" }}
                       />
                       <AgreementDownloadButton
-                        filename={`Dummy-Agreement-${doc.client_name}-${date}.pdf`}
-                        data={{ date, clientName: doc.client_name, clientPassport: doc.client_passport, carBrand: doc.car_brand, carModel: doc.car_model, carYear: doc.car_year, carColor: doc.car_color, carVin: doc.car_vin, countryOfOrigin: doc.country_of_origin, totalAmountUsd: doc.amount_usd, advanceUsd: 0, balanceUsd: doc.amount_usd }}
+                        filename={`Dummy-Agreement-${doc.client_name}-${agreementDate}.pdf`}
+                        data={{ date: agreementDate, clientName: doc.client_name, clientPassport: doc.client_passport, carBrand: doc.car_brand, carModel: doc.car_model, carYear: doc.car_year, carColor: doc.car_color, carVin: doc.car_vin, countryOfOrigin: doc.country_of_origin, totalAmountUsd: doc.amount_usd, advanceUsd: 0, balanceUsd: doc.amount_usd }}
                       />
                     </div>
                   </div>

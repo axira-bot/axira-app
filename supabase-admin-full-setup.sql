@@ -218,12 +218,16 @@ CREATE TABLE IF NOT EXISTS client_documents (
   car_color text,
   car_vin text,
   country_of_origin text,
+  invoice_date date,
+  agreement_date date,
   amount_usd numeric NOT NULL DEFAULT 0,
   export_to text DEFAULT 'Algeria',
   notes text,
   created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at timestamptz DEFAULT now()
 );
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS invoice_date date;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS agreement_date date;
 CREATE INDEX IF NOT EXISTS client_documents_created_at_idx ON client_documents(created_at DESC);
 
 -- ---------------------------------------------------------------------
