@@ -12,6 +12,8 @@ type ActivityLogRow = {
   description: string;
   amount: number | null;
   currency: string | null;
+  actor_user_id: string | null;
+  actor_name: string | null;
   created_at: string;
 };
 
@@ -89,7 +91,7 @@ export default function ActivityPage() {
     setError(null);
     let query = supabase
       .from("activity_log")
-      .select("id, action, entity, entity_id, description, amount, currency, created_at")
+      .select("id, action, entity, entity_id, description, amount, currency, actor_user_id, actor_name, created_at")
       .order("created_at", { ascending: false });
 
     if (dateFrom) {
@@ -183,6 +185,7 @@ export default function ActivityPage() {
                     <th className="px-4 py-3">Time</th>
                     <th className="px-4 py-3">Action</th>
                     <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">User</th>
                     <th className="px-4 py-3">Description</th>
                     <th className="px-4 py-3 text-right">Amount</th>
                   </tr>
@@ -203,6 +206,9 @@ export default function ActivityPage() {
                         <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-app">
                           {displayType(a.entity)}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-app">
+                        {a.actor_name || a.actor_user_id || "System"}
                       </td>
                       <td className="px-4 py-3 text-app">{a.description}</td>
                       <td className="px-4 py-3 text-right text-app">

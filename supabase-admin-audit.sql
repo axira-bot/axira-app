@@ -91,6 +91,8 @@ WITH required_columns AS (
     ('clients','algeria_address'),
     ('payments','kind'),
     ('payments','rate_snapshot'),
+    ('activity_log','actor_user_id'),
+    ('activity_log','actor_name'),
     ('user_profiles','employee_id'),
     ('user_profiles','investor_id')
   ) AS t(table_name,column_name)
