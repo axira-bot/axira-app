@@ -278,7 +278,7 @@ export default function ReportsPage() {
     const available = cars.filter((c) => {
       const s = (c.status || "").toLowerCase();
       const l = (c.inventory_lifecycle_status || "").toLowerCase();
-      return s === "available" || l === "in_stock" || l === "arrived";
+      return s === "available" || l === "in_stock" || l === "arrived" || l === "ready_to_ship";
     }).length;
     const sold = cars.filter((c) => {
       const s = (c.status || "").toLowerCase();
@@ -294,7 +294,7 @@ export default function ReportsPage() {
       .filter((c) => {
         const s = (c.status || "").toLowerCase();
         const l = (c.inventory_lifecycle_status || "").toLowerCase();
-        return s === "available" || l === "in_stock" || l === "arrived";
+        return s === "available" || l === "in_stock" || l === "arrived" || l === "ready_to_ship";
       })
       .forEach((c) => {
         const price = c.purchase_price || 0;
@@ -1050,6 +1050,7 @@ export default function ReportsPage() {
                     <option value="incoming">INCOMING</option>
                     <option value="in_transit">IN_TRANSIT</option>
                     <option value="arrived">ARRIVED</option>
+                    <option value="ready_to_ship">READY_TO_SHIP</option>
                     <option value="delivered">DELIVERED</option>
                   </select>
                   <button

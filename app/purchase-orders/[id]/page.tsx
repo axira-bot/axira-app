@@ -12,6 +12,12 @@ type PurchaseOrder = {
   total_cost: number;
   paid_amount: number;
   supplier_owed: number;
+  total_cost_aed?: number;
+  paid_amount_aed?: number;
+  supplier_owed_aed?: number;
+  shipping_estimate?: number;
+  other_fees?: number;
+  items_subtotal?: number;
   expected_arrival_date: string | null;
   ordered_at: string | null;
   notes: string | null;
@@ -40,6 +46,7 @@ type Payment = {
   amount: number;
   currency: string;
   aed_equivalent: number | null;
+  amount_in_po_currency?: number | null;
   pocket: string | null;
   method: string | null;
   notes: string | null;
@@ -216,33 +223,17 @@ export default function PurchaseOrderDetailPage() {
     load();
   };
 
-  const parseSummaryAdjustments = (notes: string | null | undefined) => {
-    if (!notes) return { shipping: 0, fees: 0 };
-    const lines = notes.split("\n");
-    for (const line of lines) {
-      try {
-        const parsed = JSON.parse(line) as { po_summary_v1?: { shipping_estimate?: number; other_fees?: number } };
-        if (parsed?.po_summary_v1) {
-          return {
-            shipping: Number(parsed.po_summary_v1.shipping_estimate || 0),
-            fees: Number(parsed.po_summary_v1.other_fees || 0),
-          };
-        }
-      } catch {
-        continue;
-      }
-    }
-    return { shipping: 0, fees: 0 };
-  };
-
   const itemsSubtotal = useMemo(
     () => items.reduce((sum, it) => sum + Number(it.total_cost || 0), 0),
     [items]
   );
-  const adjustments = parseSummaryAdjustments(row?.notes);
-  const computedGrandTotal = itemsSubtotal + adjustments.shipping + adjustments.fees;
+  const adjustments = {
+    shipping: Number(row?.shipping_estimate || 0),
+    fees: Number(row?.other_fees || 0),
+  };
+  const computedGrandTotal = Number(row?.total_cost || (itemsSubtotal + adjustments.shipping + adjustments.fees));
   const paid = Number(row?.paid_amount || 0);
-  const owed = computedGrandTotal - paid;
+  const owed = Number(row?.supplier_owed ?? (computedGrandTotal - paid));
 
   return (
     <main className="space-y-5 p-6 text-app">
@@ -267,6 +258,9 @@ export default function PurchaseOrderDetailPage() {
                 <p>Paid: {money(paid, row.currency)}</p>
                 <p className={owed <= 0 ? "text-emerald-600 font-semibold" : "text-amber-700 font-semibold"}>
                   Owed: {money(owed, row.currency)}
+                </p>
+                <p className="text-xs text-muted">
+                  AED View: Total {money(Number(row.total_cost_aed || 0), "AED")} · Paid {money(Number(row.paid_amount_aed || 0), "AED")} · Owed {money(Number(row.supplier_owed_aed || 0), "AED")}
                 </p>
               </div>
             </div>
@@ -369,6 +363,7 @@ export default function PurchaseOrderDetailPage() {
                   <tr>
                     <th className="px-2 py-2 text-left">Date</th>
                     <th className="px-2 py-2 text-right">Amount</th>
+                    <th className="px-2 py-2 text-right">PO currency eq.</th>
                     <th className="px-2 py-2 text-right">AED eq.</th>
                     <th className="px-2 py-2 text-left">Pocket</th>
                     <th className="px-2 py-2 text-left">Method</th>
@@ -380,6 +375,7 @@ export default function PurchaseOrderDetailPage() {
                     <tr key={p.id} className="border-t border-app/50">
                       <td className="px-2 py-2">{p.date || "-"}</td>
                       <td className="px-2 py-2 text-right">{money(p.amount, p.currency)}</td>
+                      <td className="px-2 py-2 text-right">{money(p.amount_in_po_currency || 0, row.currency)}</td>
                       <td className="px-2 py-2 text-right">{money(p.aed_equivalent || 0, "AED")}</td>
                       <td className="px-2 py-2">{p.pocket || "-"}</td>
                       <td className="px-2 py-2">{p.method || "-"}</td>

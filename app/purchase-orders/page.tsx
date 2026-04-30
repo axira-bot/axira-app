@@ -37,6 +37,16 @@ type PoLineItem = {
   unitPrice: string;
   notes: string;
 };
+type PoPaymentDraft = {
+  rowId: string;
+  date: string;
+  amount: string;
+  currency: "USD" | "AED" | "DZD" | "EUR";
+  rate_snapshot: string;
+  pocket: string;
+  method: string;
+  notes: string;
+};
 
 const inputCls =
   "w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]";
@@ -83,6 +93,18 @@ export default function PurchaseOrdersPage() {
   const [shippingEstimate, setShippingEstimate] = useState("0");
   const [otherFees, setOtherFees] = useState("0");
   const [createInventoryRows, setCreateInventoryRows] = useState(true);
+  const [payments, setPayments] = useState<PoPaymentDraft[]>([
+    {
+      rowId: "pay-1",
+      date: new Date().toISOString().slice(0, 10),
+      amount: "",
+      currency: "USD",
+      rate_snapshot: "",
+      pocket: "bank",
+      method: "bank_transfer",
+      notes: "",
+    },
+  ]);
 
   const supplierMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -159,6 +181,17 @@ export default function PurchaseOrdersPage() {
         other_fees: Number(otherFees || 0),
         create_inventory_rows: createInventoryRows,
         items: normalizedItems,
+        initial_payments: payments
+          .map((payment) => ({
+            date: payment.date || null,
+            amount: Number(payment.amount || 0),
+            currency: payment.currency,
+            rate_snapshot: payment.rate_snapshot ? Number(payment.rate_snapshot) : null,
+            pocket: payment.pocket || null,
+            method: payment.method || null,
+            notes: payment.notes || null,
+          }))
+          .filter((payment) => Number(payment.amount || 0) > 0),
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -185,6 +218,18 @@ export default function PurchaseOrdersPage() {
     setShippingEstimate("0");
     setOtherFees("0");
     setCreateInventoryRows(true);
+    setPayments([
+      {
+        rowId: `pay-${Date.now()}`,
+        date: new Date().toISOString().slice(0, 10),
+        amount: "",
+        currency: "USD",
+        rate_snapshot: "",
+        pocket: "bank",
+        method: "bank_transfer",
+        notes: "",
+      },
+    ]);
     fetchAll();
   };
 
@@ -258,6 +303,27 @@ export default function PurchaseOrdersPage() {
         notes: "",
       },
     ]);
+  };
+  const addPaymentRow = () => {
+    setPayments((prev) => [
+      ...prev,
+      {
+        rowId: `pay-${Date.now()}-${prev.length + 1}`,
+        date: new Date().toISOString().slice(0, 10),
+        amount: "",
+        currency: form.currency as "USD" | "AED" | "DZD" | "EUR",
+        rate_snapshot: "",
+        pocket: "bank",
+        method: "bank_transfer",
+        notes: "",
+      },
+    ]);
+  };
+  const removePaymentRow = (rowId: string) => {
+    setPayments((prev) => (prev.length === 1 ? prev : prev.filter((x) => x.rowId !== rowId)));
+  };
+  const updatePaymentRow = (rowId: string, field: keyof PoPaymentDraft, value: string) => {
+    setPayments((prev) => prev.map((row) => (row.rowId === rowId ? { ...row, [field]: value } : row)));
   };
 
   const removeLineItem = (rowId: string) => {
@@ -516,6 +582,38 @@ export default function PurchaseOrdersPage() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+            <div className="md:col-span-5 rounded-lg border border-app/60 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Initial Supplier Payments (Optional)</h3>
+                <button
+                  type="button"
+                  onClick={addPaymentRow}
+                  className="rounded-md border border-app px-3 py-1 text-xs font-semibold hover:bg-white/70"
+                >
+                  + Add payment
+                </button>
+              </div>
+              <div className="space-y-2">
+                {payments.map((payment, idx) => (
+                  <div key={payment.rowId} className="grid gap-2 rounded-md border border-app/40 p-2 md:grid-cols-12">
+                    <input className={`${inputCls} md:col-span-2`} type="date" value={payment.date} onChange={(e) => updatePaymentRow(payment.rowId, "date", e.target.value)} />
+                    <input className={`${inputCls} md:col-span-2`} placeholder="Amount" value={payment.amount} onChange={(e) => updatePaymentRow(payment.rowId, "amount", e.target.value)} />
+                    <select className={`${inputCls} md:col-span-1`} value={payment.currency} onChange={(e) => updatePaymentRow(payment.rowId, "currency", e.target.value)}>
+                      <option value="USD">USD</option>
+                      <option value="AED">AED</option>
+                      <option value="DZD">DZD</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                    <input className={`${inputCls} md:col-span-2`} placeholder="Rate snapshot" value={payment.rate_snapshot} onChange={(e) => updatePaymentRow(payment.rowId, "rate_snapshot", e.target.value)} />
+                    <input className={`${inputCls} md:col-span-2`} placeholder="Pocket" value={payment.pocket} onChange={(e) => updatePaymentRow(payment.rowId, "pocket", e.target.value)} />
+                    <input className={`${inputCls} md:col-span-2`} placeholder="Method" value={payment.method} onChange={(e) => updatePaymentRow(payment.rowId, "method", e.target.value)} />
+                    <button type="button" onClick={() => removePaymentRow(payment.rowId)} className="rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 md:col-span-1">Remove</button>
+                    <input className={`${inputCls} md:col-span-11`} placeholder="Notes" value={payment.notes} onChange={(e) => updatePaymentRow(payment.rowId, "notes", e.target.value)} />
+                    <span className="text-[10px] text-muted md:col-span-1">Pay #{idx + 1}</span>
+                  </div>
+                ))}
               </div>
             </div>
             <div className="md:col-span-5 rounded-lg border border-app/60 p-3">

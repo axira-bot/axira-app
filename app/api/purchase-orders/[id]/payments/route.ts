@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requirePoAccess, recomputePoTotals } from "@/lib/services/purchaseOrders/service";
+import { convertCurrencyAmount, requirePoAccess, recomputePoTotals } from "@/lib/services/purchaseOrders/service";
 
 export const dynamic = "force-dynamic";
 
@@ -13,12 +13,6 @@ type Body = {
   method?: string | null;
   notes?: string | null;
 };
-
-function toAed(amount: number, currency: string, rate: number | null | undefined) {
-  if (currency === "AED") return amount;
-  if (rate && rate > 0) return amount * rate;
-  return amount;
-}
 
 export async function POST(
   request: NextRequest,
@@ -33,9 +27,22 @@ export async function POST(
     if (amount <= 0) return NextResponse.json({ error: "amount must be > 0" }, { status: 400 });
     const currency = body.currency || "USD";
     const rate = body.rate_snapshot ?? null;
-    const aedEquivalent = toAed(amount, currency, rate);
     const admin = createAdminClient();
-
+    const poRes = await admin.from("purchase_orders").select("currency").eq("id", id).maybeSingle();
+    const poCurrency = ((poRes.data as { currency?: "USD" | "AED" | "DZD" | "EUR" } | null)?.currency || "USD");
+    const aedEquivalent = convertCurrencyAmount({
+      amount,
+      fromCurrency: currency,
+      toCurrency: "AED",
+      rateSnapshot: rate,
+    });
+    const amountInPoCurrency = convertCurrencyAmount({
+      amount,
+      fromCurrency: currency,
+      toCurrency: poCurrency,
+      rateSnapshot: rate,
+      aedEquivalent,
+    });
     const payIns = await admin
       .from("payments")
       .insert({
@@ -60,10 +67,12 @@ export async function POST(
       .from("movements")
       .insert({
         date: body.date || new Date().toISOString().slice(0, 10),
-        type: "expense",
-        category: "supplier_payment",
-        amount: aedEquivalent,
-        currency: "AED",
+        type: "Out",
+        category: "Car Purchase",
+        amount,
+        currency,
+        rate,
+        aed_equivalent: aedEquivalent,
         pocket: body.pocket || "bank",
         method: body.method || "bank_transfer",
         reference: `po:${id}:payment:${payIns.data.id}`,
@@ -85,6 +94,7 @@ export async function POST(
         currency,
         rate_snapshot: rate,
         aed_equivalent: aedEquivalent,
+        amount_in_po_currency: amountInPoCurrency,
         pocket: body.pocket || "bank",
         method: body.method || "bank_transfer",
         notes: body.notes || null,

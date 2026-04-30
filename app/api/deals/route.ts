@@ -92,6 +92,13 @@ export async function POST(request: NextRequest) {
     };
     const { data, error } = await admin.from("deals").insert(insertPayload).select("*").single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    await admin
+      .from("cars")
+      .update({
+        linked_deal_id: (data as { id: string }).id,
+        client_name: body.client_name.trim(),
+      })
+      .eq("id", body.car_id);
     return NextResponse.json({ row: data }, { status: 201 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error";

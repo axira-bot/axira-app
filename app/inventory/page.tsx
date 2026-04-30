@@ -259,12 +259,13 @@ export default function InventoryPage() {
     const lifecycle = (car.inventory_lifecycle_status || "").toUpperCase();
     const status = getEffectiveStatus(car).toLowerCase();
     if (poDealEligibility === "arrived_only") {
-      return lifecycle === "ARRIVED" || lifecycle === "IN_STOCK" || status === "available";
+      return lifecycle === "ARRIVED" || lifecycle === "IN_STOCK" || lifecycle === "READY_TO_SHIP" || status === "available";
     }
     return (
       lifecycle === "IN_TRANSIT" ||
       lifecycle === "INCOMING" ||
       lifecycle === "ARRIVED" ||
+      lifecycle === "READY_TO_SHIP" ||
       lifecycle === "IN_STOCK" ||
       status === "in_transit" ||
       status === "available"

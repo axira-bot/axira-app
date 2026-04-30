@@ -350,9 +350,15 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
   expected_arrival_date date,
   ordered_at date DEFAULT CURRENT_DATE,
   notes text,
+  shipping_estimate numeric NOT NULL DEFAULT 0,
+  other_fees numeric NOT NULL DEFAULT 0,
+  items_subtotal numeric NOT NULL DEFAULT 0,
   total_cost numeric NOT NULL DEFAULT 0,
   paid_amount numeric NOT NULL DEFAULT 0,
   supplier_owed numeric NOT NULL DEFAULT 0,
+  total_cost_aed numeric NOT NULL DEFAULT 0,
+  paid_amount_aed numeric NOT NULL DEFAULT 0,
+  supplier_owed_aed numeric NOT NULL DEFAULT 0,
   created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
@@ -392,6 +398,7 @@ CREATE TABLE IF NOT EXISTS purchase_order_payments (
   currency text NOT NULL DEFAULT 'USD' CHECK (currency IN ('USD', 'AED', 'DZD', 'EUR')),
   rate_snapshot numeric,
   aed_equivalent numeric,
+  amount_in_po_currency numeric,
   pocket text,
   method text,
   notes text,
@@ -404,6 +411,13 @@ CREATE TABLE IF NOT EXISTS purchase_order_payments (
 
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS purchase_order_id uuid REFERENCES purchase_orders(id) ON DELETE SET NULL;
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS purchase_order_item_id uuid REFERENCES purchase_order_items(id) ON DELETE SET NULL;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS shipping_estimate numeric NOT NULL DEFAULT 0;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS other_fees numeric NOT NULL DEFAULT 0;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS items_subtotal numeric NOT NULL DEFAULT 0;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS total_cost_aed numeric NOT NULL DEFAULT 0;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS paid_amount_aed numeric NOT NULL DEFAULT 0;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_owed_aed numeric NOT NULL DEFAULT 0;
+ALTER TABLE purchase_order_payments ADD COLUMN IF NOT EXISTS amount_in_po_currency numeric;
 
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_supplier ON purchase_orders(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_status ON purchase_orders(status);
@@ -426,23 +440,38 @@ RETURNS void
 LANGUAGE plpgsql
 AS $$
 DECLARE
+  v_items_subtotal numeric := 0;
+  v_shipping numeric := 0;
+  v_other_fees numeric := 0;
   v_total numeric := 0;
   v_paid numeric := 0;
+  v_paid_aed numeric := 0;
+  v_total_aed numeric := 0;
 BEGIN
   SELECT COALESCE(SUM(total_cost), 0)
-  INTO v_total
+  INTO v_items_subtotal
   FROM purchase_order_items
   WHERE purchase_order_id = target_po;
 
-  SELECT COALESCE(SUM(amount), 0)
-  INTO v_paid
+  SELECT COALESCE(shipping_estimate, 0), COALESCE(other_fees, 0), COALESCE(total_cost_aed, 0)
+  INTO v_shipping, v_other_fees, v_total_aed
+  FROM purchase_orders
+  WHERE id = target_po;
+
+  v_total := v_items_subtotal + v_shipping + v_other_fees;
+
+  SELECT COALESCE(SUM(COALESCE(amount_in_po_currency, amount)), 0), COALESCE(SUM(COALESCE(aed_equivalent, 0)), 0)
+  INTO v_paid, v_paid_aed
   FROM purchase_order_payments
   WHERE purchase_order_id = target_po;
 
   UPDATE purchase_orders
-  SET total_cost = v_total,
+  SET items_subtotal = v_items_subtotal,
+      total_cost = v_total,
       paid_amount = v_paid,
       supplier_owed = v_total - v_paid,
+      paid_amount_aed = v_paid_aed,
+      supplier_owed_aed = v_total_aed - v_paid_aed,
       updated_at = now()
   WHERE id = target_po;
 END;
@@ -727,7 +756,7 @@ BEGIN
     ALTER TABLE cars
       ADD CONSTRAINT cars_inventory_lifecycle_status_check
       CHECK (
-        inventory_lifecycle_status IS NULL OR inventory_lifecycle_status IN ('IN_STOCK', 'INCOMING', 'IN_TRANSIT', 'ARRIVED', 'DELIVERED')
+        inventory_lifecycle_status IS NULL OR inventory_lifecycle_status IN ('IN_STOCK', 'INCOMING', 'IN_TRANSIT', 'ARRIVED', 'READY_TO_SHIP', 'DELIVERED')
       );
   END IF;
 END$$;

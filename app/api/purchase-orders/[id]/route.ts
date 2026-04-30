@@ -27,7 +27,11 @@ export async function GET(
     const [{ data: poWithSupplier, error: poWithSupplierErr }, { data: items }, { data: payments }, { data: links }, linkedCarsQuery] = await Promise.all([
       admin.from("purchase_orders").select("*, suppliers(name)").eq("id", id).maybeSingle(),
       admin.from("purchase_order_items").select("*").eq("purchase_order_id", id).order("created_at", { ascending: true }),
-      admin.from("purchase_order_payments").select("*").eq("purchase_order_id", id).order("date", { ascending: false }),
+      admin
+        .from("purchase_order_payments")
+        .select("*")
+        .eq("purchase_order_id", id)
+        .order("date", { ascending: false }),
       admin.from("purchase_order_item_cars").select("purchase_order_item_id, car_id").order("created_at", { ascending: true }),
       admin.from("cars").select("id, purchase_order_item_id, vin, status, inventory_lifecycle_status").eq("purchase_order_id", id),
     ]);

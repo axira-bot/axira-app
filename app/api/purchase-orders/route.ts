@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requirePoAccess, recomputePoTotals } from "@/lib/services/purchaseOrders/service";
+import { convertCurrencyAmount, requirePoAccess, recomputePoTotals } from "@/lib/services/purchaseOrders/service";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,15 @@ type PoCreateBody = {
   shipping_estimate?: number;
   other_fees?: number;
   create_inventory_rows?: boolean;
+  initial_payments?: Array<{
+    date?: string;
+    amount?: number;
+    currency?: "USD" | "AED" | "DZD" | "EUR";
+    rate_snapshot?: number | null;
+    pocket?: string | null;
+    method?: string | null;
+    notes?: string | null;
+  }>;
   items?: Array<{
     brand?: string;
     model?: string;
@@ -79,17 +88,7 @@ export async function POST(request: NextRequest) {
     const otherFees = Number(body.other_fees || 0);
     const includeInventoryRows = body.create_inventory_rows !== false;
     const createItems = Array.isArray(body.items) ? body.items : [];
-    const notesWithSummary = [
-      body.notes || null,
-      JSON.stringify({
-        po_summary_v1: {
-          shipping_estimate: shippingEstimate,
-          other_fees: otherFees,
-        },
-      }),
-    ]
-      .filter(Boolean)
-      .join("\n");
+    const initialPayments = Array.isArray(body.initial_payments) ? body.initial_payments : [];
 
     const insertPayload = {
       po_number: newPoNumber(),
@@ -100,10 +99,16 @@ export async function POST(request: NextRequest) {
       status: body.status || "draft",
       expected_arrival_date: body.expected_arrival_date || null,
       ordered_at: body.ordered_at || new Date().toISOString().slice(0, 10),
-      notes: notesWithSummary || null,
+      notes: body.notes || null,
+      shipping_estimate: shippingEstimate,
+      other_fees: otherFees,
+      items_subtotal: 0,
       total_cost: 0,
       paid_amount: 0,
       supplier_owed: 0,
+      total_cost_aed: 0,
+      paid_amount_aed: 0,
+      supplier_owed_aed: 0,
       created_by: auth.user.id,
     };
     const { data, error } = await admin
@@ -168,7 +173,13 @@ export async function POST(request: NextRequest) {
           const initialStatus = rawItem.inventory_status || "in_transit";
           const carStatus = initialStatus === "available" ? "available" : "in_transit";
           const lifecycle =
-            initialStatus === "available" ? "IN_STOCK" : initialStatus === "arrived" ? "ARRIVED" : "INCOMING";
+            rawItem.vin?.trim()
+              ? "READY_TO_SHIP"
+              : initialStatus === "available"
+                ? "IN_STOCK"
+                : initialStatus === "arrived"
+                  ? "ARRIVED"
+                  : "INCOMING";
           const carPayload = {
             brand: rawItem.brand.trim(),
             model: rawItem.model.trim(),
@@ -209,16 +220,92 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const totals = await recomputePoTotals(poId);
-    const grandTotal = Number(totals.total || 0) + shippingEstimate + otherFees;
-    await admin
-      .from("purchase_orders")
-      .update({
-        total_cost: grandTotal,
-        supplier_owed: grandTotal - Number(totals.paid || 0),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", poId);
+    if (initialPayments.length > 0) {
+      for (const payment of initialPayments) {
+        const amount = Number(payment.amount || 0);
+        if (amount <= 0) continue;
+        const currency = payment.currency || "USD";
+        const rate = payment.rate_snapshot ?? null;
+        const aedEquivalent = convertCurrencyAmount({
+          amount,
+          fromCurrency: currency,
+          toCurrency: "AED",
+          rateSnapshot: rate,
+        });
+        const amountInPoCurrency = convertCurrencyAmount({
+          amount,
+          fromCurrency: currency,
+          toCurrency: (body.currency || "USD"),
+          rateSnapshot: rate,
+          aedEquivalent,
+        });
+
+        const payIns = await admin
+          .from("payments")
+          .insert({
+            kind: "supplier_payment",
+            amount,
+            currency,
+            rate_snapshot: rate,
+            aed_equivalent: aedEquivalent,
+            pocket: payment.pocket || "bank",
+            method: payment.method || "bank_transfer",
+            notes: payment.notes || `PO payment ${poId}`,
+            supplier_id: body.supplier_id || null,
+            status: "paid",
+          })
+          .select("id")
+          .single();
+        if (payIns.error || !payIns.data?.id) {
+          return NextResponse.json({ error: payIns.error?.message || "Failed to insert initial payment." }, { status: 400 });
+        }
+
+        const movIns = await admin
+          .from("movements")
+          .insert({
+            date: payment.date || new Date().toISOString().slice(0, 10),
+            type: "Out",
+            category: "Car Purchase",
+            amount,
+            currency,
+            rate: rate,
+            aed_equivalent: aedEquivalent,
+            pocket: payment.pocket || "bank",
+            method: payment.method || "bank_transfer",
+            reference: `po:${poId}:payment:${payIns.data.id}`,
+            note: payment.notes || "Purchase order payment",
+            status: "posted",
+          })
+          .select("id")
+          .single();
+        if (movIns.error || !movIns.data?.id) {
+          return NextResponse.json({ error: movIns.error?.message || "Failed to insert initial movement." }, { status: 400 });
+        }
+
+        const poPayIns = await admin
+          .from("purchase_order_payments")
+          .insert({
+            purchase_order_id: poId,
+            date: payment.date || new Date().toISOString().slice(0, 10),
+            amount,
+            currency,
+            rate_snapshot: rate,
+            aed_equivalent: aedEquivalent,
+            amount_in_po_currency: amountInPoCurrency,
+            pocket: payment.pocket || "bank",
+            method: payment.method || "bank_transfer",
+            notes: payment.notes || null,
+            movement_id: movIns.data.id,
+            payment_id: payIns.data.id,
+            created_by: auth.user.id,
+          });
+        if (poPayIns.error) {
+          return NextResponse.json({ error: poPayIns.error.message || "Failed to link initial PO payment." }, { status: 400 });
+        }
+      }
+    }
+
+    await recomputePoTotals(poId);
     const { data: finalRow } = await admin.from("purchase_orders").select("*").eq("id", poId).maybeSingle();
     return NextResponse.json({ row: finalRow ?? data }, { status: 201 });
   } catch (e) {

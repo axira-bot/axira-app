@@ -78,7 +78,13 @@ export async function POST(
         const initialStatus = rawItem.inventory_status || "in_transit";
         const carStatus = initialStatus === "available" ? "available" : "in_transit";
         const lifecycle =
-          initialStatus === "available" ? "IN_STOCK" : initialStatus === "arrived" ? "ARRIVED" : "INCOMING";
+          rawItem.vin?.trim()
+            ? "READY_TO_SHIP"
+            : initialStatus === "available"
+              ? "IN_STOCK"
+              : initialStatus === "arrived"
+                ? "ARRIVED"
+                : "INCOMING";
         const carPayload = {
           brand: rawItem.brand.trim(),
           model: rawItem.model.trim(),

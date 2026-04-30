@@ -523,12 +523,13 @@ export default function DealsPage() {
     const lifecycle = (car.inventory_lifecycle_status || "").toUpperCase();
     const availability = (car.status || "").toLowerCase();
     if (poDealEligibility === "arrived_only") {
-      return lifecycle === "ARRIVED" || lifecycle === "IN_STOCK" || availability === "available";
+      return lifecycle === "ARRIVED" || lifecycle === "IN_STOCK" || lifecycle === "READY_TO_SHIP" || availability === "available";
     }
     return (
       lifecycle === "IN_TRANSIT" ||
       lifecycle === "INCOMING" ||
       lifecycle === "ARRIVED" ||
+      lifecycle === "READY_TO_SHIP" ||
       lifecycle === "IN_STOCK" ||
       availability === "in_transit" ||
       availability === "available"
