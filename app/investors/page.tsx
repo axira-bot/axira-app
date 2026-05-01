@@ -137,50 +137,32 @@ export default function InvestorsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [
-        { data: invData, error: invErr },
-        { data: retData, error: retErr },
-        { data: dealsData, error: dealsErr },
-        { data: settingsData, error: settingsErr },
-      ] = await Promise.all([
-        supabase.from("investors").select("*").order("name", { ascending: true }),
-        supabase.from("investor_returns").select("*").order("month", { ascending: false }),
-        supabase.from("deals").select("id, date, profit"),
-        supabase
-          .from("app_settings")
-          .select("key, value")
-          .in("key", [
-            "total_capital",
-            "owner_name",
-            "owner_capital",
-            "owner_capital_currency",
-            "business_valuation",
-            "share_price",
-            "total_shares",
-            "available_shares",
-            "owner_notes",
-          ]),
-      ]);
-
-      if (invErr || retErr) {
-        setError(invErr?.message ?? retErr?.message ?? "Failed to load investors data");
+      const response = await fetch("/api/investors", { cache: "no-store" });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        investors?: Investor[];
+        returns?: InvestorReturn[];
+        deals?: DealProfit[];
+        settings?: Array<{ key: string; value: string | null }>;
+        warnings?: { deals?: string | null; settings?: string | null };
+      };
+      if (!response.ok) {
+        setError(payload.error ?? "Failed to load investors data");
         return;
       }
 
-      if (dealsErr) {
-        // Deals power analytics only; don't block investors list if deals has stricter RLS.
-        console.warn("Investors page: deals lookup unavailable", dealsErr.message);
+      if (payload.warnings?.deals) {
+        console.warn("Investors page: deals lookup unavailable", payload.warnings.deals);
       }
-      if (settingsErr) {
-        // Owner tab settings are optional for listing investors.
-        console.warn("Investors page: app settings unavailable", settingsErr.message);
+      if (payload.warnings?.settings) {
+        console.warn("Investors page: app settings unavailable", payload.warnings.settings);
       }
 
-      setInvestors((invData as Investor[]) ?? []);
-      setReturns((retData as InvestorReturn[]) ?? []);
-      setDeals((dealsData as DealProfit[]) ?? []);
-      if (settingsData) {
-        for (const row of settingsData as { key: string; value: string | null }[]) {
+      setInvestors(payload.investors ?? []);
+      setReturns(payload.returns ?? []);
+      setDeals(payload.deals ?? []);
+      if (payload.settings) {
+        for (const row of payload.settings) {
           switch (row.key) {
             case "total_capital":
               setTotalCapitalOverride(row.value ?? "");
