@@ -124,23 +124,32 @@ export default function PurchaseOrdersPage() {
   const fetchAll = async () => {
     setLoading(true);
     setError(null);
-    const [poRes, suppRes, settingRes, catalogRes] = await Promise.all([
+    const [poRes, suppliersRes, settingRes, catalogRes] = await Promise.all([
       fetch(
         `/api/purchase-orders?supplier_id=${encodeURIComponent(supplierFilter)}&status=${encodeURIComponent(statusFilter)}`,
         { cache: "no-store" }
       ),
-      supabase.from("suppliers").select("id, name").eq("active", true).order("name", { ascending: true }),
+      fetch("/api/suppliers", { cache: "no-store" }),
       fetch("/api/purchase-orders/settings", { cache: "no-store" }),
       supabase.from("supplier_catalog").select("id, brand, model, year").eq("active", true).order("brand", { ascending: true }),
     ]);
     const poData = await poRes.json().catch(() => ({}));
+    const suppliersData = await suppliersRes.json().catch(() => ({}));
     if (!poRes.ok) {
       setError(poData.error || "Failed to load purchase orders");
       setRows([]);
     } else {
       setRows((poData.rows as PurchaseOrder[] | undefined) || []);
     }
-    setSuppliers((suppRes.data as Supplier[]) || []);
+    if (!suppliersRes.ok) {
+      setSuppliers([]);
+      setError((prev) => prev ?? suppliersData.error ?? "Failed to load suppliers");
+    } else {
+      const activeSuppliers = ((suppliersData.rows as Array<Supplier & { active?: boolean }> | undefined) ?? [])
+        .filter((row) => row.active !== false)
+        .map((row) => ({ id: row.id, name: row.name ?? null }));
+      setSuppliers(activeSuppliers);
+    }
     setCatalogRows((catalogRes.data as SupplierCatalog[]) || []);
     const settingData = await settingRes.json().catch(() => ({}));
     if (settingRes.ok) {
