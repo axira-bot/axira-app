@@ -212,6 +212,33 @@ BEGIN
   END IF;
 END$$;
 
+ALTER TABLE rents ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'rents' AND policyname = 'Rents owner manager all'
+  ) THEN
+    CREATE POLICY "Rents owner manager all"
+      ON rents FOR ALL TO authenticated
+      USING (
+        EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid()
+            AND LOWER(TRIM(up.role)) IN ('owner', 'manager', 'admin', 'super_admin')
+        )
+      )
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM user_profiles up
+          WHERE up.id = auth.uid()
+            AND LOWER(TRIM(up.role)) IN ('owner', 'manager', 'admin', 'super_admin')
+        )
+      );
+  END IF;
+END$$;
+
 CREATE TABLE IF NOT EXISTS client_documents (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   client_name text NOT NULL,

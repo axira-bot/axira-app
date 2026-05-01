@@ -675,16 +675,32 @@ export default function MovementsPage() {
     return map;
   }, [movements]);
 
+  const rentPaidThisYearByRentId = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    const currentYear = new Date().getFullYear();
+    movements.forEach((m) => {
+      if ((m.category || "").trim() !== "Rent" || !m.reference?.startsWith("rent:")) return;
+      const parts = m.reference.split(":");
+      const rentId = parts[1];
+      const year = Number(parts[2]);
+      if (rentId && Number.isFinite(year) && year === currentYear) {
+        map[rentId] = true;
+      }
+    });
+    return map;
+  }, [movements]);
+
   const getRentCardInfo = (r: Rent) => {
     const monthly = (r.monthly_amount ?? r.annual_amount / 12) || 0;
     const paymentDate = rentLastPaymentByRentId[r.id] || null;
+    const paidThisYear = Boolean(rentPaidThisYearByRentId[r.id]);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const start = new Date(r.start_date);
     const anchorMonth = start.getMonth();
     const anchorDay = start.getDate();
     let nextDueDate = new Date(today.getFullYear(), anchorMonth, anchorDay);
-    if (nextDueDate < today) {
+    if (paidThisYear || nextDueDate < today) {
       nextDueDate = new Date(today.getFullYear() + 1, anchorMonth, anchorDay);
     }
     let daysRemaining: number | null = null;
@@ -760,7 +776,7 @@ export default function MovementsPage() {
           const year = new Date().getFullYear();
           const { data: movementRows, error: movementError } = await supabase
             .from("movements")
-            .select("id, amount, currency, pocket, type")
+            .select("id, amount, currency, pocket, type, reference")
             .eq("category", "Rent")
             .like("reference", `rent:${updatedRent.id}:${year}:%`);
 
@@ -771,10 +787,11 @@ export default function MovementsPage() {
               currency: string | null;
               pocket: string | null;
               type: string | null;
+              reference?: string | null;
             }[];
-            const monthlyDiff = diff / 12;
+            const perRowDiff = diff / Math.max(1, rows.length);
             for (const m of rows) {
-              const newAmount = (m.amount || 0) + monthlyDiff;
+              const newAmount = (m.amount || 0) + perRowDiff;
               await supabase.from("movements").update({ amount: newAmount }).eq("id", m.id);
             }
 
@@ -794,7 +811,7 @@ export default function MovementsPage() {
               prev.map((mv) => {
                 const updated = rows.find((r) => r.id === mv.id);
                 if (!updated) return mv;
-                return { ...mv, amount: (updated.amount || 0) + monthlyDiff };
+                return { ...mv, amount: (updated.amount || 0) + perRowDiff };
               })
             );
           }
@@ -843,7 +860,6 @@ export default function MovementsPage() {
     setLoggingRentId(r.id);
     setError(null);
     const annualAmount = r.annual_amount || 0;
-    const monthlyAmount = (r.monthly_amount ?? annualAmount / 12) || 0;
     const year = new Date().getFullYear();
     const { data: existingRows, error: existingError } = await supabase
       .from("movements")
@@ -862,26 +878,24 @@ export default function MovementsPage() {
       return;
     }
 
-    const payload = Array.from({ length: 12 }, (_, idx) => {
-      const monthDate = new Date(year, idx, 1).toISOString().slice(0, 10);
-      return {
-        date: monthDate,
-        type: "Out",
-        category: "Rent",
-        description: r.description || null,
-        amount: monthlyAmount,
-        currency: r.currency || "AED",
-        rate: r.currency === "AED" ? 1 : null,
-        aed_equivalent: r.currency === "AED" ? monthlyAmount : null,
-        pocket,
-        deal_id: null,
-        reference: `rent:${r.id}:${year}:${String(idx + 1).padStart(2, "0")}`,
-      };
-    });
+    const payload = {
+      date: new Date().toISOString().slice(0, 10),
+      type: "Out",
+      category: "Rent",
+      description: r.description || null,
+      amount: annualAmount,
+      currency: r.currency || "AED",
+      rate: r.currency === "AED" ? 1 : null,
+      aed_equivalent: r.currency === "AED" ? annualAmount : null,
+      pocket,
+      deal_id: null,
+      reference: `rent:${r.id}:${year}:annual`,
+    };
     const { data: inserted, error: insertError } = await supabase
       .from("movements")
       .insert(payload)
-      .select("*");
+      .select("*")
+      .single();
     if (insertError) {
       setError(insertError.message || "Failed to log payment.");
       setLoggingRentId(null);
@@ -896,7 +910,9 @@ export default function MovementsPage() {
       amount: annualAmount,
       currency: r.currency || "AED",
     });
-    setMovements((prev) => ([...((inserted as Movement[]) ?? []), ...prev]));
+    if (inserted) {
+      setMovements((prev) => ([inserted as Movement, ...prev]));
+    }
     setLoggingRentId(null);
   };
 
@@ -918,7 +934,7 @@ export default function MovementsPage() {
   const handleDeleteRent = async (r: Rent) => {
     if (
       !window.confirm(
-        "Delete this rent and all its payments? This will also reverse the cash movement."
+        "Delete this rent and its linked annual payment movement(s)? This will also reverse cash position."
       )
     ) {
       return;
@@ -1137,7 +1153,7 @@ export default function MovementsPage() {
                       disabled={!!loggingRentId}
                       className="rounded border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-2 py-1 text-[11px] font-medium text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20 disabled:opacity-50"
                     >
-                      {loggingRentId === r.id ? "Logging…" : "Log Yearly Payment (Split Monthly)"}
+                      {loggingRentId === r.id ? "Logging…" : "Log Yearly Payment"}
                     </button>
                     <div className="flex items-center gap-2">
                       <button

@@ -85,6 +85,30 @@ function formatDate(value: string | null | undefined): string {
   });
 }
 
+function countOverlappingMonths(
+  periodFrom: string,
+  periodTo: string,
+  rangeStart: string | null | undefined,
+  rangeEnd: string | null | undefined
+): number {
+  if (!rangeStart) return 0;
+  const pStart = new Date(periodFrom);
+  const pEnd = new Date(periodTo);
+  const rStart = new Date(rangeStart);
+  const rEnd = rangeEnd ? new Date(rangeEnd) : new Date(periodTo);
+  if ([pStart, pEnd, rStart, rEnd].some((d) => Number.isNaN(d.getTime()))) return 0;
+
+  const start = new Date(Math.max(pStart.getTime(), rStart.getTime()));
+  const end = new Date(Math.min(pEnd.getTime(), rEnd.getTime()));
+  if (end < start) return 0;
+
+  return (
+    (end.getFullYear() - start.getFullYear()) * 12 +
+    (end.getMonth() - start.getMonth()) +
+    1
+  );
+}
+
 function getAedAmount(m: Movement): number {
   if (m.currency === "AED" || !m.currency) return m.amount || 0;
   if (m.aed_equivalent != null) return m.aed_equivalent;
@@ -226,20 +250,11 @@ export default function ReportsPage() {
     });
   }, [rents, plFrom, plTo]);
 
-  const plMonthsInPeriod = useMemo(() => {
-    const from = new Date(plFrom);
-    const to = new Date(plTo);
-    return Math.max(
-      1,
-      (to.getFullYear() - from.getFullYear()) * 12 +
-        (to.getMonth() - from.getMonth()) +
-        1
-    );
-  }, [plFrom, plTo]);
-
   const plRentExpense = useMemo(() => {
     if (!rates) return 0;
     return plActiveRentsInPeriod.reduce((sum, r) => {
+      const overlapMonths = countOverlappingMonths(plFrom, plTo, r.start_date, r.end_date);
+      if (overlapMonths <= 0) return sum;
       const monthlyBase = (r.annual_amount || 0) / 12;
       const currency = (r.currency || "AED").toUpperCase();
       let monthlyAed = 0;
@@ -249,9 +264,9 @@ export default function ReportsPage() {
         // rate_DZD is DZD per 1 AED, so convert DZD → AED by dividing
         monthlyAed = monthlyBase / rates.DZD;
       }
-      return sum + monthlyAed * plMonthsInPeriod;
+      return sum + monthlyAed * overlapMonths;
     }, 0);
-  }, [plActiveRentsInPeriod, plMonthsInPeriod, rates]);
+  }, [plActiveRentsInPeriod, plFrom, plTo, rates]);
   const plTotalExpensesWithRent = plTotalExpenses + plRentExpense;
   const plGrossProfitWithRent = plRevenue - plTotalExpensesWithRent;
   const plMargin =
@@ -407,7 +422,8 @@ export default function ReportsPage() {
             return null;
           }
 
-          return [label, monthlyAed * plMonthsInPeriod] as [string, number];
+          const overlapMonths = countOverlappingMonths(plFrom, plTo, r.start_date, r.end_date);
+          return [label, monthlyAed * overlapMonths] as [string, number];
         })
         .filter(Boolean) as (string | number)[][],
       [],
@@ -498,7 +514,8 @@ export default function ReportsPage() {
       setCellValueAndStyle(ws, rentRow, 0, label, {
         fill: { fgColor: { rgb: LIGHT_GRAY }, patternType: "solid" },
       });
-      setCellValueAndStyle(ws, rentRow, 1, monthlyAed * plMonthsInPeriod, {
+      const overlapMonths = countOverlappingMonths(plFrom, plTo, r.start_date, r.end_date);
+      setCellValueAndStyle(ws, rentRow, 1, monthlyAed * overlapMonths, {
         numFmt: "#,##0",
         fill: { fgColor: { rgb: LIGHT_GRAY }, patternType: "solid" },
       });
@@ -546,7 +563,8 @@ export default function ReportsPage() {
     plTotalExpensesWithRent,
     plGrossProfitWithRent,
     plActiveRentsInPeriod,
-    plMonthsInPeriod,
+    plFrom,
+    plTo,
     plMargin,
     plExpensesByCategory,
     plFilteredDeals,
@@ -974,7 +992,8 @@ export default function ReportsPage() {
                             return null;
                           }
 
-                          const periodAmountAed = monthlyAed * plMonthsInPeriod;
+                          const overlapMonths = countOverlappingMonths(plFrom, plTo, r.start_date, r.end_date);
+                          const periodAmountAed = monthlyAed * overlapMonths;
 
                           return (
                             <tr key={r.id} className="border-b border-app last:border-b-0">
