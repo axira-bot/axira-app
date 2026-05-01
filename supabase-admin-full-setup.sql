@@ -921,8 +921,10 @@ BEGIN
         created_by = auth.uid()
         OR EXISTS (
           SELECT 1 FROM user_profiles up
-          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+          WHERE up.id = auth.uid() AND LOWER(TRIM(up.role)) IN ('owner', 'manager', 'admin', 'super_admin')
         )
+        OR LOWER(COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '')) IN ('owner', 'manager', 'admin', 'super_admin')
+        OR LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) IN ('owner', 'manager', 'admin', 'super_admin')
       );
   END IF;
 END$$;
@@ -939,8 +941,10 @@ BEGIN
         created_by = auth.uid()
         OR EXISTS (
           SELECT 1 FROM user_profiles up
-          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+          WHERE up.id = auth.uid() AND LOWER(TRIM(up.role)) IN ('owner', 'manager', 'admin', 'super_admin')
         )
+        OR LOWER(COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '')) IN ('owner', 'manager', 'admin', 'super_admin')
+        OR LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) IN ('owner', 'manager', 'admin', 'super_admin')
       );
   END IF;
 END$$;
@@ -957,15 +961,19 @@ BEGIN
         created_by = auth.uid()
         OR EXISTS (
           SELECT 1 FROM user_profiles up
-          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+          WHERE up.id = auth.uid() AND LOWER(TRIM(up.role)) IN ('owner', 'manager', 'admin', 'super_admin')
         )
+        OR LOWER(COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '')) IN ('owner', 'manager', 'admin', 'super_admin')
+        OR LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) IN ('owner', 'manager', 'admin', 'super_admin')
       )
       WITH CHECK (
         created_by = auth.uid()
         OR EXISTS (
           SELECT 1 FROM user_profiles up
-          WHERE up.id = auth.uid() AND up.role IN ('owner', 'manager')
+          WHERE up.id = auth.uid() AND LOWER(TRIM(up.role)) IN ('owner', 'manager', 'admin', 'super_admin')
         )
+        OR LOWER(COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '')) IN ('owner', 'manager', 'admin', 'super_admin')
+        OR LOWER(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '')) IN ('owner', 'manager', 'admin', 'super_admin')
       );
   END IF;
 END$$;

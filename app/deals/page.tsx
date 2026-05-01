@@ -8,6 +8,7 @@ import { logActivity } from "@/lib/activity";
 import dynamic from "next/dynamic";
 import PreorderDealModal from "@/components/preorders/PreorderDealModal";
 import { useAuth } from "@/lib/context/AuthContext";
+import { getRates, type AppRates } from "@/lib/rates";
 
 const InvoiceDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.InvoiceDownloadButton),
@@ -196,6 +197,7 @@ export default function DealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [clients, setClients] = useState<ClientDeal[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [rates, setRates] = useState<AppRates>({ DZD: 0, EUR: 0, USD: 0, GBP: 0 });
 
   const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
   const [clientSearchQuery, setClientSearchQuery] = useState("");
@@ -265,7 +267,7 @@ export default function DealsPage() {
       supabase
         .from("cars")
         .select(
-          "id, brand, model, year, purchase_price, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name, inventory_lifecycle_status, purchase_order_id, purchase_order_item_id"
+          "id, brand, model, year, purchase_price, purchase_currency, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name, inventory_lifecycle_status, purchase_order_id, purchase_order_item_id"
         )
         .order("created_at", { ascending: false }),
       supabase.from("deals").select("*").order("date", { ascending: false }),
@@ -325,6 +327,8 @@ export default function DealsPage() {
     setClients((clientsData as ClientDeal[]) ?? []);
     setEmployees((employeesData as EmployeeOption[]) ?? []);
     setDummyDocs((dummyDocsRes?.rows as DummyDocRow[] | undefined) ?? []);
+    const latestRates = await getRates();
+    setRates(latestRates);
   };
 
   const saveDummyDoc = async () => {
@@ -477,7 +481,7 @@ export default function DealsPage() {
     } else if (selectedClientName) {
       base = base.filter((d) => (d.client_name || "").trim().toLowerCase() === selectedClientName);
     }
-    if (isStaff && user?.id) {
+    if ((role || "").toLowerCase() === "staff" && user?.id) {
       base = base.filter((d) => ((d as Deal & { created_by?: string | null }).created_by || "") === user.id);
     }
     if (customerSearchDebounced) {
@@ -494,7 +498,7 @@ export default function DealsPage() {
       });
     }
     return base;
-  }, [activeTab, deals, searchParams, isStaff, user?.id, customerSearchDebounced, clients]);
+  }, [activeTab, deals, searchParams, role, user?.id, customerSearchDebounced, clients]);
 
   const pendingCompletionCount = useMemo(
     () =>
@@ -611,8 +615,25 @@ export default function DealsPage() {
   const amountReceivedDzd = parseNum(form.amountReceivedDzd);
   const rate = parseNum(form.rate);
   const saleAed = rate > 0 ? saleDzd / rate : 0;
-
-  const carCostAed = selectedCar?.purchase_price ?? 0;
+  const dealRateDzdPerAed = rate > 0 ? rate : rates.DZD > 0 ? rates.DZD : 0;
+  const sourceCost = selectedCar?.purchase_price ?? 0;
+  const sourceCurrency = ((selectedCar?.purchase_currency || "AED") as string).toUpperCase();
+  const usdPerAed = rates.USD > 0 ? rates.USD : 0;
+  const aedPerUsd = usdPerAed > 0 ? 1 / usdPerAed : 3.67;
+  const carCostAed =
+    sourceCurrency === "AED"
+      ? sourceCost
+      : sourceCurrency === "USD"
+        ? sourceCost * aedPerUsd
+        : sourceCurrency === "DZD" && rates.DZD > 0
+          ? sourceCost / rates.DZD
+          : sourceCost;
+  const carCostDzd =
+    sourceCurrency === "DZD"
+      ? sourceCost
+      : dealRateDzdPerAed > 0
+        ? carCostAed * dealRateDzdPerAed
+        : 0;
   const shippingAed = parseNum(form.shippingAed);
   const inspectionAed = parseNum(form.inspectionAed);
   const recoveryAed = parseNum(form.recoveryAed);
@@ -626,8 +647,13 @@ export default function DealsPage() {
     recoveryAed +
     maintenanceAed +
     otherAed;
-
-  const profitPreview = saleAed - totalExpenses;
+  const totalExpensesDzd =
+    dealRateDzdPerAed > 0 ? totalExpenses * dealRateDzdPerAed : 0;
+  const profitPreviewDzd = saleDzd - totalExpensesDzd;
+  const profitPreview =
+    dealRateDzdPerAed > 0
+      ? profitPreviewDzd / dealRateDzdPerAed
+      : saleAed - totalExpenses;
   const pendingDzd = Math.max(saleDzd - amountReceivedDzd, 0);
 
   const openAddModal = () => {
@@ -2045,11 +2071,19 @@ export default function DealsPage() {
 
                   <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="font-semibold text-app">Car Cost AED</span>
+                      <span className="font-semibold text-app">Car Cost (source)</span>
+                      <span className="text-app">{formatMoney(sourceCost, sourceCurrency)}</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+                      <span className="font-semibold text-app">Car Cost (converted DZD)</span>
+                      <span className="text-app">{formatMoney(carCostDzd, "DZD")}</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+                      <span className="font-semibold text-app">Car Cost (converted AED)</span>
                       <span className="text-app">{formatMoney(carCostAed, "AED")}</span>
                     </div>
                     <div className="mt-1 text-[11px] text-gray-400">
-                      Auto-filled from selected car purchase price.
+                      Auto-filled from selected car purchase price and converted with dashboard rates.
                     </div>
                   </div>
 
@@ -2122,11 +2156,19 @@ export default function DealsPage() {
                   <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <span className="font-semibold text-app">Live Profit Preview</span>
-                      <span className="text-[var(--color-accent)]">{formatMoney(profitPreview, "AED")}</span>
+                      <span className="text-[var(--color-accent)]">{formatMoney(profitPreviewDzd, "DZD")}</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-500">
+                      <span>Derived Profit (AED)</span>
+                      <span>{formatMoney(profitPreview, "AED")}</span>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
-                      <span>Total expenses</span>
+                      <span>Total expenses (AED)</span>
                       <span>{formatMoney(totalExpenses, "AED")}</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
+                      <span>Total expenses (DZD)</span>
+                      <span>{formatMoney(totalExpensesDzd, "DZD")}</span>
                     </div>
                   </div>
                 </>
@@ -2263,6 +2305,14 @@ export default function DealsPage() {
                     <span className="text-[var(--color-accent)]">{formatMoney(viewDeal.profit, "AED")}</span>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
+                    <span>Profit (DZD)</span>
+                    <span className="text-app">
+                      {viewDeal.rate && viewDeal.rate > 0
+                        ? formatMoney((viewDeal.profit || 0) * viewDeal.rate, "DZD")
+                        : "-"}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
                     <span>Status</span>
                     <span className="text-app">{(viewDeal.status || "pending").toLowerCase()}</span>
                   </div>
@@ -2289,6 +2339,17 @@ export default function DealsPage() {
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                   Expenses (AED)
                 </div>
+                {(() => {
+                  const dealCar = cars.find((c) => c.id === viewDeal.car_id);
+                  const srcCurrency = ((dealCar?.purchase_currency || "AED") as string).toUpperCase();
+                  const srcAmount = Number(dealCar?.purchase_price || 0);
+                  if (!dealCar || !srcAmount || srcCurrency === "AED") return null;
+                  return (
+                    <div className="mt-2 rounded border border-app bg-[#fafafa] px-2 py-1 text-[11px] text-app">
+                      Car source cost: {formatMoney(srcAmount, srcCurrency)}
+                    </div>
+                  );
+                })()}
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
                   <div className="flex items-center justify-between gap-2 text-app">
                     <span className="text-muted">Car Cost</span>
