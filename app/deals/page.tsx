@@ -613,13 +613,24 @@ export default function DealsPage() {
 
   const saleDzd = parseNum(form.saleDzd);
   const amountReceivedDzd = parseNum(form.amountReceivedDzd);
-  const rate = parseNum(form.rate);
-  const saleAed = rate > 0 ? saleDzd / rate : 0;
-  const dealRateDzdPerAed = rate > 0 ? rate : rates.DZD > 0 ? rates.DZD : 0;
+  const dealRateDzdPerUsd = parseNum(form.rate);
   const sourceCost = selectedCar?.purchase_price ?? 0;
   const sourceCurrency = ((selectedCar?.purchase_currency || "AED") as string).toUpperCase();
   const usdPerAed = rates.USD > 0 ? rates.USD : 0;
   const aedPerUsd = usdPerAed > 0 ? 1 / usdPerAed : 3.67;
+  const dealRateDzdPerAed =
+    dealRateDzdPerUsd > 0
+      ? dealRateDzdPerUsd * (usdPerAed > 0 ? usdPerAed : 1)
+      : rates.DZD > 0
+        ? rates.DZD
+        : 0;
+  const saleUsd = dealRateDzdPerUsd > 0 ? saleDzd / dealRateDzdPerUsd : 0;
+  const saleAed =
+    usdPerAed > 0
+      ? saleUsd / usdPerAed
+      : dealRateDzdPerAed > 0
+        ? saleDzd / dealRateDzdPerAed
+        : 0;
   const carCostAed =
     sourceCurrency === "AED"
       ? sourceCost
@@ -628,12 +639,24 @@ export default function DealsPage() {
         : sourceCurrency === "DZD" && rates.DZD > 0
           ? sourceCost / rates.DZD
           : sourceCost;
+  const carCostUsd =
+    sourceCurrency === "USD"
+      ? sourceCost
+      : sourceCurrency === "AED"
+        ? sourceCost * (usdPerAed > 0 ? usdPerAed : 0)
+        : sourceCurrency === "DZD" && dealRateDzdPerUsd > 0
+          ? sourceCost / dealRateDzdPerUsd
+          : sourceCurrency === "DZD" && rates.DZD > 0 && usdPerAed > 0
+            ? (sourceCost / rates.DZD) * usdPerAed
+            : 0;
   const carCostDzd =
     sourceCurrency === "DZD"
       ? sourceCost
-      : dealRateDzdPerAed > 0
-        ? carCostAed * dealRateDzdPerAed
-        : 0;
+      : dealRateDzdPerUsd > 0
+        ? carCostUsd * dealRateDzdPerUsd
+        : dealRateDzdPerAed > 0
+          ? carCostAed * dealRateDzdPerAed
+          : 0;
   const shippingAed = parseNum(form.shippingAed);
   const inspectionAed = parseNum(form.inspectionAed);
   const recoveryAed = parseNum(form.recoveryAed);
@@ -647,9 +670,16 @@ export default function DealsPage() {
     recoveryAed +
     maintenanceAed +
     otherAed;
+  const totalExpensesUsd =
+    carCostUsd + (shippingAed * usdPerAed) + (inspectionAed * usdPerAed) + (recoveryAed * usdPerAed) + (maintenanceAed * usdPerAed) + (otherAed * usdPerAed);
   const totalExpensesDzd =
-    dealRateDzdPerAed > 0 ? totalExpenses * dealRateDzdPerAed : 0;
+    dealRateDzdPerUsd > 0
+      ? totalExpensesUsd * dealRateDzdPerUsd
+      : dealRateDzdPerAed > 0
+        ? totalExpenses * dealRateDzdPerAed
+        : 0;
   const profitPreviewDzd = saleDzd - totalExpensesDzd;
+  const profitPreviewUsd = saleUsd - totalExpensesUsd;
   const profitPreview =
     dealRateDzdPerAed > 0
       ? profitPreviewDzd / dealRateDzdPerAed
@@ -675,7 +705,14 @@ export default function DealsPage() {
       saleDzd: deal.sale_dzd != null ? String(deal.sale_dzd) : "",
       amountReceivedDzd:
         deal.collected_dzd != null ? String(deal.collected_dzd) : "0",
-      rate: deal.rate != null ? String(deal.rate) : "",
+      rate:
+        deal.rate != null
+          ? String(
+              rates.USD > 0
+                ? deal.rate / rates.USD
+                : deal.rate
+            )
+          : "",
       shippingAed: deal.cost_shipping != null ? String(deal.cost_shipping) : "",
       inspectionAed: deal.cost_inspection != null ? String(deal.cost_inspection) : "",
       recoveryAed: deal.cost_recovery != null ? String(deal.cost_recovery) : "",
@@ -739,7 +776,7 @@ export default function DealsPage() {
     if (!form.saleDzd.trim()) return "Sale Price DZD is required.";
     if (!isStaff) {
       if (!form.rate.trim()) return "Rate at Deal is required.";
-      if (rate <= 0) return "Rate at Deal must be > 0.";
+      if (dealRateDzdPerUsd <= 0) return "Rate at Deal must be > 0.";
     }
     return null;
   };
@@ -770,7 +807,7 @@ export default function DealsPage() {
       handled_by: form.employeeId || null,
       handled_by_name: form.employeeId ? (employees.find((e) => e.id === form.employeeId)?.name ?? "") : null,
       sale_dzd: saleDzd,
-      rate,
+      rate: dealRateDzdPerAed,
       sale_aed: saleAed,
       cost_car: carCostAed,
       cost_shipping: shippingAed,
@@ -786,7 +823,7 @@ export default function DealsPage() {
       status: form.status,
       notes: form.notes || null,
       drive_link: form.driveLink.trim() || null,
-      sale_usd: parseNum(form.saleUsd) || null,
+      sale_usd: parseNum(form.saleUsd) || saleUsd || null,
       created_by: user?.id || null,
       pending_completion: isStaff ? true : false,
     };
@@ -893,7 +930,7 @@ export default function DealsPage() {
                   deal_id: editingDealId,
                   amount,
                   currency: "DZD",
-                  rate_snapshot: rate > 0 ? rate : null,
+                  rate_snapshot: dealRateDzdPerAed > 0 ? dealRateDzdPerAed : null,
                   type: "per_deal",
                   status: "pending",
                   month,
@@ -935,7 +972,7 @@ export default function DealsPage() {
                 deal_id: editingDealId,
                 amount,
                 currency: "DZD",
-                rate_snapshot: rate > 0 ? rate : null,
+                rate_snapshot: dealRateDzdPerAed > 0 ? dealRateDzdPerAed : null,
                 type: "per_deal",
                 status: "pending",
                 month,
@@ -1076,7 +1113,7 @@ export default function DealsPage() {
                 deal_id: dealId,
                 amount,
                 currency: "DZD",
-                rate_snapshot: rate > 0 ? rate : null,
+                rate_snapshot: dealRateDzdPerAed > 0 ? dealRateDzdPerAed : null,
                 type: "per_deal",
                 status: "pending",
                 month,
@@ -1105,7 +1142,7 @@ export default function DealsPage() {
             dzd: amountReceivedDzd,
             date: form.date,
             type: "deal_init",
-            rate,
+            rate: dealRateDzdPerAed,
             notes: form.notes || null,
           })
           .select("*")
@@ -1117,7 +1154,7 @@ export default function DealsPage() {
         } else {
           const paymentId = (paymentInsert.data as DealPayment).id;
 
-          const aedEquivalent = rate > 0 ? amountReceivedDzd / rate : null;
+          const aedEquivalent = dealRateDzdPerAed > 0 ? amountReceivedDzd / dealRateDzdPerAed : null;
 
           const movementInsert = await supabase.from("movements").insert({
             date: form.date,
@@ -1126,7 +1163,7 @@ export default function DealsPage() {
             description: form.notes || "Initial payment on deal creation",
             amount: amountReceivedDzd,
             currency: "DZD",
-            rate: rate || null,
+            rate: dealRateDzdPerAed || null,
             aed_equivalent: aedEquivalent,
             pocket: "Algeria Cash",
             deal_id: dealId,
@@ -1713,8 +1750,8 @@ export default function DealsPage() {
                     <th className="px-4 py-3">VIN</th>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Sale DZD</th>
-                    {!isStaff && <th className="px-4 py-3 hidden sm:table-cell">Rate</th>}
-                    {!isStaff && <th className="px-4 py-3">Sale AED</th>}
+                    {!isStaff && <th className="px-4 py-3 hidden sm:table-cell">Rate (DZD/USD)</th>}
+                    {!isStaff && <th className="px-4 py-3">Sale USD</th>}
                     {!isStaff && <th className="px-4 py-3 hidden sm:table-cell">Total Expenses</th>}
                     {!isStaff && <th className="px-4 py-3">Profit</th>}
                     {!isStaff && <th className="px-4 py-3 hidden md:table-cell">Source</th>}
@@ -1770,8 +1807,12 @@ export default function DealsPage() {
                         </td>
                         <td className="px-4 py-3 text-app">{formatDate(d.date ?? d.created_at)}</td>
                         <td className="px-4 py-3 text-app">{formatMoney(d.sale_dzd, "DZD")}</td>
-                        {!isStaff && <td className="px-4 py-3 text-app hidden sm:table-cell">{d.rate != null ? formatNumber(d.rate) : "-"}</td>}
-                        {!isStaff && <td className="px-4 py-3 text-app">{formatMoney(d.sale_aed, "AED")}</td>}
+                        {!isStaff && (
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">
+                            {d.rate != null && rates.USD > 0 ? formatNumber(d.rate / rates.USD) : "-"}
+                          </td>
+                        )}
+                        {!isStaff && <td className="px-4 py-3 text-app">{formatMoney(d.sale_usd, "USD")}</td>}
                         {!isStaff && <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(total, "AED")}</td>}
                         {!isStaff && <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(d.profit, "AED")}</td>}
                         {!isStaff && <td className="px-4 py-3 text-app hidden md:table-cell">{((d as Deal & { source?: string | null }).source || "STOCK").toString()}</td>}
@@ -1850,8 +1891,14 @@ export default function DealsPage() {
                                       carVin: dealCar?.vin ?? null,
                                       countryOfOrigin: (dealCar as Car & { country_of_origin?: string | null })?.country_of_origin ?? null,
                                       totalAmountUsd: d.sale_usd ?? 0,
-                                      advanceUsd: d.sale_usd && d.collected_dzd && d.rate ? Math.round(d.collected_dzd / d.rate) : 0,
-                                      balanceUsd: d.sale_usd && d.pending_dzd && d.rate ? Math.round(d.pending_dzd / d.rate) : 0,
+                                      advanceUsd:
+                                        d.sale_usd && d.collected_dzd && d.rate && rates.USD > 0
+                                          ? Math.round(d.collected_dzd / (d.rate / rates.USD))
+                                          : 0,
+                                      balanceUsd:
+                                        d.sale_usd && d.pending_dzd && d.rate && rates.USD > 0
+                                          ? Math.round(d.pending_dzd / (d.rate / rates.USD))
+                                          : 0,
                                     }}
                                   />
                                 </>
@@ -1880,7 +1927,7 @@ export default function DealsPage() {
                   {editingDealId ? "Edit Deal" : "Add Deal"}
                 </div>
                 <div className="text-xs text-muted">
-                  Sale AED and Profit update automatically as you type.
+                  Sale USD and Profit update automatically as you type.
                 </div>
               </div>
               <button
@@ -2032,7 +2079,7 @@ export default function DealsPage() {
               {!isStaff && (
                 <>
                   <label className="space-y-1 text-xs text-app">
-                    <span className="font-semibold">Rate at Deal (DZD/AED)</span>
+                    <span className="font-semibold">Rate at Deal (DZD/USD)</span>
                     <input
                       type="number"
                       value={form.rate}
@@ -2043,8 +2090,12 @@ export default function DealsPage() {
 
                   <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="font-semibold text-app">Sale AED</span>
-                      <span className="text-app">{formatMoney(saleAed, "AED")}</span>
+                      <span className="font-semibold text-app">Sale USD</span>
+                      <span className="text-app">{formatMoney(saleUsd, "USD")}</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-500">
+                      <span>Derived Sale AED</span>
+                      <span>{formatMoney(saleAed, "AED")}</span>
                     </div>
                   </div>
                 </>
@@ -2075,15 +2126,11 @@ export default function DealsPage() {
                       <span className="text-app">{formatMoney(sourceCost, sourceCurrency)}</span>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-                      <span className="font-semibold text-app">Car Cost (converted DZD)</span>
-                      <span className="text-app">{formatMoney(carCostDzd, "DZD")}</span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-                      <span className="font-semibold text-app">Car Cost (converted AED)</span>
-                      <span className="text-app">{formatMoney(carCostAed, "AED")}</span>
+                      <span className="font-semibold text-app">Car Cost (converted USD)</span>
+                      <span className="text-app">{formatMoney(carCostUsd, "USD")}</span>
                     </div>
                     <div className="mt-1 text-[11px] text-gray-400">
-                      Auto-filled from selected car purchase price and converted with dashboard rates.
+                      Auto-filled from selected car purchase price and converted with dashboard USD rate.
                     </div>
                   </div>
 
@@ -2159,12 +2206,16 @@ export default function DealsPage() {
                       <span className="text-[var(--color-accent)]">{formatMoney(profitPreviewDzd, "DZD")}</span>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-500">
-                      <span>Derived Profit (AED)</span>
-                      <span>{formatMoney(profitPreview, "AED")}</span>
+                      <span>Profit (USD)</span>
+                      <span>{formatMoney(profitPreviewUsd, "USD")}</span>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
                       <span>Total expenses (AED)</span>
                       <span>{formatMoney(totalExpenses, "AED")}</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
+                      <span>Total expenses (USD)</span>
+                      <span>{formatMoney(totalExpensesUsd, "USD")}</span>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
                       <span>Total expenses (DZD)</span>
@@ -2287,12 +2338,12 @@ export default function DealsPage() {
                 {!isStaff && (
                   <>
                     <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                      <span>Rate</span>
-                      <span>{viewDeal.rate != null ? formatNumber(viewDeal.rate) : "-"}</span>
+                      <span>Rate (DZD/USD)</span>
+                      <span>{viewDeal.rate != null && rates.USD > 0 ? formatNumber(viewDeal.rate / rates.USD) : "-"}</span>
                     </div>
                     <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                      <span>Sale AED</span>
-                      <span>{formatMoney(viewDeal.sale_aed, "AED")}</span>
+                      <span>Sale USD</span>
+                      <span>{formatMoney(viewDeal.sale_usd, "USD")}</span>
                     </div>
                   </>
                 )}

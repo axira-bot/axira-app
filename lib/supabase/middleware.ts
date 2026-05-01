@@ -117,7 +117,7 @@ export async function updateSession(request: NextRequest) {
     (user.user_metadata as { role?: string } | null)?.role ??
     (user.app_metadata as { role?: string } | null)?.role ??
     null;
-  const effectiveRole = (profileRole || metadataRole || "").toLowerCase();
+  const effectiveRole = (profileRole || metadataRole || "staff").toLowerCase();
 
   if (path.startsWith("/admin/users")) {
     if (profileError || !isOwnerLikeRole(effectiveRole)) {
