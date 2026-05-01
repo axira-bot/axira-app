@@ -161,26 +161,37 @@ export default function EmployeesPage() {
   const fetchAll = async () => {
     setIsLoading(true);
     setError(null);
-    const [
-      { data: empData, error: empErr },
-      { data: commData, error: commErr },
-      { data: dealsData, error: dealsErr },
-    ] = await Promise.all([
-      supabase.from("employees").select("*").order("name", { ascending: true }),
-      supabase.from("commissions").select("*").order("created_at", { ascending: false }),
-      supabase.from("deals").select("id, date, car_label, client_name, profit"),
-    ]);
-    if (empErr) setError(empErr.message);
-    if (commErr) setError(commErr.message);
-    if (dealsErr) setError(dealsErr.message);
-    setEmployees((empData as Employee[]) ?? []);
-    setCommissions((commData as Commission[]) ?? []);
-    const map: Record<string, DealRow> = {};
-    ((dealsData as DealRow[]) ?? []).forEach((d) => {
-      map[d.id] = d;
-    });
-    setDealsMap(map);
-    setIsLoading(false);
+    try {
+      const [
+        { data: empData, error: empErr },
+        { data: commData, error: commErr },
+        { data: dealsData, error: dealsErr },
+      ] = await Promise.all([
+        supabase.from("employees").select("*").order("name", { ascending: true }),
+        supabase.from("commissions").select("*").order("created_at", { ascending: false }),
+        supabase.from("deals").select("id, date, car_label, client_name, profit"),
+      ]);
+
+      if (empErr || commErr) {
+        setError(empErr?.message ?? commErr?.message ?? "Failed to load employees data");
+        return;
+      }
+
+      if (dealsErr) {
+        // Deals are only used as lookup context; keep employees screen usable if deals is restricted by RLS.
+        console.warn("Employees page: deals lookup unavailable", dealsErr.message);
+      }
+
+      setEmployees((empData as Employee[]) ?? []);
+      setCommissions((commData as Commission[]) ?? []);
+      const map: Record<string, DealRow> = {};
+      ((dealsData as DealRow[]) ?? []).forEach((d) => {
+        map[d.id] = d;
+      });
+      setDealsMap(map);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
+import { normalizeRole } from "@/lib/auth/roles";
 
 type Supplier = { id: string; name: string | null };
 type PurchaseOrder = {
@@ -56,9 +57,17 @@ function formatMoney(amount: number, currency: string) {
 }
 
 export default function PurchaseOrdersPage() {
-  const { role } = useAuth();
-  const isPrivileged = ["owner", "manager", "admin", "super_admin"].includes((role || "").toLowerCase());
-  const isOwner = ["owner", "admin", "super_admin"].includes((role || "").toLowerCase());
+  const { user, profile, permissions, role } = useAuth();
+  const effectiveRole = useMemo(() => {
+    const metaRole = (user?.app_metadata as { role?: string } | undefined)?.role;
+    return normalizeRole(profile?.role ?? metaRole ?? role ?? "");
+  }, [user, profile, role]);
+  const isPrivileged = ["owner", "manager", "admin", "super_admin"].includes(effectiveRole);
+  const isOwner = ["owner", "admin", "super_admin"].includes(effectiveRole);
+  const canManageSuppliers = Boolean(
+    permissions.suppliers ||
+      ["owner", "admin", "super_admin", "manager"].includes(effectiveRole)
+  );
   const [rows, setRows] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [catalogRows, setCatalogRows] = useState<SupplierCatalog[]>([]);
@@ -357,6 +366,14 @@ export default function PurchaseOrdersPage() {
           <h1 className="text-2xl font-bold">Purchase Orders</h1>
           <p className="text-xs text-muted">Bulk procurement, payment tracking, and receive workflow.</p>
         </div>
+        {canManageSuppliers ? (
+          <Link
+            href="/suppliers"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-[var(--color-accent)] bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+          >
+            Add / manage suppliers
+          </Link>
+        ) : null}
       </div>
 
       <section className="grid gap-3 sm:grid-cols-3">

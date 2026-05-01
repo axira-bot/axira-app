@@ -16,6 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/investors":   "Investors",
   "/reports":     "Reports",
   "/clients":     "Clients",
+  "/suppliers":   "Suppliers",
   "/admin/users": "Users",
   "/login":       "Login",
 };
@@ -33,6 +34,7 @@ const PAGE_SUBTITLES: Record<string, string> = {
   "/investors":   "Investor overview",
   "/reports":     "Financial reports",
   "/clients":     "Client directory",
+  "/suppliers":   "Procurement suppliers for POs",
   "/admin/users": "User management",
 };
 

@@ -90,6 +90,11 @@ const icons: Record<string, React.ReactNode> = {
       <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
     </svg>
   ),
+  "/suppliers": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v0"/><path d="M9 12v0"/><path d="M9 15v0"/><path d="M9 18v0"/>
+    </svg>
+  ),
   "/admin/users": (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
@@ -113,6 +118,7 @@ const navItems = [
   { href: "/reports",     label: "Reports" },
   { href: "/clients",     label: "Clients" },
   { href: "/inquiries",   label: "Inquiries" },
+  { href: "/suppliers",   label: "Suppliers" },
   { href: "/purchase-orders", label: "Purchase Orders" },
 ];
 
@@ -120,7 +126,7 @@ const navItems = [
 const groups = [
   ["/dashboard", "/activity"],
   ["/inventory", "/deals", "/containers", "/movements", "/transfers", "/debts"],
-  ["/employees", "/payroll", "/investors", "/reports", "/clients", "/inquiries", "/purchase-orders"],
+  ["/employees", "/payroll", "/investors", "/reports", "/clients", "/inquiries", "/suppliers", "/purchase-orders"],
 ];
 
 function roleLabel(role: string | null): string {
@@ -143,6 +149,7 @@ const ROUTE_FEATURE_MAP: Record<string, FeatureKey> = {
   "/reports": "reports",
   "/clients": "clients",
   "/inquiries": "inquiries",
+  "/suppliers": "suppliers",
   "/purchase-orders": "purchase_orders",
   "/admin/users": "admin_users",
 };

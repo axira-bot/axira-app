@@ -265,11 +265,11 @@ FROM (
     ('owner','dashboard',true),('owner','activity',true),('owner','inventory',true),('owner','deals',true),
     ('owner','containers',true),('owner','movements',true),('owner','transfers',true),('owner','debts',true),
     ('owner','employees',true),('owner','payroll',true),('owner','investors',true),('owner','reports',true),
-    ('owner','clients',true),('owner','inquiries',true),('owner','purchase_orders',true),('owner','admin_users',true),
+    ('owner','clients',true),('owner','inquiries',true),('owner','purchase_orders',true),('owner','suppliers',true),('owner','admin_users',true),
     ('manager','dashboard',true),('manager','activity',true),('manager','inventory',true),('manager','deals',true),
     ('manager','containers',true),('manager','movements',true),('manager','debts',true),('manager','payroll',true),('manager','purchase_orders',true),
-    ('manager','reports',true),('manager','clients',true),('manager','inquiries',true),
-    ('staff','inventory',true),('staff','deals',true),('staff','clients',true),('staff','inquiries',true),('staff','purchase_orders',true),
+    ('manager','reports',true),('manager','clients',true),('manager','inquiries',true),('manager','suppliers',true),
+    ('staff','inventory',true),('staff','deals',true),('staff','clients',true),('staff','inquiries',true),('staff','purchase_orders',true),('staff','suppliers',false),
     ('accountant','activity',true),('accountant','movements',true),('accountant','reports',true),('accountant','payroll',true),
     ('investor','investors',true)
 ) AS defaults(role, feature_key, allowed)

@@ -136,75 +136,89 @@ export default function InvestorsPage() {
   const fetchAll = async () => {
     setIsLoading(true);
     setError(null);
-    const [
-      { data: invData, error: invErr },
-      { data: retData, error: retErr },
-      { data: dealsData, error: dealsErr },
-      { data: settingsData, error: settingsErr },
-    ] = await Promise.all([
-      supabase.from("investors").select("*").order("name", { ascending: true }),
-      supabase.from("investor_returns").select("*").order("month", { ascending: false }),
-      supabase.from("deals").select("id, date, profit"),
-      supabase
-        .from("app_settings")
-        .select("key, value")
-        .in("key", [
-          "total_capital",
-          "owner_name",
-          "owner_capital",
-          "owner_capital_currency",
-          "business_valuation",
-          "share_price",
-          "total_shares",
-          "available_shares",
-          "owner_notes",
-        ]),
-    ]);
-    if (invErr) setError(invErr.message);
-    if (retErr) setError(retErr.message);
-    if (dealsErr) setError(dealsErr.message);
-    if (settingsErr) setError(settingsErr.message);
-    setInvestors((invData as Investor[]) ?? []);
-    setReturns((retData as InvestorReturn[]) ?? []);
-    setDeals((dealsData as DealProfit[]) ?? []);
-    if (settingsData) {
-      for (const row of settingsData as { key: string; value: string | null }[]) {
-        switch (row.key) {
-          case "total_capital":
-            setTotalCapitalOverride(row.value ?? "");
-            break;
-          case "owner_name":
-            setOwnerName(row.value ?? "Rami");
-            break;
-          case "owner_capital":
-            setOwnerCapital(row.value ?? "");
-            break;
-          case "owner_capital_currency":
-            if (row.value === "AED" || row.value === "DZD" || row.value === "EUR" || row.value === "USD") {
-              setOwnerCapitalCurrency(row.value);
-            }
-            break;
-          case "business_valuation":
-            setBusinessValuation(row.value ?? "");
-            break;
-          case "share_price":
-            setSharePrice(row.value ?? "");
-            break;
-          case "total_shares":
-            setTotalShares(row.value ?? "");
-            break;
-          case "available_shares":
-            setAvailableShares(row.value ?? "");
-            break;
-          case "owner_notes":
-            setOwnerNotes(row.value ?? "");
-            break;
-          default:
-            break;
+    try {
+      const [
+        { data: invData, error: invErr },
+        { data: retData, error: retErr },
+        { data: dealsData, error: dealsErr },
+        { data: settingsData, error: settingsErr },
+      ] = await Promise.all([
+        supabase.from("investors").select("*").order("name", { ascending: true }),
+        supabase.from("investor_returns").select("*").order("month", { ascending: false }),
+        supabase.from("deals").select("id, date, profit"),
+        supabase
+          .from("app_settings")
+          .select("key, value")
+          .in("key", [
+            "total_capital",
+            "owner_name",
+            "owner_capital",
+            "owner_capital_currency",
+            "business_valuation",
+            "share_price",
+            "total_shares",
+            "available_shares",
+            "owner_notes",
+          ]),
+      ]);
+
+      if (invErr || retErr) {
+        setError(invErr?.message ?? retErr?.message ?? "Failed to load investors data");
+        return;
+      }
+
+      if (dealsErr) {
+        // Deals power analytics only; don't block investors list if deals has stricter RLS.
+        console.warn("Investors page: deals lookup unavailable", dealsErr.message);
+      }
+      if (settingsErr) {
+        // Owner tab settings are optional for listing investors.
+        console.warn("Investors page: app settings unavailable", settingsErr.message);
+      }
+
+      setInvestors((invData as Investor[]) ?? []);
+      setReturns((retData as InvestorReturn[]) ?? []);
+      setDeals((dealsData as DealProfit[]) ?? []);
+      if (settingsData) {
+        for (const row of settingsData as { key: string; value: string | null }[]) {
+          switch (row.key) {
+            case "total_capital":
+              setTotalCapitalOverride(row.value ?? "");
+              break;
+            case "owner_name":
+              setOwnerName(row.value ?? "Rami");
+              break;
+            case "owner_capital":
+              setOwnerCapital(row.value ?? "");
+              break;
+            case "owner_capital_currency":
+              if (row.value === "AED" || row.value === "DZD" || row.value === "EUR" || row.value === "USD") {
+                setOwnerCapitalCurrency(row.value);
+              }
+              break;
+            case "business_valuation":
+              setBusinessValuation(row.value ?? "");
+              break;
+            case "share_price":
+              setSharePrice(row.value ?? "");
+              break;
+            case "total_shares":
+              setTotalShares(row.value ?? "");
+              break;
+            case "available_shares":
+              setAvailableShares(row.value ?? "");
+              break;
+            case "owner_notes":
+              setOwnerNotes(row.value ?? "");
+              break;
+            default:
+              break;
+          }
         }
       }
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   useEffect(() => {

@@ -50,6 +50,7 @@ function roleFallbackPermissions(role: string | null | undefined): FeaturePermis
     p.clients = true;
     p.inquiries = true;
     p.purchase_orders = true;
+    p.suppliers = true;
     return p;
   }
   return p;

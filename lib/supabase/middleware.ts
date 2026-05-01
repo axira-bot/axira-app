@@ -29,6 +29,7 @@ const ROUTE_FEATURE_GATES: Array<{ prefix: string; feature: FeatureKey }> = [
   { prefix: "/clients", feature: "clients" },
   { prefix: "/inquiries", feature: "inquiries" },
   { prefix: "/purchase-orders", feature: "purchase_orders" },
+  { prefix: "/suppliers", feature: "suppliers" },
 ];
 
 function roleFallbackAllows(role: string, feature: FeatureKey): boolean {
@@ -50,6 +51,7 @@ function roleFallbackAllows(role: string, feature: FeatureKey): boolean {
       "clients",
       "inquiries",
       "purchase_orders",
+      "suppliers",
     ].includes(feature);
   }
   return false;
