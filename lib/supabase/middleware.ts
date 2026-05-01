@@ -57,6 +57,15 @@ function roleFallbackAllows(role: string, feature: FeatureKey): boolean {
   return false;
 }
 
+function defaultRouteForRole(role: string): string {
+  if (isOwnerLikeRole(role)) return "/dashboard";
+  if (role === "manager") return "/dashboard";
+  if (role === "staff") return "/deals";
+  if (role === "accountant") return "/movements";
+  if (role === "investor") return "/investors";
+  return "/dashboard";
+}
+
 export async function updateSession(request: NextRequest) {
   const response = NextResponse.next({ request });
 
@@ -97,7 +106,18 @@ export async function updateSession(request: NextRequest) {
 
   if (path === "/login") {
     if (user) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      const loginRole =
+        ((profile as { role?: string } | null)?.role ||
+          (user.user_metadata as { role?: string } | null)?.role ||
+          (user.app_metadata as { role?: string } | null)?.role ||
+          "staff")
+          .toLowerCase();
+      return NextResponse.redirect(new URL(defaultRouteForRole(loginRole), request.url));
     }
     return response;
   }
@@ -136,7 +156,11 @@ export async function updateSession(request: NextRequest) {
         // Keep role-based fallback when permission table/client is unavailable.
       }
       if (!allowed) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+        const fallbackRoute = defaultRouteForRole(effectiveRole);
+        if (path === fallbackRoute) {
+          return NextResponse.redirect(new URL("/login", request.url));
+        }
+        return NextResponse.redirect(new URL(fallbackRoute, request.url));
       }
     }
   }
