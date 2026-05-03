@@ -30,15 +30,39 @@ export type DisplayFx = {
   aedPerDzd: number;
 };
 
-/** App settings: rate_USD / rate_DZD / rate_EUR are foreign currency per 1 AED. */
-export function displayFxFromAppRates(r: {
-  USD: number;
-  DZD: number;
-  EUR: number;
-}): DisplayFx {
+/**
+ * Normalizes dashboard `rate_USD` / `rate_EUR` into **AED per 1 foreign unit** for display math.
+ * Settings may store either:
+ * - **USD/EUR per 1 AED** (typical ~0.20–0.35), or
+ * - **AED per 1 USD/EUR** (typical ~3–5), which some teams enter by habit.
+ * Values ≥ 1.2 are treated as AED per unit; smaller values as foreign per AED (inverted).
+ */
+function appRateToAedPerForeignUnit(raw: number): number {
+  if (!Number.isFinite(raw) || raw <= 0) return 0;
+  return raw >= 1.2 ? raw : 1 / raw;
+}
+
+/** USD per 1 AED for formulas that expect `rate_USD` as USD/AED, regardless of storage convention. */
+export function usdPerAedFromAppUsdSetting(storedUsdKey: number): number {
+  const aedPerUsd = appRateToAedPerForeignUnit(storedUsdKey);
+  return aedPerUsd > 0 ? 1 / aedPerUsd : 0;
+}
+
+/** EUR per 1 AED for formulas that expect `rate_EUR` as EUR/AED, regardless of storage convention. */
+export function eurPerAedFromAppEurSetting(storedEurKey: number): number {
+  const aedPerEur = appRateToAedPerForeignUnit(storedEurKey);
+  return aedPerEur > 0 ? 1 / aedPerEur : 0;
+}
+
+/**
+ * Build display FX from app_settings-style keys.
+ * - USD/EUR: normalized via {@link appRateToAedPerForeignUnit}.
+ * - DZD: still **DZD per 1 AED** (e.g. 68); output is AED per 1 DZD = 1 / rate.
+ */
+export function displayFxFromAppRates(r: { USD: number; DZD: number; EUR: number }): DisplayFx {
   return {
-    aedPerUsd: r.USD > 0 ? 1 / r.USD : 0,
-    aedPerEur: r.EUR > 0 ? 1 / r.EUR : 0,
+    aedPerUsd: appRateToAedPerForeignUnit(r.USD),
+    aedPerEur: appRateToAedPerForeignUnit(r.EUR),
     aedPerDzd: r.DZD > 0 ? 1 / r.DZD : 0,
   };
 }

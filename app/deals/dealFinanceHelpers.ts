@@ -1,5 +1,6 @@
 import type { Car } from "@/lib/types";
 import type { DealExpenseFact } from "@/lib/finance/dealMoney";
+import { displayFxFromAppRates } from "@/lib/finance/dealMoney";
 
 export type DealExpenseRow = {
   id?: string;
@@ -10,17 +11,58 @@ export type DealExpenseRow = {
   rate_to_aed: number;
 };
 
-export function carPurchaseToCostFact(car: Car | null): {
+/** USD/EUR in inventory: normally AED per 1 foreign unit (~3.x for USD). Values ~0.2–0.35 are usually USD-per-AED by mistake — invert. */
+function normalizeUsdEurRateToAedPerUnit(currency: string, raw: number): number {
+  const c = currency.toUpperCase();
+  if (!(c === "USD" || c === "EUR") || !(raw > 0)) return raw;
+  if (raw < 0.45) return 1 / raw;
+  return raw;
+}
+
+type AppRatesSlice = { USD: number; DZD: number; EUR: number };
+
+/**
+ * Snapshot for deal cost: amount + currency + rate_to_aed (AED per 1 unit; multiply to get AED).
+ * - DZD: `purchase_rate` in inventory is DZD per 1 AED → rateToAed = 1 / purchase_rate.
+ * - USD/EUR: `purchase_rate` is AED per 1 unit; small values are normalized (inverted) when likely USD/EUR per AED.
+ * - Missing rate (e.g. PO-created cars): use optional `appRates` dashboard snapshot.
+ */
+export function carPurchaseToCostFact(
+  car: Car | null,
+  appRates?: AppRatesSlice
+): {
   amount: number;
   currency: string;
   rateToAed: number;
 } {
   if (!car) return { amount: 0, currency: "AED", rateToAed: 1 };
-  const currency = (car.purchase_currency || "AED").toUpperCase();
+  const currency = (String(car.purchase_currency ?? "").trim() || "AED").toUpperCase();
   if (currency === "AED") return { amount: car.purchase_price ?? 0, currency: "AED", rateToAed: 1 };
-  const pr = car.purchase_rate;
-  const rate = pr != null && pr > 0 ? pr : 0.0000001;
-  return { amount: car.purchase_price ?? 0, currency, rateToAed: rate };
+
+  const fx = appRates ? displayFxFromAppRates(appRates) : null;
+  const rawPr = car.purchase_rate;
+  const amount = car.purchase_price ?? 0;
+
+  if (currency === "DZD") {
+    const dzdPerAed =
+      rawPr != null && rawPr > 0
+        ? rawPr
+        : fx && appRates && appRates.DZD > 0
+          ? appRates.DZD
+          : 0;
+    const rateToAed = dzdPerAed > 0 ? 1 / dzdPerAed : 0.0000001;
+    return { amount, currency: "DZD", rateToAed };
+  }
+
+  let rateToAed: number;
+  if (rawPr == null || !(rawPr > 0)) {
+    if (currency === "USD" && fx && fx.aedPerUsd > 0) rateToAed = fx.aedPerUsd;
+    else if (currency === "EUR" && fx && fx.aedPerEur > 0) rateToAed = fx.aedPerEur;
+    else rateToAed = 0.0000001;
+  } else {
+    rateToAed = normalizeUsdEurRateToAedPerUnit(currency, rawPr);
+  }
+  return { amount, currency, rateToAed };
 }
 
 export function parseNumLocal(s: string): number {
@@ -28,30 +70,49 @@ export function parseNumLocal(s: string): number {
   return Number.isFinite(v) ? v : 0;
 }
 
-export function formLinesToExpenseFacts(form: {
-  shippingAed: string;
-  inspectionAed: string;
-  recoveryAed: string;
-  maintenanceAed: string;
-  otherAed: string;
-}): DealExpenseFact[] {
+export function formLinesToExpenseFacts(
+  form: {
+    shippingAed: string;
+    shippingUsd: string;
+    inspectionAed: string;
+    recoveryAed: string;
+    maintenanceAed: string;
+    otherAed: string;
+  },
+  opts?: { usdExpenseRateToAed: number }
+): DealExpenseFact[] {
   const rows: DealExpenseFact[] = [];
-  const add = (expenseType: string, amount: number) => {
-    if (amount > 0) rows.push({ expenseType, amount, currency: "AED", rateToAed: 1 });
+  const add = (expenseType: string, amount: number, currency: string, rateToAed: number) => {
+    if (amount > 0) rows.push({ expenseType, amount, currency, rateToAed });
   };
-  add("shipping", parseNumLocal(form.shippingAed));
-  add("inspection", parseNumLocal(form.inspectionAed));
-  add("recovery", parseNumLocal(form.recoveryAed));
-  add("maintenance", parseNumLocal(form.maintenanceAed));
-  add("other", parseNumLocal(form.otherAed));
+  const usdR = opts?.usdExpenseRateToAed;
+  const shipUsd = parseNumLocal(form.shippingUsd);
+  if (shipUsd > 0 && usdR != null && usdR > 0) {
+    add("shipping", shipUsd, "USD", usdR);
+  } else {
+    add("shipping", parseNumLocal(form.shippingAed), "AED", 1);
+  }
+  add("inspection", parseNumLocal(form.inspectionAed), "AED", 1);
+  add("recovery", parseNumLocal(form.recoveryAed), "AED", 1);
+  add("maintenance", parseNumLocal(form.maintenanceAed), "AED", 1);
+  add("other", parseNumLocal(form.otherAed), "AED", 1);
   return rows;
 }
 
 export function expensesByTypeToFormFields(rows: DealExpenseRow[]) {
+  const shipRows = rows.filter((e) => e.expense_type === "shipping");
+  let shippingAed = "";
+  let shippingUsd = "";
+  for (const e of shipRows) {
+    const c = (e.currency || "AED").toUpperCase();
+    if (c === "USD") shippingUsd = String(e.amount || "");
+    else if (c === "AED") shippingAed = String(e.amount || "");
+  }
   const sum = (t: string) =>
     rows.filter((e) => e.expense_type === t).reduce((s, e) => s + (e.amount || 0), 0);
   return {
-    shippingAed: String(sum("shipping") || ""),
+    shippingAed,
+    shippingUsd,
     inspectionAed: String(sum("inspection") || ""),
     recoveryAed: String(sum("recovery") || ""),
     maintenanceAed: String(sum("maintenance") || ""),
@@ -59,10 +120,7 @@ export function expensesByTypeToFormFields(rows: DealExpenseRow[]) {
   };
 }
 
-export function dealListSaleDzd(d: {
-  sale_currency?: string | null;
-  sale_amount?: number | null;
-}): number {
+export function dealListSaleDzd(d: { sale_currency?: string | null; sale_amount?: number | null }): number {
   return String(d.sale_currency || "").toUpperCase() === "DZD" ? Number(d.sale_amount ?? 0) : 0;
 }
 

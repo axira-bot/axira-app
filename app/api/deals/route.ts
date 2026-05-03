@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeRole } from "@/lib/auth/roles";
 import { carPurchaseToCostFact } from "@/app/deals/dealFinanceHelpers";
 import type { Car } from "@/lib/types";
+import { fetchAppRatesFromSettingsTable } from "@/lib/rates";
 
 export const dynamic = "force-dynamic";
 
@@ -106,7 +107,8 @@ export async function POST(request: NextRequest) {
         .select("purchase_price, purchase_currency, purchase_rate")
         .eq("id", body.car_id)
         .maybeSingle();
-      const cf = carPurchaseToCostFact((carRow as Car | null) ?? null);
+      const dashboardRates = await fetchAppRatesFromSettingsTable(admin);
+      const cf = carPurchaseToCostFact((carRow as Car | null) ?? null, dashboardRates);
       costAmount = cf.amount;
       costCurrency = cf.currency;
       costRateToAed = cf.rateToAed;

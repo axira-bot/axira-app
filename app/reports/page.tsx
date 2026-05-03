@@ -7,7 +7,7 @@ import * as XLSX from "xlsx-js-style";
 import { getRates, type AppRates } from "@/lib/rates";
 import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
 import { dealListSaleDzd } from "@/app/deals/dealFinanceHelpers";
-import { toAed } from "@/lib/finance/dealMoney";
+import { toAed, usdPerAedFromAppUsdSetting } from "@/lib/finance/dealMoney";
 
 const ACCENT_RED = "C0392B";
 const WHITE = "FFFFFF";
@@ -492,7 +492,7 @@ export default function ReportsPage() {
       ["DEALS"],
       ["Client", "Car", "Date", "Sale DZD", "Rate", "Sale AED", "Expenses", "Profit", "Status"],
       ...plFilteredDeals.map((d) => {
-        const usdPerAed = rates?.USD ?? 0;
+        const usdPerAed = usdPerAedFromAppUsdSetting(rates?.USD ?? 0);
         return [
         d.client_name ?? "",
         d.car_label ?? "",
@@ -597,7 +597,7 @@ export default function ReportsPage() {
     dealColHeaders.forEach((h, c) => setCellValueAndStyle(ws, dealsHeaderRow + 1, c, h, { font: { bold: true } }));
     plFilteredDeals.forEach((d, i) => {
       const r = dealsHeaderRow + 2 + i;
-      const usdPerAed = rates?.USD ?? 0;
+      const usdPerAed = usdPerAedFromAppUsdSetting(rates?.USD ?? 0);
       const row = [
         d.client_name ?? "",
         d.car_label ?? "",
@@ -725,7 +725,7 @@ export default function ReportsPage() {
       [],
       cols,
       ...dealsFiltered.map((d) => {
-        const usdPerAed = rates?.USD ?? 0;
+        const usdPerAed = usdPerAedFromAppUsdSetting(rates?.USD ?? 0);
         return [
         d.client_name ?? "",
         d.car_label ?? "",
@@ -762,7 +762,7 @@ export default function ReportsPage() {
     const profitColIdx = 7;
     dealsFiltered.forEach((d, i) => {
       const r = 4 + i;
-      const usdPerAed = rates?.USD ?? 0;
+      const usdPerAed = usdPerAedFromAppUsdSetting(rates?.USD ?? 0);
       const row = [
         d.client_name ?? "",
         d.car_label ?? "",
@@ -1315,7 +1315,7 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {dealsFiltered.map((d) => {
-                          const usdPerAed = rates?.USD ?? 0;
+                          const usdPerAed = usdPerAedFromAppUsdSetting(rates?.USD ?? 0);
                           const rateCell = dealRateDzdPerAedForReport(d, usdPerAed);
                           return (
                           <tr key={d.id} className="border-b border-app last:border-b-0">

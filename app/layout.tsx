@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "tailwindcss/index.css";
 import "./globals.css";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import AppShell from "@/components/AppShell";

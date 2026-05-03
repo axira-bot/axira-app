@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  aedToCurrency,
   computeDealCore,
   displayFxFromAppRates,
   saleDzdRateToAedFromDzdPerAed,
   toAed,
+  usdPerAedFromAppUsdSetting,
 } from "./dealMoney";
 
 describe("dealMoney", () => {
@@ -30,6 +32,29 @@ describe("dealMoney", () => {
     expect(core.costAed).toBeCloseTo(costAed, 3);
     expect(core.expensesAedTotal).toBeCloseTo(shipAed, 3);
     expect(core.profitAed).toBeCloseTo(saleAed - costAed - shipAed, 3);
+  });
+
+  it("displayFx accepts rate_USD as USD-per-AED or AED-per-USD", () => {
+    const usdPerAed = 0.2725;
+    const aedPerUsd = 1 / usdPerAed;
+    const fx1 = displayFxFromAppRates({ USD: usdPerAed, DZD: 68, EUR: 0.25 });
+    const fx2 = displayFxFromAppRates({ USD: aedPerUsd, DZD: 68, EUR: 4 });
+    expect(fx1.aedPerUsd).toBeCloseTo(aedPerUsd, 4);
+    expect(fx2.aedPerUsd).toBeCloseTo(aedPerUsd, 4);
+    expect(fx1.aedPerUsd).toBeCloseTo(fx2.aedPerUsd, 4);
+  });
+
+  it("AED → USD display uses ~7.7k USD for 28.5k AED at ~3.67 AED/USD", () => {
+    const fx = displayFxFromAppRates({ USD: 3.67, DZD: 68, EUR: 0.25 });
+    const usd = aedToCurrency(28_500, "USD", fx);
+    expect(usd).toBeCloseTo(28_500 / 3.67, 0);
+  });
+
+  it("usdPerAedFromAppUsdSetting matches either stored convention", () => {
+    const u1 = usdPerAedFromAppUsdSetting(0.2725);
+    const u2 = usdPerAedFromAppUsdSetting(1 / 0.2725);
+    expect(u1).toBeCloseTo(0.2725, 4);
+    expect(u2).toBeCloseTo(0.2725, 4);
   });
 
   it("displayFx changes do not affect computeDealCore", () => {
