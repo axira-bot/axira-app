@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Car } from "@/lib/types";
-import { carPurchaseToCostFact, formLinesToExpenseFacts } from "@/app/deals/dealFinanceHelpers";
+import {
+  carPurchaseToCostFact,
+  formLinesToExpenseFacts,
+  rateFieldFromDeal,
+  rateFieldFromDealWithDashboardFallback,
+  saleRateToAedFromAppRatesForDzdSale,
+} from "@/app/deals/dealFinanceHelpers";
 
 describe("formLinesToExpenseFacts", () => {
   it("records USD shipping with AED snapshot when USD amount set", () => {
@@ -39,6 +45,46 @@ describe("formLinesToExpenseFacts", () => {
       currency: "AED",
       rateToAed: 1,
     });
+  });
+});
+
+describe("saleRateToAedFromAppRatesForDzdSale", () => {
+  it("matches DZD-per-USD composed from dashboard keys", () => {
+    const dash = { USD: 3.67, DZD: 50, EUR: 4 };
+    const sr = saleRateToAedFromAppRatesForDzdSale(dash);
+    expect(sr).not.toBeNull();
+    const usdPerAed = 1 / 3.67;
+    const dzdPerUsd = 50 * 3.67;
+    const dzdPerAed = dzdPerUsd * usdPerAed;
+    expect(sr).toBeCloseTo(1 / dzdPerAed, 8);
+  });
+});
+
+describe("rateFieldFromDealWithDashboardFallback", () => {
+  it("uses stored sale_rate_to_aed when present", () => {
+    const usdPerAed = 1 / 3.67;
+    const dzdPerUsd = 135;
+    const sale_rate_to_aed = 1 / (dzdPerUsd * usdPerAed);
+    const row = { sale_currency: "DZD", sale_rate_to_aed, sale_amount: 1e6 };
+    const dash = { USD: 3.67, DZD: 999, EUR: 4 };
+    const direct = rateFieldFromDeal(row, usdPerAed);
+    const withFb = rateFieldFromDealWithDashboardFallback(row, usdPerAed, dash);
+    expect(direct).toBe(String(dzdPerUsd));
+    expect(withFb).toBe(direct);
+  });
+
+  it("falls back to dashboard when sale_rate_to_aed missing", () => {
+    const usdPerAed = 1 / 3.67;
+    const dash = { USD: 3.67, DZD: 50, EUR: 4 };
+    const inferred = saleRateToAedFromAppRatesForDzdSale(dash);
+    expect(inferred).not.toBeNull();
+    const expectDzdPerUsd = 1 / (inferred! * usdPerAed);
+    const withFb = rateFieldFromDealWithDashboardFallback(
+      { sale_currency: "DZD", sale_rate_to_aed: null, sale_amount: 1 },
+      usdPerAed,
+      dash
+    );
+    expect(Number(withFb)).toBeCloseTo(expectDzdPerUsd, 6);
   });
 });
 

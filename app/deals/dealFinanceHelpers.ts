@@ -1,6 +1,10 @@
 import type { Car } from "@/lib/types";
 import type { DealExpenseFact } from "@/lib/finance/dealMoney";
-import { displayFxFromAppRates } from "@/lib/finance/dealMoney";
+import {
+  displayFxFromAppRates,
+  saleDzdRateToAedFromDzdPerAed,
+  usdPerAedFromAppUsdSetting,
+} from "@/lib/finance/dealMoney";
 
 export type DealExpenseRow = {
   id?: string;
@@ -135,5 +139,52 @@ export function rateFieldFromDeal(
   const sr = d.sale_rate_to_aed;
   if (sr == null || !(sr > 0) || !(usdPerAed > 0)) return "";
   const dzdPerUsd = 1 / (sr * usdPerAed);
+  return String(dzdPerUsd);
+}
+
+/**
+ * When `sale_rate_to_aed` was never stored (common after financial migration if legacy `sale_aed` was empty),
+ * derive the same snapshot shape from dashboard keys: DZD = DZD per 1 AED, USD = normalized to AED/USD.
+ */
+export function saleRateToAedFromAppRatesForDzdSale(appRates: AppRatesSlice): number | null {
+  if (!(appRates.DZD > 0)) return null;
+  const fx = displayFxFromAppRates(appRates);
+  if (!(fx.aedPerUsd > 0)) return null;
+  const usdPerAed = usdPerAedFromAppUsdSetting(appRates.USD);
+  if (!(usdPerAed > 0)) return null;
+  const dzdPerUsd = appRates.DZD * fx.aedPerUsd;
+  const dzdPerAed = dzdPerUsd * usdPerAed;
+  return saleDzdRateToAedFromDzdPerAed(dzdPerAed);
+}
+
+export function withDealSaleRateDashboardFallback<
+  T extends {
+    sale_currency?: string | null;
+    sale_rate_to_aed?: number | null;
+    sale_amount?: number | null;
+  },
+>(d: T, appRates: AppRatesSlice): T {
+  if (d.sale_rate_to_aed != null && d.sale_rate_to_aed > 0) return d;
+  if (String(d.sale_currency || "").toUpperCase() !== "DZD") return d;
+  if (!(Number(d.sale_amount ?? 0) > 0)) return d;
+  const fb = saleRateToAedFromAppRatesForDzdSale(appRates);
+  if (fb == null || !(fb > 0)) return d;
+  return { ...d, sale_rate_to_aed: fb };
+}
+
+export function rateFieldFromDealWithDashboardFallback(
+  d: {
+    sale_currency?: string | null;
+    sale_rate_to_aed?: number | null;
+    sale_amount?: number | null;
+  },
+  usdPerAed: number,
+  appRates: AppRatesSlice
+): string {
+  const fromRow = rateFieldFromDeal(d, usdPerAed);
+  if (fromRow.trim()) return fromRow;
+  const inferred = saleRateToAedFromAppRatesForDzdSale(appRates);
+  if (inferred == null || !(inferred > 0) || !(usdPerAed > 0)) return "";
+  const dzdPerUsd = 1 / (inferred * usdPerAed);
   return String(dzdPerUsd);
 }
