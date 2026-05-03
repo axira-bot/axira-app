@@ -200,30 +200,32 @@ WHERE d.car_id IS NULL
 -- ---------------------------------------------------------------------------
 -- 4b) Backfill cost (stock deal with car; prefer deal_costs purchase when set)
 -- ---------------------------------------------------------------------------
+-- Join must not reference UPDATE target "d" inside JOIN ON (PostgreSQL 42P01).
 UPDATE public.deals d
 SET
   cost_amount = CASE
     WHEN COALESCE(dc.purchase_cost, 0) > 0 THEN dc.purchase_cost
-    ELSE COALESCE(c.purchase_price, d.source_cost, 0)
+    ELSE COALESCE(c.purchase_price, d_src.source_cost, 0)
   END,
   cost_currency = COALESCE(
     NULLIF(TRIM(UPPER(COALESCE(dc.purchase_currency, ''))), ''),
     NULLIF(TRIM(UPPER(COALESCE(c.purchase_currency, ''))), ''),
-    NULLIF(TRIM(UPPER(COALESCE(d.source_currency::text, ''))), ''),
+    NULLIF(TRIM(UPPER(COALESCE(d_src.source_currency::text, ''))), ''),
     'AED'
   ),
   cost_rate_to_aed = CASE COALESCE(
       NULLIF(TRIM(UPPER(COALESCE(dc.purchase_currency, ''))), ''),
       NULLIF(TRIM(UPPER(COALESCE(c.purchase_currency, ''))), ''),
-      NULLIF(TRIM(UPPER(COALESCE(d.source_currency::text, ''))), ''),
+      NULLIF(TRIM(UPPER(COALESCE(d_src.source_currency::text, ''))), ''),
       'AED'
     )
     WHEN 'AED' THEN 1
-    ELSE GREATEST(COALESCE(dc.purchase_rate, c.purchase_rate, d.source_rate_to_aed, 0.0000001), 0.0000001)
+    ELSE GREATEST(COALESCE(dc.purchase_rate, c.purchase_rate, d_src.source_rate_to_aed, 0.0000001), 0.0000001)
   END
-FROM public.cars c
-LEFT JOIN public.deal_costs dc ON dc.deal_id = d.id
-WHERE d.car_id = c.id
+FROM public.deals d_src
+INNER JOIN public.cars c ON c.id = d_src.car_id
+LEFT JOIN public.deal_costs dc ON dc.deal_id = d_src.id
+WHERE d.id = d_src.id
   AND d.cost_amount IS NULL;
 
 UPDATE public.deals d

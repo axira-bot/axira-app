@@ -13,18 +13,20 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- Allow anyone to read photos (public site needs this)
-CREATE POLICY IF NOT EXISTS "Public read - car photos"
+-- PostgreSQL has no CREATE POLICY IF NOT EXISTS; drop then create for idempotent migrations.
+DROP POLICY IF EXISTS "Public read - car photos" ON storage.objects;
+CREATE POLICY "Public read - car photos"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'car-photos');
 
--- Allow authenticated users to upload photos
-CREATE POLICY IF NOT EXISTS "Authenticated upload - car photos"
+DROP POLICY IF EXISTS "Authenticated upload - car photos" ON storage.objects;
+CREATE POLICY "Authenticated upload - car photos"
   ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (bucket_id = 'car-photos');
 
--- Allow authenticated users to delete photos
-CREATE POLICY IF NOT EXISTS "Authenticated delete - car photos"
+DROP POLICY IF EXISTS "Authenticated delete - car photos" ON storage.objects;
+CREATE POLICY "Authenticated delete - car photos"
   ON storage.objects FOR DELETE
   TO authenticated
   USING (bucket_id = 'car-photos');
