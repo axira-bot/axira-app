@@ -6,6 +6,7 @@ import {
   getDealForTransition,
   requirePreorderAccess,
 } from "@/lib/services/preorders/service";
+import { toAed } from "@/lib/finance/dealMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,7 @@ export async function POST(
           notes: body.trim ?? null,
           purchase_price: body.amount,
           purchase_currency: body.currency,
-          purchase_rate: body.rate_snapshot,
+          purchase_rate: body.rate_to_aed,
           location: "In Transit",
           owner: "Axira",
           status: "in_transit",
@@ -70,12 +71,7 @@ export async function POST(
     }
 
     const paymentDate = body.date || new Date().toISOString().slice(0, 10);
-    const aedEquivalent =
-      body.currency === "AED"
-        ? body.amount
-        : body.rate_snapshot > 0
-          ? body.amount / body.rate_snapshot
-          : 0;
+    const aedEquivalent = toAed(body.amount, body.currency, body.rate_to_aed);
 
     const payIns = await admin
       .from("payments")
@@ -87,13 +83,13 @@ export async function POST(
         kind: "supplier_payment",
         currency: body.currency,
         amount: body.amount,
-        rate_snapshot: body.rate_snapshot,
+        rate_to_aed: body.rate_to_aed,
         aed_equivalent: aedEquivalent,
         pocket: body.pocket,
         method: body.method,
         supplier_id: body.supplier_id,
         dzd: null,
-        rate: body.rate_snapshot,
+        rate: body.rate_to_aed,
       })
       .select("id")
       .single();
@@ -112,7 +108,7 @@ export async function POST(
       description: `Supplier payment for pre-order ${id}`,
       amount: body.amount,
       currency: body.currency,
-      rate: body.rate_snapshot,
+      rate: body.rate_to_aed,
       aed_equivalent: aedEquivalent,
       pocket: body.pocket,
       deal_id: id,

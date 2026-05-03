@@ -112,20 +112,20 @@ export interface Deal {
   id: string;
   client_name: string;
   client_id?: string;
-  car_id: string;
+  car_id: string | null;
   car_label: string;
   date: string;
-  sale_dzd: number;
-  rate: number;
-  sale_aed: number;
-  cost_car: number;
-  cost_shipping: number;
-  cost_inspection: number;
-  cost_recovery: number;
-  cost_maintenance: number;
-  cost_other: number;
-  total_expenses: number;
-  profit: number;
+  sale_amount: number;
+  sale_currency: string;
+  sale_rate_to_aed: number | null;
+  cost_amount: number;
+  cost_currency: string;
+  cost_rate_to_aed: number;
+  invoice_declared_amount?: number | null;
+  invoice_declared_currency?: string | null;
+  invoice_declared_usd?: number | null;
+  financial_migration_status?: string | null;
+  financial_migration_notes?: string | null;
   shipping_paid?: boolean;
   collected_dzd: number;
   pending_dzd: number;
@@ -133,7 +133,6 @@ export interface Deal {
   notes?: string;
   drive_link?: string | null;
   created_at?: string;
-  sale_usd?: number | null;
   source?: "STOCK" | "PRE_ORDER_CATALOG" | "PRE_ORDER_CUSTOM" | null;
   lifecycle_status?: "PRE_ORDER" | "ORDERED" | "SHIPPED" | "ARRIVED" | "CLOSED" | "CANCELLED" | null;
   cancellation_reason?: "customer_cancelled" | "supplier_unavailable" | "other" | null;
@@ -144,8 +143,14 @@ export interface Deal {
   source_currency?: "USD" | "AED" | null;
   source_rate_to_dzd?: number | null;
   source_rate_to_aed?: number | null;
-  margin_dzd?: number | null;
-  margin_aed?: number | null;
-  margin_pct?: number | null;
   custom_spec_signature?: string | null;
+  created_by?: string | null;
+  pending_completion?: boolean | null;
+  handled_by?: string | null;
+  handled_by_name?: string | null;
+  /** Derived client-side (attachDealCoreMetrics) — not a DB column */
+  profit_aed?: number;
+  sale_aed_derived?: number;
+  cost_aed?: number;
+  expenses_aed_total?: number;
 }

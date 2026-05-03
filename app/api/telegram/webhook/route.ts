@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
@@ -48,25 +49,50 @@ async function getBusinessContext() {
     .toISOString()
     .slice(0, 10);
 
-  const [
-    { data: deals },
-    { data: cash },
-    { data: debts },
-    { data: cars },
-    { data: movements },
-  ] = await Promise.all([
-    supabase.from("deals").select("client_name, car_label, date, sale_dzd, sale_aed, sale_usd, profit, status, collected_dzd, pending_dzd, rate").order("date", { ascending: false }).limit(50),
-    supabase.from("cash_positions").select("*"),
-    supabase.from("debts").select("label, amount, currency, type, status, due_date").eq("status", "unpaid").limit(20),
-    supabase.from("cars").select("brand, model, year, color, status, purchase_price, purchase_currency, country_of_origin").eq("status", "available").limit(30),
-    supabase.from("movements").select("date, type, category, description, amount, currency, pocket").gte("date", thirtyDaysAgo).order("date", { ascending: false }).limit(100),
-  ]);
+  const [{ data: dealRows }, { data: cash }, { data: debts }, { data: cars }, { data: movements }] =
+    await Promise.all([
+      supabase
+        .from("deals")
+        .select(
+          "id, client_name, car_label, date, sale_amount, sale_currency, sale_rate_to_aed, cost_amount, cost_currency, cost_rate_to_aed, invoice_declared_usd, status, collected_dzd, pending_dzd"
+        )
+        .order("date", { ascending: false })
+        .limit(50),
+      supabase.from("cash_positions").select("*"),
+      supabase.from("debts").select("label, amount, currency, type, status, due_date").eq("status", "unpaid").limit(20),
+      supabase.from("cars").select("brand, model, year, color, status, purchase_price, purchase_currency, country_of_origin").eq("status", "available").limit(30),
+      supabase
+        .from("movements")
+        .select("date, type, category, description, amount, currency, pocket")
+        .gte("date", thirtyDaysAgo)
+        .order("date", { ascending: false })
+        .limit(100),
+    ]);
+
+  const dealFacts =
+    (dealRows as {
+      id: string;
+      client_name: string;
+      car_label: string;
+      date: string;
+      sale_amount: number;
+      sale_currency: string;
+      sale_rate_to_aed: number | null;
+      cost_amount: number;
+      cost_currency: string;
+      cost_rate_to_aed: number;
+      invoice_declared_usd: number | null;
+      status: string;
+      collected_dzd: number;
+      pending_dzd: number;
+    }[]) ?? [];
+  const deals = await attachDealCoreMetrics(supabase, dealFacts);
 
   return { deals, cash, debts, cars, movements };
 }
 
 function buildSystemPrompt(context: Awaited<ReturnType<typeof getBusinessContext>>, extraContext?: string) {
-  const totalProfit = context.deals?.filter((d) => d.status === "closed").reduce((sum, d) => sum + (d.profit || 0), 0) ?? 0;
+  const totalProfit = context.deals?.filter((d) => d.status === "closed").reduce((sum, d) => sum + (d.profit_aed || 0), 0) ?? 0;
   const pendingDeals = context.deals?.filter((d) => d.status !== "closed").length ?? 0;
   const totalPendingDzd = context.deals?.reduce((sum, d) => sum + (d.pending_dzd || 0), 0) ?? 0;
 

@@ -3,6 +3,7 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolvePermissions } from "@/lib/auth/permissions";
 import { normalizeRole } from "@/lib/auth/roles";
+import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,9 @@ export async function GET() {
     ] = await Promise.all([
       admin.from("investors").select("*").order("name", { ascending: true }),
       admin.from("investor_returns").select("*").order("month", { ascending: false }),
-      admin.from("deals").select("id, date, profit"),
+      admin
+        .from("deals")
+        .select("id, date, sale_amount, sale_currency, sale_rate_to_aed, cost_amount, cost_currency, cost_rate_to_aed"),
       admin
         .from("app_settings")
         .select("key, value")
@@ -64,10 +67,28 @@ export async function GET() {
       );
     }
 
+    const dealFacts =
+      (deals as {
+        id: string;
+        date: string;
+        sale_amount: number;
+        sale_currency: string;
+        sale_rate_to_aed: number | null;
+        cost_amount: number;
+        cost_currency: string;
+        cost_rate_to_aed: number;
+      }[]) ?? [];
+    const withProfit = dealsError ? [] : await attachDealCoreMetrics(admin, dealFacts);
+    const dealsForClient = withProfit.map((d) => ({
+      id: d.id,
+      date: d.date,
+      profit: d.profit_aed,
+    }));
+
     return NextResponse.json({
       investors: investors ?? [],
       returns: returns ?? [],
-      deals: dealsError ? [] : deals ?? [],
+      deals: dealsForClient,
       settings: settingsError ? [] : settings ?? [],
       warnings: {
         deals: dealsError?.message ?? null,

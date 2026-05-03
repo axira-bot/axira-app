@@ -44,7 +44,6 @@ type DealRow = {
   date: string | null;
   car_label: string | null;
   client_name: string | null;
-  profit: number | null;
 };
 
 type EmployeeFormState = {
@@ -171,7 +170,7 @@ export default function EmployeesPage() {
       ] = await Promise.all([
         supabase.from("employees").select("*").order("name", { ascending: true }),
         supabase.from("commissions").select("*").order("created_at", { ascending: false }),
-        supabase.from("deals").select("id, date, car_label, client_name, profit"),
+        supabase.from("deals").select("id, date, car_label, client_name"),
       ]);
 
       if (empErr || commErr) {

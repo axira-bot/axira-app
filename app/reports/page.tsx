@@ -5,6 +5,9 @@ import type { Car, Deal, Movement, Rent } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx-js-style";
 import { getRates, type AppRates } from "@/lib/rates";
+import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
+import { dealListSaleDzd } from "@/app/deals/dealFinanceHelpers";
+import { toAed } from "@/lib/finance/dealMoney";
 
 const ACCENT_RED = "C0392B";
 const WHITE = "FFFFFF";
@@ -52,14 +55,51 @@ type CashPosition = {
 
 const POCKETS = ["Dubai Cash", "Dubai Bank", "Algeria Cash", "Algeria Bank", "Qatar"];
 
-const PL_EXPENSE_BREAKDOWN: { label: string; key: keyof Deal }[] = [
-  { label: "Car Purchase", key: "cost_car" },
-  { label: "Shipping", key: "cost_shipping" },
-  { label: "Inspection", key: "cost_inspection" },
-  { label: "Recovery", key: "cost_recovery" },
-  { label: "Maintenance", key: "cost_maintenance" },
-  { label: "Other", key: "cost_other" },
+type DealExpenseDbRow = {
+  deal_id: string;
+  expense_type: string;
+  amount: number;
+  currency: string;
+  rate_to_aed: number;
+};
+
+const EXPENSE_TYPE_LABEL: Record<string, string> = {
+  purchase_advance: "Purchase advance",
+  shipping: "Shipping",
+  customs: "Customs",
+  inspection: "Inspection",
+  recovery: "Recovery",
+  maintenance: "Maintenance",
+  other: "Other",
+};
+
+const PL_EXPENSE_CATEGORY_ORDER = [
+  "Car cost (AED)",
+  "Purchase advance",
+  "Shipping",
+  "Customs",
+  "Inspection",
+  "Recovery",
+  "Maintenance",
+  "Other",
 ];
+
+function orderedPlExpenseLabels(map: Record<string, number>): string[] {
+  const keys = Object.keys(map);
+  const head = PL_EXPENSE_CATEGORY_ORDER.filter((k) => keys.includes(k));
+  const tail = keys.filter((k) => !head.includes(k)).sort();
+  return [...head, ...tail];
+}
+
+function dealRateDzdPerAedForReport(d: Deal, usdPerAed: number): number {
+  const sr = d.sale_rate_to_aed;
+  if (sr == null || !(sr > 0) || !(usdPerAed > 0)) return 0;
+  return 1 / (sr * usdPerAed);
+}
+
+function dealTotalExpensesAed(d: Deal): number {
+  return (d.cost_aed ?? 0) + (d.expenses_aed_total ?? 0);
+}
 
 function formatNumber(value: number): string {
   return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -126,6 +166,7 @@ export default function ReportsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealExpenseRows, setDealExpenseRows] = useState<DealExpenseDbRow[]>([]);
   const [cars, setCars] = useState<Car[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
   const [cashPositions, setCashPositions] = useState<CashPosition[]>([]);
@@ -187,7 +228,19 @@ export default function ReportsPage() {
           .join(" ")
       );
     }
-    setDeals((dealsData as Deal[]) ?? []);
+    const rawDeals = (dealsData as Deal[]) ?? [];
+    const enrichedDeals = await attachDealCoreMetrics(supabase, rawDeals);
+    setDeals(enrichedDeals);
+    const dealIds = rawDeals.map((d) => d.id).filter(Boolean);
+    if (dealIds.length) {
+      const { data: exData } = await supabase
+        .from("deal_expenses")
+        .select("deal_id, expense_type, amount, currency, rate_to_aed")
+        .in("deal_id", dealIds);
+      setDealExpenseRows((exData as DealExpenseDbRow[]) ?? []);
+    } else {
+      setDealExpenseRows([]);
+    }
     setCars((carsData as Car[]) ?? []);
     setMovements((movesData as Movement[]) ?? []);
     setCashPositions((cashData as CashPosition[]) ?? []);
@@ -213,31 +266,40 @@ export default function ReportsPage() {
     });
   }, [deals, plFrom, plTo]);
 
+  const plExpensesByCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    const carKey = "Car cost (AED)";
+    plFilteredDeals.forEach((d) => {
+      map[carKey] = (map[carKey] ?? 0) + (d.cost_aed ?? 0);
+    });
+    const ids = new Set(plFilteredDeals.map((d) => d.id));
+    dealExpenseRows.forEach((row) => {
+      if (!ids.has(row.deal_id)) return;
+      const label = EXPENSE_TYPE_LABEL[row.expense_type] ?? row.expense_type;
+      map[label] = (map[label] ?? 0) + toAed(row.amount, row.currency, row.rate_to_aed);
+    });
+    return map;
+  }, [plFilteredDeals, dealExpenseRows]);
+
+  const plExpenseRowLabels = useMemo(
+    () => orderedPlExpenseLabels(plExpensesByCategory),
+    [plExpensesByCategory]
+  );
+
   const plRevenue = useMemo(
-    () => plFilteredDeals.reduce((s, d) => s + (d.sale_aed || 0), 0),
+    () => plFilteredDeals.reduce((s, d) => s + (d.sale_aed_derived ?? 0), 0),
     [plFilteredDeals]
   );
 
   const plTotalExpenses = useMemo(
-    () => plFilteredDeals.reduce((s, d) => s + (d.total_expenses || 0), 0),
-    [plFilteredDeals]
+    () => Object.values(plExpensesByCategory).reduce((s, v) => s + v, 0),
+    [plExpensesByCategory]
   );
 
   const plGrossProfit = useMemo(
-    () => plFilteredDeals.reduce((s, d) => s + (d.profit || 0), 0),
+    () => plFilteredDeals.reduce((s, d) => s + (d.profit_aed ?? 0), 0),
     [plFilteredDeals]
   );
-
-  const plExpensesByCategory = useMemo(() => {
-    const map: Record<string, number> = {};
-    PL_EXPENSE_BREAKDOWN.forEach(({ label }) => (map[label] = 0));
-    plFilteredDeals.forEach((d) => {
-      PL_EXPENSE_BREAKDOWN.forEach(({ label, key }) => {
-        map[label] += (d[key] as number) || 0;
-      });
-    });
-    return map;
-  }, [plFilteredDeals]);
 
   const plActiveRentsInPeriod = useMemo(() => {
     return rents.filter((r) => {
@@ -338,9 +400,9 @@ export default function ReportsPage() {
 
   const dealsSummary = useMemo(() => {
     const total = dealsFiltered.length;
-    const revenueDzd = dealsFiltered.reduce((s, d) => s + (d.sale_dzd || 0), 0);
-    const revenueAed = dealsFiltered.reduce((s, d) => s + (d.sale_aed || 0), 0);
-    const totalProfit = dealsFiltered.reduce((s, d) => s + (d.profit || 0), 0);
+    const revenueDzd = dealsFiltered.reduce((s, d) => s + (dealListSaleDzd(d) || 0), 0);
+    const revenueAed = dealsFiltered.reduce((s, d) => s + (d.sale_aed_derived ?? 0), 0);
+    const totalProfit = dealsFiltered.reduce((s, d) => s + (d.profit_aed ?? 0), 0);
     const avgProfit = total > 0 ? totalProfit / total : 0;
     return { total, revenueDzd, revenueAed, totalProfit, avgProfit };
   }, [dealsFiltered]);
@@ -399,7 +461,7 @@ export default function ReportsPage() {
       ["Profit Margin %", plMargin],
       [],
       ["EXPENSES BREAKDOWN"],
-      ...PL_EXPENSE_BREAKDOWN.map(({ label }) => [label, plExpensesByCategory[label] ?? 0]),
+      ...plExpenseRowLabels.map((label) => [label, plExpensesByCategory[label] ?? 0]),
       ...plActiveRentsInPeriod
         .map((r) => {
           if (!rates) return null;
@@ -429,17 +491,20 @@ export default function ReportsPage() {
       [],
       ["DEALS"],
       ["Client", "Car", "Date", "Sale DZD", "Rate", "Sale AED", "Expenses", "Profit", "Status"],
-      ...plFilteredDeals.map((d) => [
+      ...plFilteredDeals.map((d) => {
+        const usdPerAed = rates?.USD ?? 0;
+        return [
         d.client_name ?? "",
         d.car_label ?? "",
         d.date ?? "",
-        d.sale_dzd ?? 0,
-        d.rate ?? 0,
-        d.sale_aed ?? 0,
-        d.total_expenses ?? 0,
-        d.profit ?? 0,
+        dealListSaleDzd(d) || 0,
+        dealRateDzdPerAedForReport(d, usdPerAed),
+        d.sale_aed_derived ?? 0,
+        dealTotalExpensesAed(d),
+        d.profit_aed ?? 0,
         d.status ?? "",
-      ]),
+      ];
+      }),
     ];
     const ws = XLSX.utils.aoa_to_sheet(data);
 
@@ -477,7 +542,7 @@ export default function ReportsPage() {
       fill: { fgColor: { rgb: DARK_GRAY }, patternType: "solid" },
     });
     ws["!merges"] = [...(ws["!merges"] || []), { s: { r: expenseHeaderRow, c: 0 }, e: { r: expenseHeaderRow, c: 2 } }];
-    PL_EXPENSE_BREAKDOWN.forEach(({ label }, i) => {
+    plExpenseRowLabels.forEach((label, i) => {
       const r = expenseHeaderRow + 1 + i;
       setCellValueAndStyle(
         ws,
@@ -510,7 +575,7 @@ export default function ReportsPage() {
         return;
       }
 
-      const rentRow = expenseHeaderRow + 1 + PL_EXPENSE_BREAKDOWN.length + i;
+      const rentRow = expenseHeaderRow + 1 + plExpenseRowLabels.length + i;
       setCellValueAndStyle(ws, rentRow, 0, label, {
         fill: { fgColor: { rgb: LIGHT_GRAY }, patternType: "solid" },
       });
@@ -522,7 +587,7 @@ export default function ReportsPage() {
     });
 
     const dealsHeaderRow =
-      expenseHeaderRow + 1 + PL_EXPENSE_BREAKDOWN.length + plActiveRentsInPeriod.length + 1;
+      expenseHeaderRow + 1 + plExpenseRowLabels.length + plActiveRentsInPeriod.length + 1;
     setCellValueAndStyle(ws, dealsHeaderRow, 0, "DEALS", {
       font: { bold: true, color: { rgb: WHITE } },
       fill: { fgColor: { rgb: DARK_GRAY }, patternType: "solid" },
@@ -532,15 +597,16 @@ export default function ReportsPage() {
     dealColHeaders.forEach((h, c) => setCellValueAndStyle(ws, dealsHeaderRow + 1, c, h, { font: { bold: true } }));
     plFilteredDeals.forEach((d, i) => {
       const r = dealsHeaderRow + 2 + i;
+      const usdPerAed = rates?.USD ?? 0;
       const row = [
         d.client_name ?? "",
         d.car_label ?? "",
         d.date ?? "",
-        d.sale_dzd ?? 0,
-        d.rate ?? 0,
-        d.sale_aed ?? 0,
-        d.total_expenses ?? 0,
-        d.profit ?? 0,
+        dealListSaleDzd(d) || 0,
+        dealRateDzdPerAedForReport(d, usdPerAed),
+        d.sale_aed_derived ?? 0,
+        dealTotalExpensesAed(d),
+        d.profit_aed ?? 0,
         d.status ?? "",
       ];
       row.forEach((val, c) => {
@@ -569,6 +635,7 @@ export default function ReportsPage() {
     plExpensesByCategory,
     plFilteredDeals,
     rates,
+    plExpenseRowLabels,
   ]);
 
   const exportInventory = useCallback(() => {
@@ -657,21 +724,24 @@ export default function ReportsPage() {
       ["Deals Report", `${dealsFrom} to ${dealsTo}`],
       [],
       cols,
-      ...dealsFiltered.map((d) => [
+      ...dealsFiltered.map((d) => {
+        const usdPerAed = rates?.USD ?? 0;
+        return [
         d.client_name ?? "",
         d.car_label ?? "",
         d.date ?? "",
-        d.sale_dzd ?? 0,
-        d.rate ?? 0,
-        d.sale_aed ?? 0,
-        d.total_expenses ?? 0,
-        d.profit ?? 0,
+        dealListSaleDzd(d) || 0,
+        dealRateDzdPerAedForReport(d, usdPerAed),
+        d.sale_aed_derived ?? 0,
+        dealTotalExpensesAed(d),
+        d.profit_aed ?? 0,
         d.collected_dzd ?? 0,
         d.pending_dzd ?? 0,
         d.status ?? "",
         d.lifecycle_status ?? "",
         d.source ?? "STOCK",
-      ]),
+      ];
+      }),
     ];
     const ws = XLSX.utils.aoa_to_sheet(data);
     const maxCol = cols.length - 1;
@@ -692,15 +762,16 @@ export default function ReportsPage() {
     const profitColIdx = 7;
     dealsFiltered.forEach((d, i) => {
       const r = 4 + i;
+      const usdPerAed = rates?.USD ?? 0;
       const row = [
         d.client_name ?? "",
         d.car_label ?? "",
         d.date ?? "",
-        d.sale_dzd ?? 0,
-        d.rate ?? 0,
-        d.sale_aed ?? 0,
-        d.total_expenses ?? 0,
-        d.profit ?? 0,
+        dealListSaleDzd(d) || 0,
+        dealRateDzdPerAedForReport(d, usdPerAed),
+        d.sale_aed_derived ?? 0,
+        dealTotalExpensesAed(d),
+        d.profit_aed ?? 0,
         d.collected_dzd ?? 0,
         d.pending_dzd ?? 0,
         d.status ?? "",
@@ -719,7 +790,7 @@ export default function ReportsPage() {
     ws["!cols"] = cols.map((_, i) => ({ wch: i === 0 || i === 1 ? 18 : 12 }));
     XLSX.utils.book_append_sheet(wb, ws, "Deals");
     downloadWorkbook(wb, `Deals_${dealsFrom}_${dealsTo}.xlsx`);
-  }, [dealsFiltered, dealsFrom, dealsTo]);
+  }, [dealsFiltered, dealsFrom, dealsTo, rates]);
 
   const exportCashFlow = useCallback(() => {
     const wb = XLSX.utils.book_new();
@@ -960,7 +1031,7 @@ export default function ReportsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {PL_EXPENSE_BREAKDOWN.map(({ label }) => (
+                        {plExpenseRowLabels.map((label) => (
                           <tr key={label} className="border-b border-app last:border-b-0">
                             <td className="px-4 py-3 text-app">{label}</td>
                             <td className="px-4 py-3 text-right text-app">
@@ -1030,10 +1101,10 @@ export default function ReportsPage() {
                             <td className="px-4 py-3 text-app">{d.car_label ?? "-"}</td>
                             <td className="px-4 py-3 text-app">{formatDate(d.date)}</td>
                             <td className="px-4 py-3 text-right text-app">
-                              {formatNumber(d.sale_aed ?? 0)}
+                              {formatNumber(d.sale_aed_derived ?? 0)}
                             </td>
                             <td className="px-4 py-3 text-right text-app">
-                              {formatNumber(d.profit ?? 0)}
+                              {formatNumber(d.profit_aed ?? 0)}
                             </td>
                           </tr>
                         ))}
@@ -1243,25 +1314,28 @@ export default function ReportsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {dealsFiltered.map((d) => (
+                        {dealsFiltered.map((d) => {
+                          const usdPerAed = rates?.USD ?? 0;
+                          const rateCell = dealRateDzdPerAedForReport(d, usdPerAed);
+                          return (
                           <tr key={d.id} className="border-b border-app last:border-b-0">
                             <td className="px-4 py-3 text-app">{d.client_name ?? "-"}</td>
                             <td className="px-4 py-3 text-app">{d.car_label ?? "-"}</td>
                             <td className="px-4 py-3 text-app">{formatDate(d.date)}</td>
                             <td className="px-4 py-3 text-right text-app">
-                              {formatNumber(d.sale_dzd ?? 0)}
+                              {formatNumber(dealListSaleDzd(d) || 0)}
                             </td>
                             <td className="px-4 py-3 text-right text-app">
-                              {d.rate ?? "-"}
+                              {rateCell > 0 ? formatNumber(rateCell) : "—"}
                             </td>
                             <td className="px-4 py-3 text-right text-app">
-                              {formatNumber(d.sale_aed ?? 0)}
+                              {formatNumber(d.sale_aed_derived ?? 0)}
                             </td>
                             <td className="px-4 py-3 text-right text-app">
-                              {formatNumber(d.total_expenses ?? 0)}
+                              {formatNumber(dealTotalExpensesAed(d))}
                             </td>
                             <td className="px-4 py-3 text-right text-app">
-                              {formatNumber(d.profit ?? 0)}
+                              {formatNumber(d.profit_aed ?? 0)}
                             </td>
                             <td className="px-4 py-3 text-right text-app">
                               {formatNumber(d.collected_dzd ?? 0)}
@@ -1273,7 +1347,8 @@ export default function ReportsPage() {
                             <td className="px-4 py-3 text-app">{d.lifecycle_status ?? "-"}</td>
                             <td className="px-4 py-3 text-app">{d.source ?? "STOCK"}</td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

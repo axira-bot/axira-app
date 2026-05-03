@@ -48,9 +48,12 @@ export async function POST(
     }
 
     if (next === "CLOSED") {
-      const saleDzd = Number(deal.sale_dzd || 0);
+      const saleDzd =
+        String(deal.sale_currency || "").toUpperCase() === "DZD"
+          ? Number(deal.sale_amount || 0)
+          : 0;
       const collected = Number(deal.collected_dzd || 0);
-      if (Math.abs(collected - saleDzd) > 1) {
+      if (saleDzd > 0 && Math.abs(collected - saleDzd) > 1) {
         return NextResponse.json(
           { error: "Cannot close deal before full customer payment." },
           { status: 400 }
