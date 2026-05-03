@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
+import { useAuth } from "@/lib/context/AuthContext";
 
 type Client = {
   id: string;
@@ -59,6 +60,7 @@ function DriveLinkIcon({ href }: { href: string }) {
 }
 
 export default function ClientsPage() {
+  const { canDelete } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -256,6 +258,7 @@ export default function ClientsPage() {
   };
 
   const handleDelete = async (client: Client) => {
+    if (!canDelete) return;
     if (
       !window.confirm(
         `Delete client ${client.name || client.phone || client.id}? This cannot be undone.`
@@ -432,6 +435,7 @@ export default function ClientsPage() {
                             >
                               Edit
                             </button>
+                            {canDelete ? (
                             <button
                               type="button"
                               onClick={() => handleDelete(client)}
@@ -439,6 +443,7 @@ export default function ClientsPage() {
                             >
                               Delete
                             </button>
+                            ) : null}
                           </div>
                         </td>
                       </tr>

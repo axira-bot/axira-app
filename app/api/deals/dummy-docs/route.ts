@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deletionForbiddenResponse } from "@/lib/auth/httpGuards";
 
 export const dynamic = "force-dynamic";
 
@@ -276,6 +277,9 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const denied = await deletionForbiddenResponse();
+    if (denied) return denied;
+
     const supabase = await createServerClient();
     const {
       data: { user },

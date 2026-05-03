@@ -97,7 +97,7 @@ WITH required_columns AS (
     ('clients','passport_number'),
     ('clients','algeria_address'),
     ('payments','kind'),
-    ('payments','rate_snapshot'),
+    ('payments','rate_to_aed'),
     ('activity_log','actor_user_id'),
     ('activity_log','actor_name'),
     ('user_profiles','employee_id'),

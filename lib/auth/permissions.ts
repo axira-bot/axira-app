@@ -1,59 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeRole } from "@/lib/auth/roles";
+import { roleFallbackPermissions as matrixRoleFallbackPermissions } from "@/lib/auth/roleMatrix";
 import { FEATURE_KEYS, type FeatureKey, type FeaturePermissions } from "@/lib/auth/featureKeys";
 
-function emptyPermissions(): FeaturePermissions {
-  return FEATURE_KEYS.reduce((acc, k) => {
-    acc[k] = false;
-    return acc;
-  }, {} as FeaturePermissions);
-}
-
 function roleFallbackPermissions(role: string | null | undefined): FeaturePermissions {
-  const normalized = normalizeRole(role);
-  const p = emptyPermissions();
-  if (normalized === "owner" || normalized === "super_admin" || normalized === "admin") {
-    FEATURE_KEYS.forEach((k) => {
-      p[k] = true;
-    });
-    return p;
-  }
-  if (normalized === "staff") {
-    p.inventory = true;
-    p.deals = true;
-    p.clients = true;
-    p.inquiries = true;
-    p.purchase_orders = true;
-    return p;
-  }
-  if (normalized === "accountant") {
-    p.activity = true;
-    p.movements = true;
-    p.reports = true;
-    p.payroll = true;
-    return p;
-  }
-  if (normalized === "investor") {
-    p.investors = true;
-    return p;
-  }
-  if (normalized === "manager") {
-    p.dashboard = true;
-    p.activity = true;
-    p.inventory = true;
-    p.deals = true;
-    p.containers = true;
-    p.movements = true;
-    p.debts = true;
-    p.payroll = true;
-    p.reports = true;
-    p.clients = true;
-    p.inquiries = true;
-    p.purchase_orders = true;
-    p.suppliers = true;
-    return p;
-  }
-  return p;
+  return matrixRoleFallbackPermissions(role);
 }
 
 export async function resolvePermissions(

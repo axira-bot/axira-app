@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { toAed } from "@/lib/finance/dealMoney";
 import { cancelSchema } from "@/lib/services/preorders/schemas";
 import { getDealForTransition, requirePreorderAccess } from "@/lib/services/preorders/service";
 
@@ -29,7 +30,7 @@ export async function POST(
 
     const { data: depositRows } = await admin
       .from("payments")
-      .select("id, amount, dzd, pocket, currency")
+      .select("id, amount, dzd, pocket, currency, rate_to_aed")
       .eq("deal_id", id)
       .eq("kind", "customer_deposit");
     const depositTotal = ((depositRows as { amount?: number | null; dzd?: number | null }[] | null) || [])
@@ -55,9 +56,16 @@ export async function POST(
     if (depositTotal > 0 && parsed.data.deposit_action) {
       const actionKind = parsed.data.deposit_action === "refund" ? "refund" : "forfeit";
       const amount = depositTotal;
-      const row = (depositRows?.[0] || {}) as { pocket?: string | null; currency?: string | null };
+      const row = (depositRows?.[0] || {}) as {
+        pocket?: string | null;
+        currency?: string | null;
+        rate_to_aed?: number | null;
+      };
       const pocket = row.pocket || "Algeria Cash";
       const currency = row.currency || "DZD";
+      const rateToAed =
+        row.rate_to_aed != null && row.rate_to_aed > 0 ? row.rate_to_aed : currency === "AED" ? 1 : 1;
+      const aedEq = toAed(amount, currency, rateToAed);
       const payDate = new Date().toISOString().slice(0, 10);
       const direction = parsed.data.deposit_action === "refund" ? "Out" : "In";
 
@@ -73,9 +81,10 @@ export async function POST(
           amount,
           pocket,
           method: "cash",
-          rate_snapshot: null,
-          aed_equivalent: null,
+          rate_to_aed: rateToAed,
+          aed_equivalent: aedEq,
           dzd: currency === "DZD" ? amount : null,
+          rate: rateToAed,
         })
         .select("id")
         .single();
@@ -106,6 +115,8 @@ export async function POST(
         description: `Pre-order ${actionKind}`,
         amount,
         currency,
+        rate: rateToAed,
+        aed_equivalent: aedEq,
         pocket,
         payment_id: payIns.data.id,
         deal_id: id,

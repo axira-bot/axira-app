@@ -1,5 +1,6 @@
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { toAed } from "@/lib/finance/dealMoney";
 import { isPreorderPrivilegedRole } from "@/lib/auth/roles";
 import type { DealLifecycleStatus } from "./types";
 import { LIFECYCLE_TRANSITIONS } from "./types";
@@ -114,11 +115,13 @@ export async function createPreorderDeal(payload: Record<string, unknown>) {
   const carLabel = [brand, model, year ? String(year) : null, color].filter(Boolean).join(" ");
   const saleDzd = Number(payload.sale_dzd || 0);
   const rate = Number(payload.rate || 0);
-  const saleAed = rate > 0 ? saleDzd / rate : 0;
+  const saleRateToAed = rate > 0 ? 1 / rate : null;
   const sourceCost = Number(payload.source_cost || 0);
-  const marginDzd = saleDzd - Number(payload.source_rate_to_dzd || 0) * sourceCost;
-  const marginAed = saleAed - Number(payload.source_rate_to_aed || 0) * sourceCost;
-  const marginPct = saleDzd > 0 ? (marginDzd / saleDzd) * 100 : 0;
+  const srcCur = String(payload.source_currency || "AED").toUpperCase();
+  if (srcCur !== "AED" && (!Number(payload.source_rate_to_aed) || Number(payload.source_rate_to_aed) <= 0)) {
+    throw new Error("source_rate_to_aed is required for non-AED source currency.");
+  }
+  const costRateToAed = srcCur === "AED" ? 1 : Number(payload.source_rate_to_aed || 0);
 
   const statusForCompatibility: "pending" | "closed" = "pending";
   const lifecycleStatus = "PRE_ORDER";
@@ -136,17 +139,12 @@ export async function createPreorderDeal(payload: Record<string, unknown>) {
       car_id: null,
       car_label: carLabel,
       date: payload.date,
-      sale_dzd: saleDzd,
-      rate,
-      sale_aed: saleAed,
-      cost_car: 0,
-      cost_shipping: 0,
-      cost_inspection: 0,
-      cost_recovery: 0,
-      cost_maintenance: 0,
-      cost_other: 0,
-      total_expenses: 0,
-      profit: 0,
+      sale_amount: saleDzd,
+      sale_currency: "DZD",
+      sale_rate_to_aed: saleRateToAed,
+      cost_amount: sourceCost,
+      cost_currency: srcCur,
+      cost_rate_to_aed: costRateToAed,
       collected_dzd: 0,
       pending_dzd: saleDzd,
       status: statusForCompatibility,
@@ -158,9 +156,6 @@ export async function createPreorderDeal(payload: Record<string, unknown>) {
       source_currency: payload.source_currency,
       source_rate_to_dzd: payload.source_rate_to_dzd,
       source_rate_to_aed: payload.source_rate_to_aed,
-      margin_dzd: marginDzd,
-      margin_aed: marginAed,
-      margin_pct: marginPct,
       custom_spec_signature: customSpecSignature,
     })
     .select("id")
@@ -215,7 +210,8 @@ export async function createPreorderDeal(payload: Record<string, unknown>) {
     const amountDzd = Number(deposit.amount_dzd || 0);
     const date = (deposit.date as string | undefined) || (payload.date as string);
     const rateSnapshot = Number(payload.rate || 0);
-    const aedEquivalent = rateSnapshot > 0 ? amountDzd / rateSnapshot : 0;
+    const rateToAed = rateSnapshot > 0 ? 1 / rateSnapshot : 1;
+    const aedEquivalent = toAed(amountDzd, "DZD", rateToAed);
 
     const payIns = await admin
       .from("payments")
@@ -224,12 +220,12 @@ export async function createPreorderDeal(payload: Record<string, unknown>) {
         dzd: amountDzd,
         date,
         type: "preorder_deposit",
-        rate: rateSnapshot,
+        rate: rateToAed,
         notes: (deposit.notes as string | null | undefined) ?? null,
         kind: "customer_deposit",
         currency: "DZD",
         amount: amountDzd,
-        rate_snapshot: rateSnapshot,
+        rate_to_aed: rateToAed,
         aed_equivalent: aedEquivalent,
         pocket: deposit.pocket,
         method: deposit.method,
@@ -248,7 +244,7 @@ export async function createPreorderDeal(payload: Record<string, unknown>) {
       description: "Pre-order deposit",
       amount: amountDzd,
       currency: "DZD",
-      rate: rateSnapshot,
+      rate: rateToAed,
       aed_equivalent: aedEquivalent,
       pocket: deposit.pocket,
       deal_id: dealId,
@@ -298,7 +294,7 @@ export async function getDealForTransition(
 ) {
   const { data, error } = await admin
     .from("deals")
-    .select("id, source, status, lifecycle_status, sale_dzd, collected_dzd, car_id, inventory_car_id")
+    .select("id, source, status, lifecycle_status, sale_amount, sale_currency, collected_dzd, car_id, inventory_car_id")
     .eq("id", dealId)
     .single();
   if (error || !data) throw new Error(error?.message || "Deal not found");
@@ -307,7 +303,8 @@ export async function getDealForTransition(
     source: string | null;
     status: string | null;
     lifecycle_status: string | null;
-    sale_dzd: number | null;
+    sale_amount: number | null;
+    sale_currency: string | null;
     collected_dzd: number | null;
     car_id: string | null;
     inventory_car_id: string | null;

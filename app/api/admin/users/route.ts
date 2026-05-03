@@ -173,6 +173,9 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "User not created" }, { status: 500 });
     }
+    await admin.auth.admin.updateUserById(user.id, {
+      app_metadata: { ...(user.app_metadata as Record<string, unknown>), role: safeRole },
+    });
     await admin.from("user_profiles").insert({
       id: user.id,
       name: fullName || null,
@@ -301,6 +304,16 @@ export async function PATCH(request: NextRequest) {
 
       const { error } = await admin.from("user_profiles").update(payload).eq("id", body.user_id);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      if (role) {
+        const { data: authUser, error: getErr } = await admin.auth.admin.getUserById(body.user_id);
+        if (!getErr && authUser.user) {
+          const meta =
+            (authUser.user.app_metadata as Record<string, unknown> | null) ?? {};
+          await admin.auth.admin.updateUserById(body.user_id, {
+            app_metadata: { ...meta, role },
+          });
+        }
+      }
       return NextResponse.json({ ok: true });
     }
 

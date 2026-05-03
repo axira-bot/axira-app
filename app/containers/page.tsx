@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Car, Deal } from "@/lib/types";
+import type { Car } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
+import { useAuth } from "@/lib/context/AuthContext";
 
 type Container = {
   id: string;
@@ -116,13 +117,13 @@ function formatDate(value: string | null | undefined): string {
 }
 
 export default function ContainersPage() {
+  const { canDelete } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [containers, setContainers] = useState<Container[]>([]);
   const [containerCars, setContainerCars] = useState<ContainerCar[]>([]);
   const [cars, setCars] = useState<Car[]>([]);
-  const [deals, setDeals] = useState<Deal[]>([]);
 
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [newForm, setNewForm] = useState<NewContainerForm>({
@@ -169,7 +170,6 @@ export default function ContainersPage() {
       { data: containersData, error: containersError },
       { data: containerCarsData, error: containerCarsError },
       { data: carsData, error: carsError },
-      { data: dealsData, error: dealsError },
     ] = await Promise.all([
       supabase
         .from("containers")
@@ -179,21 +179,15 @@ export default function ContainersPage() {
       supabase
         .from("cars")
         .select("id, brand, model, year, color, vin, location, owner, client_name"),
-      supabase
-        .from("deals")
-        .select(
-          "id, car_id, car_label, cost_shipping, profit, total_expenses, sale_aed"
-        ),
     ]);
 
-    if (containersError || containerCarsError || carsError || dealsError) {
+    if (containersError || containerCarsError || carsError) {
       setError(
         [
           "Failed to load containers data.",
           containersError?.message,
           containerCarsError?.message,
           carsError?.message,
-          dealsError?.message,
         ]
           .filter(Boolean)
           .join(" ")
@@ -203,7 +197,6 @@ export default function ContainersPage() {
     setContainers((containersData as Container[]) ?? []);
     setContainerCars((containerCarsData as ContainerCar[]) ?? []);
     setCars((carsData as Car[]) ?? []);
-    setDeals((dealsData as Deal[]) ?? []);
 
     setIsLoading(false);
   };
@@ -367,6 +360,7 @@ export default function ContainersPage() {
   };
 
   const handleDeleteContainer = async (container: Container) => {
+    if (!canDelete) return;
     const carsInContainer = containerCars.filter((cc) => cc.container_id === container.id);
     if (carsInContainer.length > 0) {
       setError("Remove all cars from container before deleting.");
@@ -757,7 +751,7 @@ export default function ContainersPage() {
         .eq("id", (pocketRow as { id: string }).id);
     }
 
-    // 3. Split cost across cars and update deals.cost_shipping & profit
+    // 3. Split shipping cost across cars: replace deal_expenses.shipping per linked deal
     // Log which container_cars we're about to process
     // eslint-disable-next-line no-console
     console.log(
@@ -771,7 +765,7 @@ export default function ContainersPage() {
     );
     const perCarDefault = amount / carsInContainer.length;
 
-    const updatedDealsSummary: { id: string; profit: number }[] = [];
+    const updatedShippingSummary: { id: string; shippingAed: number }[] = [];
 
     for (const cc of carsInContainer) {
       if (!cc.car_id) continue;
@@ -781,7 +775,6 @@ export default function ContainersPage() {
           ? cc.shipping_contribution
           : perCarDefault;
 
-      // Log each car_id we're processing
       // eslint-disable-next-line no-console
       console.log(
         "Processing container_car for shipping split:",
@@ -792,17 +785,10 @@ export default function ContainersPage() {
         contribution
       );
 
-      // 1) Fetch current deal for this car_id from Supabase
       const {
         data: dealRow,
         error: dealFetchError,
-      } = await supabase
-        .from("deals")
-        .select(
-          "id, cost_car, cost_shipping, cost_inspection, cost_recovery, cost_maintenance, cost_other, sale_aed"
-        )
-        .eq("car_id", cc.car_id)
-        .maybeSingle();
+      } = await supabase.from("deals").select("id").eq("car_id", cc.car_id).maybeSingle();
 
       if (dealFetchError || !dealRow) {
         // eslint-disable-next-line no-console
@@ -813,97 +799,58 @@ export default function ContainersPage() {
         continue;
       }
 
-      // Log the fetched deal before calculations
+      const dealId = (dealRow as { id: string }).id;
+
       // eslint-disable-next-line no-console
       console.log("Fetched deal for car_id", cc.car_id, "=>", dealRow);
 
-      const currentCostCar = dealRow.cost_car || 0;
-      const currentCostInspection = dealRow.cost_inspection || 0;
-      const currentCostRecovery = dealRow.cost_recovery || 0;
-      const currentCostMaintenance = dealRow.cost_maintenance || 0;
-      const currentCostOther = dealRow.cost_other || 0;
-      const saleAed = dealRow.sale_aed || 0;
+      const { error: delExErr } = await supabase
+        .from("deal_expenses")
+        .delete()
+        .eq("deal_id", dealId)
+        .eq("expense_type", "shipping");
 
-      // 2) New cost_shipping is the split amount
-      const newCostShipping = contribution;
-
-      // 3) Recalculate total_expenses using freshly fetched costs
-      const totalExpenses =
-        currentCostCar +
-        newCostShipping +
-        currentCostInspection +
-        currentCostRecovery +
-        currentCostMaintenance +
-        currentCostOther;
-
-      // 4) Recalculate profit
-      const profit = saleAed - totalExpenses;
-
-      // Log the calculation details
-      // eslint-disable-next-line no-console
-      console.log(
-        "Shipping split calculation for deal",
-        dealRow.id,
-        {
-          cost_car: currentCostCar,
-          new_cost_shipping: newCostShipping,
-          cost_inspection: currentCostInspection,
-          cost_recovery: currentCostRecovery,
-          cost_maintenance: currentCostMaintenance,
-          cost_other: currentCostOther,
-          total_expenses: totalExpenses,
-          sale_aed: saleAed,
-          profit,
-        }
-      );
-
-      const { error: dealUpdateError } = await supabase
-        .from("deals")
-        .update({
-          cost_shipping: newCostShipping,
-          total_expenses: totalExpenses,
-          profit,
-        })
-        .eq("id", dealRow.id);
-
-      if (dealUpdateError) {
+      if (delExErr) {
         // eslint-disable-next-line no-console
-        console.log("Supabase update deal shipping error:", dealUpdateError);
-        setError(
-          [
-            "Invoice saved, but failed to update some deal shipping costs.",
-            dealUpdateError.message,
-            dealUpdateError.details,
-            dealUpdateError.hint,
-          ]
-            .filter(Boolean)
-            .join(" ")
-        );
-      } else {
-        // Log successful update
-        // eslint-disable-next-line no-console
-        console.log(
-          "Updated deal shipping successfully:",
-          dealRow.id,
-          "profit:",
-          profit
-        );
-        updatedDealsSummary.push({ id: dealRow.id, profit });
-        setDeals((prev) =>
-          prev.map((d) =>
-            d.id === dealRow.id
-              ? {
-                  ...d,
-                  cost_shipping: newCostShipping,
-                  total_expenses: totalExpenses,
-                  profit,
-                }
-              : d
-          )
-        );
+        console.log("Supabase delete prior shipping expense error:", delExErr);
       }
 
-      // Partner cars: partner pays Axira = movement IN
+      if (contribution > 0) {
+        const { error: insExErr } = await supabase.from("deal_expenses").insert({
+          deal_id: dealId,
+          expense_type: "shipping",
+          amount: contribution,
+          currency: "AED",
+          rate_to_aed: 1,
+        });
+
+        if (insExErr) {
+          // eslint-disable-next-line no-console
+          console.log("Supabase insert shipping expense error:", insExErr);
+          setError(
+            [
+              "Invoice saved, but failed to update some deal shipping expenses.",
+              insExErr.message,
+              insExErr.details,
+              insExErr.hint,
+            ]
+              .filter(Boolean)
+              .join(" ")
+          );
+        } else {
+          // eslint-disable-next-line no-console
+          console.log(
+            "Updated deal shipping expense successfully:",
+            dealId,
+            "shipping AED:",
+            contribution
+          );
+          updatedShippingSummary.push({ id: dealId, shippingAed: contribution });
+        }
+      } else {
+        updatedShippingSummary.push({ id: dealId, shippingAed: 0 });
+      }
+
       if (cc.is_partner && contribution > 0) {
         const { error: partnerMoveError } = await supabase
           .from("movements")
@@ -919,7 +866,7 @@ export default function ContainersPage() {
             rate: 1,
             aed_equivalent: contribution,
             pocket: "Dubai Cash",
-            deal_id: dealRow.id,
+            deal_id: dealId,
             payment_id: null,
             reference: invoiceRef,
           });
@@ -934,11 +881,11 @@ export default function ContainersPage() {
     }
 
     // Log which deals were updated and their new profits
-    if (updatedDealsSummary.length > 0) {
+    if (updatedShippingSummary.length > 0) {
       // eslint-disable-next-line no-console
       console.log(
         "Updated deals after shipping split:",
-        updatedDealsSummary.map((d) => `deal_id=${d.id}, profit=${d.profit}`)
+        updatedShippingSummary.map((d) => `deal_id=${d.id}, shipping_AED=${d.shippingAed}`)
       );
     }
 
@@ -1097,6 +1044,7 @@ export default function ContainersPage() {
                             >
                               Edit
                             </button>
+                            {canDelete ? (
                             <button
                               type="button"
                               onClick={() => handleDeleteContainer(container)}
@@ -1104,6 +1052,7 @@ export default function ContainersPage() {
                             >
                               Delete
                             </button>
+                            ) : null}
                           </div>
                         </td>
                       </tr>

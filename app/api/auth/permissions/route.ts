@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { resolvePermissions } from "@/lib/auth/permissions";
+import { resolveEffectiveRole } from "@/lib/auth/resolveUserRole";
 
 export async function GET() {
   try {
@@ -18,11 +19,7 @@ export async function GET() {
       .eq("id", user.id)
       .maybeSingle();
 
-    const role =
-      (profile as { role?: string } | null)?.role ??
-      (user.user_metadata as { role?: string } | null)?.role ??
-      (user.app_metadata as { role?: string } | null)?.role ??
-      "staff";
+    const role = resolveEffectiveRole((profile as { role?: string } | null)?.role, user);
 
     const metadataPermissions =
       (user.app_metadata as { feature_permissions?: Record<string, boolean> } | null)

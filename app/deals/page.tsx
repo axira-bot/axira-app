@@ -9,6 +9,23 @@ import dynamic from "next/dynamic";
 import PreorderDealModal from "@/components/preorders/PreorderDealModal";
 import { useAuth } from "@/lib/context/AuthContext";
 import { getRates, type AppRates } from "@/lib/rates";
+import {
+  computeDealCore,
+  computeDealPresentation,
+  dbDealExpenseToFact,
+  displayFxFromAppRates,
+  mergeDealWithDerived,
+  saleDzdRateToAedFromDzdPerAed,
+  toAed,
+} from "@/lib/finance/dealMoney";
+import {
+  carPurchaseToCostFact,
+  dealListSaleDzd,
+  expensesByTypeToFormFields,
+  formLinesToExpenseFacts,
+  rateFieldFromDeal,
+  type DealExpenseRow,
+} from "@/app/deals/dealFinanceHelpers";
 
 const InvoiceDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.InvoiceDownloadButton),
@@ -23,12 +40,21 @@ type DealPayment = {
   id: string;
   deal_id: string;
   dzd: number | null;
+  amount: number | null;
+  currency: string | null;
+  rate_to_aed: number | null;
   date: string | null;
   type: string | null;
   rate: number | null;
   notes: string | null;
   created_at?: string | null;
 };
+
+function paymentAmountDzd(p: DealPayment): number {
+  const cur = (p.currency || "DZD").toUpperCase();
+  const raw = p.amount ?? p.dzd ?? 0;
+  return cur === "DZD" ? Number(raw) : Number(p.dzd ?? 0);
+}
 
 type ClientDeal = {
   id: string;
@@ -183,7 +209,7 @@ function formatVinShort(vin: string | null | undefined): string {
 export default function DealsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, role, isStaff } = useAuth();
+  const { user, role, isStaff, canDelete, isInvestorReadOnly } = useAuth();
   /** Cleared when URL no longer has `addDeal=1`, so the same car can be deep-linked again after `router.replace`. */
   const prefillCarIdProcessedRef = useRef<string>("");
 
@@ -195,6 +221,7 @@ export default function DealsPage() {
     "in_transit_or_arrived"
   );
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealExpensesByDealId, setDealExpensesByDealId] = useState<Record<string, DealExpenseRow[]>>({});
   const [clients, setClients] = useState<ClientDeal[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [rates, setRates] = useState<AppRates>({ DZD: 0, EUR: 0, USD: 0, GBP: 0 });
@@ -267,7 +294,7 @@ export default function DealsPage() {
       supabase
         .from("cars")
         .select(
-          "id, brand, model, year, purchase_price, purchase_currency, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name, inventory_lifecycle_status, purchase_order_id, purchase_order_item_id"
+          "id, brand, model, year, purchase_price, purchase_currency, purchase_rate, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name, inventory_lifecycle_status, purchase_order_id, purchase_order_item_id"
         )
         .order("created_at", { ascending: false }),
       supabase.from("deals").select("*").order("date", { ascending: false }),
@@ -287,7 +314,22 @@ export default function DealsPage() {
     }
 
     setCars((carsData as Car[]) ?? []);
-    setDeals((dealsData as Deal[]) ?? []);
+    const dealRows = (dealsData as Deal[]) ?? [];
+    setDeals(dealRows);
+    const dealIds = dealRows.map((d) => d.id).filter(Boolean);
+    if (dealIds.length) {
+      const { data: exData } = await supabase.from("deal_expenses").select("*").in("deal_id", dealIds);
+      const map: Record<string, DealExpenseRow[]> = {};
+      for (const r of (exData as DealExpenseRow[]) ?? []) {
+        const did = String((r as { deal_id?: string }).deal_id || "");
+        if (!did) continue;
+        if (!map[did]) map[did] = [];
+        map[did].push(r as DealExpenseRow);
+      }
+      setDealExpensesByDealId(map);
+    } else {
+      setDealExpensesByDealId({});
+    }
     if (!poEligibilityErr) {
       const value = ((poEligibilityData as { value?: string | null } | null)?.value || "").trim();
       if (value === "arrived_only" || value === "in_transit_or_arrived") {
@@ -443,6 +485,7 @@ export default function DealsPage() {
   };
 
   const deleteDummyDoc = async (id: string) => {
+    if (!canDelete) return;
     if (!window.confirm("Delete this dummy document?")) return;
     setDummyError(null);
     const res = await fetch(`/api/deals/dummy-docs?id=${encodeURIComponent(id)}`, { method: "DELETE" });
@@ -467,10 +510,28 @@ export default function DealsPage() {
     return () => clearTimeout(t);
   }, [customerSearchInput]);
 
+  const fxList = useMemo(
+    () => displayFxFromAppRates({ USD: rates.USD, DZD: rates.DZD, EUR: rates.EUR }),
+    [rates.USD, rates.DZD, rates.EUR]
+  );
+
+  const dealsWithDerived = useMemo(() => {
+    return deals.map((d) => {
+      const ex = (dealExpensesByDealId[d.id] ?? []).map((r) => dbDealExpenseToFact(r));
+      return mergeDealWithDerived(d, ex, fxList);
+    });
+  }, [deals, dealExpensesByDealId, fxList]);
+
+  const viewDealDerived = useMemo(() => {
+    if (!viewDeal) return null;
+    const ex = (dealExpensesByDealId[viewDeal.id] ?? []).map((r) => dbDealExpenseToFact(r));
+    return mergeDealWithDerived(viewDeal, ex, fxList);
+  }, [viewDeal, dealExpensesByDealId, fxList]);
+
   const filteredDeals = useMemo(() => {
     const selectedClientId = (searchParams.get("clientId") || "").trim();
     const selectedClientName = (searchParams.get("clientName") || "").trim().toLowerCase();
-    let base = deals;
+    let base = dealsWithDerived;
     if (activeTab === "Pending") {
       base = base.filter((d) => (d.status || "pending").toLowerCase() === "pending");
     } else if (activeTab === "Closed") {
@@ -498,7 +559,7 @@ export default function DealsPage() {
       });
     }
     return base;
-  }, [activeTab, deals, searchParams, role, user?.id, customerSearchDebounced, clients]);
+  }, [activeTab, dealsWithDerived, searchParams, role, user?.id, customerSearchDebounced, clients]);
 
   const pendingCompletionCount = useMemo(
     () =>
@@ -617,28 +678,42 @@ export default function DealsPage() {
   const sourceCost = selectedCar?.purchase_price ?? 0;
   const sourceCurrency = ((selectedCar?.purchase_currency || "AED") as string).toUpperCase();
   const usdPerAed = rates.USD > 0 ? rates.USD : 0;
-  const aedPerUsd = usdPerAed > 0 ? 1 / usdPerAed : 3.67;
   const dealRateDzdPerAed =
     dealRateDzdPerUsd > 0
       ? dealRateDzdPerUsd * (usdPerAed > 0 ? usdPerAed : 1)
       : rates.DZD > 0
         ? rates.DZD
         : 0;
-  const saleUsd = dealRateDzdPerUsd > 0 ? saleDzd / dealRateDzdPerUsd : 0;
-  const saleAed =
-    usdPerAed > 0
-      ? saleUsd / usdPerAed
-      : dealRateDzdPerAed > 0
-        ? saleDzd / dealRateDzdPerAed
-        : 0;
-  const carCostAed =
-    sourceCurrency === "AED"
-      ? sourceCost
-      : sourceCurrency === "USD"
-        ? sourceCost * aedPerUsd
-        : sourceCurrency === "DZD" && rates.DZD > 0
-          ? sourceCost / rates.DZD
-          : sourceCost;
+
+  const saleRateToAedSnapshot = saleDzdRateToAedFromDzdPerAed(dealRateDzdPerAed);
+  const costF = carPurchaseToCostFact(selectedCar);
+  const expenseFacts = formLinesToExpenseFacts(form);
+  const dealCorePreview = computeDealCore({
+    sale: { amount: saleDzd, currency: "DZD", rateToAed: saleRateToAedSnapshot },
+    cost: { amount: costF.amount, currency: costF.currency, rateToAed: costF.rateToAed },
+    expenses: expenseFacts,
+  });
+  const fxToday = displayFxFromAppRates({ USD: rates.USD, DZD: rates.DZD, EUR: rates.EUR });
+  const pres = computeDealPresentation(dealCorePreview, fxToday);
+
+  const shippingAed = parseNum(form.shippingAed);
+  const inspectionAed = parseNum(form.inspectionAed);
+  const recoveryAed = parseNum(form.recoveryAed);
+  const maintenanceAed = parseNum(form.maintenanceAed);
+  const otherAed = parseNum(form.otherAed);
+
+  const saleAed = dealCorePreview.saleAed;
+  const carCostAed = dealCorePreview.costAed;
+  const totalExpensesAed = dealCorePreview.costAed + dealCorePreview.expensesAedTotal;
+  const profitPreviewAed = dealCorePreview.profitAed;
+  const profitPreview = profitPreviewAed;
+  const profitPreviewUsd = pres.profitUsd;
+  const profitPreviewDzd = pres.profitDzd;
+  const saleUsd = pres.saleUsd;
+  const totalExpenses = totalExpensesAed;
+  const totalExpensesUsd = pres.costUsd + pres.expensesUsd;
+  const totalExpensesDzd =
+    fxToday.aedPerDzd > 0 ? totalExpensesAed / fxToday.aedPerDzd : dealRateDzdPerAed > 0 ? totalExpensesAed * dealRateDzdPerAed : 0;
   const carCostUsd =
     sourceCurrency === "USD"
       ? sourceCost
@@ -657,33 +732,6 @@ export default function DealsPage() {
         : dealRateDzdPerAed > 0
           ? carCostAed * dealRateDzdPerAed
           : 0;
-  const shippingAed = parseNum(form.shippingAed);
-  const inspectionAed = parseNum(form.inspectionAed);
-  const recoveryAed = parseNum(form.recoveryAed);
-  const maintenanceAed = parseNum(form.maintenanceAed);
-  const otherAed = parseNum(form.otherAed);
-
-  const totalExpenses =
-    carCostAed +
-    shippingAed +
-    inspectionAed +
-    recoveryAed +
-    maintenanceAed +
-    otherAed;
-  const totalExpensesUsd =
-    carCostUsd + (shippingAed * usdPerAed) + (inspectionAed * usdPerAed) + (recoveryAed * usdPerAed) + (maintenanceAed * usdPerAed) + (otherAed * usdPerAed);
-  const totalExpensesDzd =
-    dealRateDzdPerUsd > 0
-      ? totalExpensesUsd * dealRateDzdPerUsd
-      : dealRateDzdPerAed > 0
-        ? totalExpenses * dealRateDzdPerAed
-        : 0;
-  const profitPreviewDzd = saleDzd - totalExpensesDzd;
-  const profitPreviewUsd = saleUsd - totalExpensesUsd;
-  const profitPreview =
-    dealRateDzdPerAed > 0
-      ? profitPreviewDzd / dealRateDzdPerAed
-      : saleAed - totalExpenses;
   const pendingDzd = Math.max(saleDzd - amountReceivedDzd, 0);
 
   const openAddModal = () => {
@@ -696,33 +744,29 @@ export default function DealsPage() {
   const openEditModal = (deal: Deal) => {
     setEditingDealId(deal.id);
     const dealExt = deal as Deal & { client_id?: string | null; handled_by?: string | null; handled_by_name?: string | null };
+    const exRows = dealExpensesByDealId[deal.id] ?? [];
+    const exForm = expensesByTypeToFormFields(exRows);
     setForm({
       clientId: dealExt.client_id ?? "",
       date: (deal.date || new Date().toISOString().slice(0, 10)).slice(0, 10),
       carId: deal.car_id || "",
       employeeId: dealExt.handled_by ?? "",
       isManagedDeal: false,
-      saleDzd: deal.sale_dzd != null ? String(deal.sale_dzd) : "",
+      saleDzd: String(dealListSaleDzd(deal) || deal.sale_amount || ""),
       amountReceivedDzd:
         deal.collected_dzd != null ? String(deal.collected_dzd) : "0",
-      rate:
-        deal.rate != null
-          ? String(
-              rates.USD > 0
-                ? deal.rate / rates.USD
-                : deal.rate
-            )
-          : "",
-      shippingAed: deal.cost_shipping != null ? String(deal.cost_shipping) : "",
-      inspectionAed: deal.cost_inspection != null ? String(deal.cost_inspection) : "",
-      recoveryAed: deal.cost_recovery != null ? String(deal.cost_recovery) : "",
-      maintenanceAed: deal.cost_maintenance != null ? String(deal.cost_maintenance) : "",
-      otherAed: deal.cost_other != null ? String(deal.cost_other) : "",
+      rate: rateFieldFromDeal(deal, usdPerAed),
+      shippingAed: exForm.shippingAed,
+      inspectionAed: exForm.inspectionAed,
+      recoveryAed: exForm.recoveryAed,
+      maintenanceAed: exForm.maintenanceAed,
+      otherAed: exForm.otherAed,
       shippingPaid: Boolean(deal.shipping_paid),
       notes: deal.notes || "",
       driveLink: (deal as Deal & { drive_link?: string | null }).drive_link ?? "",
       status: ((deal.status || "pending").toLowerCase() === "closed" ? "closed" : "pending"),
-      saleUsd: deal.sale_usd != null ? String(deal.sale_usd) : "",
+      saleUsd:
+        deal.invoice_declared_usd != null ? String(deal.invoice_declared_usd) : "",
     });
     setIsModalOpen(true);
     setError(null);
@@ -798,6 +842,8 @@ export default function DealsPage() {
     setError(null);
 
     const car = selectedCar;
+    const costSnap = carPurchaseToCostFact(car);
+    const saleSnapshotRate = saleDzdRateToAedFromDzdPerAed(dealRateDzdPerAed);
     const payload = {
       client_id: form.clientId || null,
       client_name: selectedClient?.name ?? "",
@@ -806,26 +852,37 @@ export default function DealsPage() {
       date: form.date,
       handled_by: form.employeeId || null,
       handled_by_name: form.employeeId ? (employees.find((e) => e.id === form.employeeId)?.name ?? "") : null,
-      sale_dzd: saleDzd,
-      rate: dealRateDzdPerAed,
-      sale_aed: saleAed,
-      cost_car: carCostAed,
-      cost_shipping: shippingAed,
-      cost_inspection: inspectionAed,
-      cost_recovery: recoveryAed,
-      cost_maintenance: maintenanceAed,
-      cost_other: otherAed,
-      total_expenses: totalExpenses,
-      profit: profitPreview,
+      sale_amount: saleDzd,
+      sale_currency: "DZD",
+      sale_rate_to_aed: saleSnapshotRate,
+      cost_amount: costSnap.amount,
+      cost_currency: costSnap.currency,
+      cost_rate_to_aed: costSnap.rateToAed,
+      invoice_declared_usd: parseNum(form.saleUsd) > 0 ? parseNum(form.saleUsd) : null,
       shipping_paid: form.shippingPaid,
       collected_dzd: amountReceivedDzd,
       pending_dzd: pendingDzd,
       status: form.status,
       notes: form.notes || null,
       drive_link: form.driveLink.trim() || null,
-      sale_usd: parseNum(form.saleUsd) || saleUsd || null,
       created_by: user?.id || null,
       pending_completion: isStaff ? true : false,
+    };
+
+    const syncDealExpensesLocal = async (dealId: string) => {
+      const exTypes = ["shipping", "customs", "inspection", "recovery", "maintenance", "other"];
+      await supabase.from("deal_expenses").delete().eq("deal_id", dealId).in("expense_type", exTypes);
+      const exRows = formLinesToExpenseFacts(form).map((e) => ({
+        deal_id: dealId,
+        expense_type: e.expenseType,
+        amount: e.amount,
+        currency: e.currency,
+        rate_to_aed: e.rateToAed,
+      }));
+      if (exRows.length) {
+        const { error: exErr } = await supabase.from("deal_expenses").insert(exRows);
+        if (exErr) throw exErr;
+      }
     };
 
     if (editingDealId) {
@@ -874,12 +931,27 @@ export default function DealsPage() {
         setIsSaving(false);
         return;
       }
+      try {
+        await syncDealExpensesLocal(editingDealId);
+        const localRows = formLinesToExpenseFacts(form).map((e) => ({
+          deal_id: editingDealId,
+          expense_type: e.expenseType,
+          amount: e.amount,
+          currency: e.currency,
+          rate_to_aed: e.rateToAed,
+        })) as DealExpenseRow[];
+        setDealExpensesByDealId((p) => ({ ...p, [editingDealId]: localRows }));
+      } catch (syncErr) {
+        setError(syncErr instanceof Error ? syncErr.message : "Deal saved but expenses failed to sync.");
+        setIsSaving(false);
+        return;
+      }
       await logActivity({
         action: "updated",
         entity: "deal",
         entity_id: editingDealId,
         description: `Deal updated – ${existingDeal?.client_name ?? ""} – ${existingDeal?.car_label ?? ""}`.trim(),
-        amount: existingDeal?.sale_aed ?? undefined,
+        amount: saleAed,
         currency: "AED",
       });
 
@@ -893,7 +965,7 @@ export default function DealsPage() {
             data: {
               clientName: existingDeal?.client_name ?? "Unknown",
               carLabel: existingDeal?.car_label ?? "Unknown",
-              profit: payload.profit ?? existingDeal?.profit,
+              profit: profitPreviewAed,
             },
           }),
         }).catch(() => {});
@@ -1040,12 +1112,27 @@ export default function DealsPage() {
 
       const dealId = (inserted as Deal).id;
       const newDeal = inserted as Deal;
+      try {
+        await syncDealExpensesLocal(dealId);
+        const localRows = formLinesToExpenseFacts(form).map((e) => ({
+          deal_id: dealId,
+          expense_type: e.expenseType,
+          amount: e.amount,
+          currency: e.currency,
+          rate_to_aed: e.rateToAed,
+        })) as DealExpenseRow[];
+        setDealExpensesByDealId((p) => ({ ...p, [dealId]: localRows }));
+      } catch (syncErr) {
+        setError(syncErr instanceof Error ? syncErr.message : "Deal created but expenses failed to sync.");
+        setIsSaving(false);
+        return;
+      }
       await logActivity({
         action: "created",
         entity: "deal",
         entity_id: dealId,
         description: `Deal created – ${newDeal.client_name ?? ""} – ${newDeal.car_label ?? ""}`.trim(),
-        amount: newDeal.sale_aed ?? undefined,
+        amount: saleAed,
         currency: "AED",
       });
 
@@ -1058,9 +1145,9 @@ export default function DealsPage() {
           data: {
             clientName: newDeal.client_name ?? "Unknown",
             carLabel: newDeal.car_label ?? "Unknown",
-            saleDzd: newDeal.sale_dzd,
-            saleAed: newDeal.sale_aed,
-            saleUsd: newDeal.sale_usd,
+            saleDzd: dealListSaleDzd(newDeal) || newDeal.sale_amount,
+            saleAed,
+            saleUsd: newDeal.invoice_declared_usd,
             date: newDeal.date ?? new Date().toISOString().slice(0, 10),
           },
         }),
@@ -1135,14 +1222,22 @@ export default function DealsPage() {
 
       // If some DZD already collected at deal creation, create payment + movement and update Algeria Cash
       if (amountReceivedDzd > 0) {
+        const initRateToAed =
+          saleRateToAedSnapshot != null && saleRateToAedSnapshot > 0 ? saleRateToAedSnapshot : 1;
+        const initAedEq = toAed(amountReceivedDzd, "DZD", initRateToAed);
         const paymentInsert = await supabase
           .from("payments")
           .insert({
             deal_id: dealId,
             dzd: amountReceivedDzd,
+            amount: amountReceivedDzd,
+            currency: "DZD",
+            rate_to_aed: initRateToAed,
             date: form.date,
             type: "deal_init",
-            rate: dealRateDzdPerAed,
+            kind: "deal_init",
+            rate: initRateToAed,
+            aed_equivalent: initAedEq,
             notes: form.notes || null,
           })
           .select("*")
@@ -1154,8 +1249,6 @@ export default function DealsPage() {
         } else {
           const paymentId = (paymentInsert.data as DealPayment).id;
 
-          const aedEquivalent = dealRateDzdPerAed > 0 ? amountReceivedDzd / dealRateDzdPerAed : null;
-
           const movementInsert = await supabase.from("movements").insert({
             date: form.date,
             type: "In",
@@ -1163,8 +1256,8 @@ export default function DealsPage() {
             description: form.notes || "Initial payment on deal creation",
             amount: amountReceivedDzd,
             currency: "DZD",
-            rate: dealRateDzdPerAed || null,
-            aed_equivalent: aedEquivalent,
+            rate: initRateToAed,
+            aed_equivalent: initAedEq,
             pocket: "Algeria Cash",
             deal_id: dealId,
             payment_id: paymentId,
@@ -1204,6 +1297,7 @@ export default function DealsPage() {
   };
 
   const handleDelete = async (deal: Deal) => {
+    if (!canDelete) return;
     if (!window.confirm("Delete this deal? This cannot be undone.")) return;
     setIsDeletingId(deal.id);
     setError(null);
@@ -1287,7 +1381,7 @@ export default function DealsPage() {
       entity: "deal",
       entity_id: deal.id,
       description: `Deal deleted – ${deal.client_name ?? ""} – ${deal.car_label ?? ""}`.trim(),
-      amount: deal.sale_aed ?? undefined,
+      amount: toAed(deal.sale_amount, deal.sale_currency, deal.sale_rate_to_aed) || undefined,
       currency: "AED",
     });
 
@@ -1370,7 +1464,16 @@ export default function DealsPage() {
 
     const dealId = viewDeal.id;
 
-    // 1. Insert into payments table
+    const payRateToAed =
+      String(viewDeal.sale_currency || "").toUpperCase() === "DZD" &&
+      viewDeal.sale_rate_to_aed != null &&
+      viewDeal.sale_rate_to_aed > 0
+        ? viewDeal.sale_rate_to_aed
+        : fxList.aedPerDzd > 0
+          ? fxList.aedPerDzd
+          : 1;
+    const aedEq = toAed(amount, "DZD", payRateToAed);
+
     const {
       data: insertedPayment,
       error: paymentError,
@@ -1379,9 +1482,14 @@ export default function DealsPage() {
       .insert({
         deal_id: dealId,
         dzd: amount,
+        amount,
+        currency: "DZD",
+        rate_to_aed: payRateToAed,
         date,
         type: "client_payment",
-        rate: viewDeal.rate || null,
+        kind: "client_payment",
+        rate: payRateToAed,
+        aed_equivalent: aedEq,
         notes: newPaymentNote || null,
       })
       .select("*")
@@ -1443,9 +1551,8 @@ export default function DealsPage() {
         "Client payment",
       amount,
       currency: "DZD",
-      rate: viewDeal.rate || null,
-      aed_equivalent:
-        viewDeal.rate && viewDeal.rate > 0 ? amount / viewDeal.rate : null,
+      rate: payRateToAed,
+      aed_equivalent: aedEq,
       pocket: "Algeria Cash",
       deal_id: dealId,
       payment_id: (insertedPayment as DealPayment).id,
@@ -1543,8 +1650,9 @@ export default function DealsPage() {
   };
 
   const handleDeletePayment = async (payment: DealPayment) => {
+    if (!canDelete) return;
     if (!viewDeal) return;
-    const amount = payment.dzd ?? 0;
+    const amount = paymentAmountDzd(payment);
     if (amount <= 0) return;
     if (!window.confirm("Remove this payment? Deal balances will be updated and the payment movement reversed.")) return;
     setDeletingPaymentId(payment.id);
@@ -1650,6 +1758,9 @@ export default function DealsPage() {
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Deals</h1>
             <p className="text-sm font-medium text-[var(--color-accent)]">Sales & Profit</p>
           </div>
+          {isInvestorReadOnly ? (
+            <p className="text-sm text-muted">You have view-only access to deals.</p>
+          ) : (
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -1676,6 +1787,7 @@ export default function DealsPage() {
               Add Deal
             </button>
           </div>
+          )}
         </header>
 
         <div className="flex flex-wrap gap-2">
@@ -1764,13 +1876,13 @@ export default function DealsPage() {
                 <tbody>
                   {filteredDeals.map((d) => {
                     const status = (d.status || "pending").toLowerCase();
-                    const total =
-                      (d.cost_car || 0) +
-                      (d.cost_shipping || 0) +
-                      (d.cost_inspection || 0) +
-                      (d.cost_recovery || 0) +
-                      (d.cost_maintenance || 0) +
-                      (d.cost_other || 0);
+                    const derived = d.derived;
+                    const total = derived.costAed + derived.expensesAedTotal;
+                    const saleDzdVal = dealListSaleDzd(d) || d.sale_amount || 0;
+                    const rateDzdPerUsdCell =
+                      d.sale_rate_to_aed != null && d.sale_rate_to_aed > 0 && rates.USD > 0
+                        ? formatNumber(1 / (d.sale_rate_to_aed * rates.USD))
+                        : "-";
                     return (
                       <tr key={d.id} className="border-b border-app last:border-b-0">
                         <td className="px-4 py-3 font-semibold text-app">
@@ -1806,15 +1918,19 @@ export default function DealsPage() {
                           })()}
                         </td>
                         <td className="px-4 py-3 text-app">{formatDate(d.date ?? d.created_at)}</td>
-                        <td className="px-4 py-3 text-app">{formatMoney(d.sale_dzd, "DZD")}</td>
+                        <td className="px-4 py-3 text-app">{formatMoney(saleDzdVal, "DZD")}</td>
                         {!isStaff && (
                           <td className="px-4 py-3 text-app hidden sm:table-cell">
-                            {d.rate != null && rates.USD > 0 ? formatNumber(d.rate / rates.USD) : "-"}
+                            {rateDzdPerUsdCell}
                           </td>
                         )}
-                        {!isStaff && <td className="px-4 py-3 text-app">{formatMoney(d.sale_usd, "USD")}</td>}
+                        {!isStaff && <td className="px-4 py-3 text-app">{formatMoney(derived.saleUsd, "USD")}</td>}
                         {!isStaff && <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(total, "AED")}</td>}
-                        {!isStaff && <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(d.profit, "AED")}</td>}
+                        {!isStaff && (
+                          <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">
+                            {formatMoney(derived.profitAed, "AED")}
+                          </td>
+                        )}
                         {!isStaff && <td className="px-4 py-3 text-app hidden md:table-cell">{((d as Deal & { source?: string | null }).source || "STOCK").toString()}</td>}
                         {!isStaff && <td className="px-4 py-3 text-app hidden md:table-cell">{((d as Deal & { lifecycle_status?: string | null }).lifecycle_status || (status === "closed" ? "CLOSED" : "PRE_ORDER")).toString()}</td>}
                         <td className="px-4 py-3">
@@ -1837,11 +1953,12 @@ export default function DealsPage() {
                             <button
                               type="button"
                               onClick={() => openEditModal(d)}
-                              disabled={isStaff && !isPrivilegedRole}
+                              disabled={(isStaff && !isPrivilegedRole) || isInvestorReadOnly}
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
                               Edit
                             </button>
+                            {canDelete ? (
                             <button
                               type="button"
                               onClick={() => handleDelete(d)}
@@ -1850,6 +1967,7 @@ export default function DealsPage() {
                             >
                               {isDeletingId === d.id ? "Deleting..." : "Delete"}
                             </button>
+                            ) : null}
                             <button
                               type="button"
                               onClick={() => openView(d)}
@@ -1857,7 +1975,28 @@ export default function DealsPage() {
                             >
                               View
                             </button>
-                            {d.sale_usd ? (() => {
+                            {(() => {
+                              const invUsd =
+                                d.invoice_declared_usd != null && d.invoice_declared_usd > 0
+                                  ? d.invoice_declared_usd
+                                  : 0;
+                              const showDocs = invUsd > 0 || (d.derived?.saleUsd ?? 0) > 0;
+                              if (!showDocs) return null;
+                              const saleUsdPdf = invUsd > 0 ? invUsd : d.derived.saleUsd;
+                              const dzdToAed =
+                                String(d.sale_currency || "").toUpperCase() === "DZD" &&
+                                d.sale_rate_to_aed != null &&
+                                d.sale_rate_to_aed > 0
+                                  ? d.sale_rate_to_aed
+                                  : fxList.aedPerDzd;
+                              const advanceUsd =
+                                (d.collected_dzd ?? 0) > 0 && dzdToAed > 0 && fxList.aedPerUsd > 0
+                                  ? Math.round(((d.collected_dzd ?? 0) * dzdToAed) / fxList.aedPerUsd)
+                                  : 0;
+                              const balanceUsd =
+                                (d.pending_dzd ?? 0) > 0 && dzdToAed > 0 && fxList.aedPerUsd > 0
+                                  ? Math.round(((d.pending_dzd ?? 0) * dzdToAed) / fxList.aedPerUsd)
+                                  : 0;
                               const dealCar = cars.find((c) => c.id === d.car_id);
                               const dealDate = d.date ? new Date(d.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase() : "";
                               const invoiceNum = `INV-${d.id.slice(0, 8).toUpperCase()}`;
@@ -1875,7 +2014,7 @@ export default function DealsPage() {
                                       carColor: dealCar?.color ?? null,
                                       carVin: dealCar?.vin ?? null,
                                       countryOfOrigin: (dealCar as Car & { country_of_origin?: string | null })?.country_of_origin ?? null,
-                                      saleUsd: d.sale_usd ?? 0,
+                                      saleUsd: saleUsdPdf,
                                       exportTo: "Algeria",
                                     }}
                                   />
@@ -1890,20 +2029,14 @@ export default function DealsPage() {
                                       carColor: dealCar?.color ?? null,
                                       carVin: dealCar?.vin ?? null,
                                       countryOfOrigin: (dealCar as Car & { country_of_origin?: string | null })?.country_of_origin ?? null,
-                                      totalAmountUsd: d.sale_usd ?? 0,
-                                      advanceUsd:
-                                        d.sale_usd && d.collected_dzd && d.rate && rates.USD > 0
-                                          ? Math.round(d.collected_dzd / (d.rate / rates.USD))
-                                          : 0,
-                                      balanceUsd:
-                                        d.sale_usd && d.pending_dzd && d.rate && rates.USD > 0
-                                          ? Math.round(d.pending_dzd / (d.rate / rates.USD))
-                                          : 0,
+                                      totalAmountUsd: saleUsdPdf,
+                                      advanceUsd,
+                                      balanceUsd,
                                     }}
                                   />
                                 </>
                               );
-                            })() : null}
+                            })()}
                           </div>
                         </td>
                       </tr>
@@ -2333,18 +2466,36 @@ export default function DealsPage() {
               <div className="rounded-md border border-app bg-white p-3 text-xs text-app">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-app">Sale</span>
-                  <span className="text-app">{formatMoney(viewDeal.sale_dzd, "DZD")}</span>
+                  <span className="text-app">
+                    {formatMoney(
+                      viewDeal.sale_amount,
+                      (viewDeal.sale_currency || "AED") as "AED" | "USD" | "DZD" | "EUR"
+                    )}
+                  </span>
                 </div>
                 {!isStaff && (
                   <>
                     <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
                       <span>Rate (DZD/USD)</span>
-                      <span>{viewDeal.rate != null && rates.USD > 0 ? formatNumber(viewDeal.rate / rates.USD) : "-"}</span>
+                      <span>
+                        {String(viewDeal.sale_currency || "").toUpperCase() === "DZD" &&
+                        viewDeal.sale_rate_to_aed != null &&
+                        viewDeal.sale_rate_to_aed > 0 &&
+                        rates.USD > 0
+                          ? formatNumber(1 / (viewDeal.sale_rate_to_aed * rates.USD))
+                          : "-"}
+                      </span>
                     </div>
                     <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                      <span>Sale USD</span>
-                      <span>{formatMoney(viewDeal.sale_usd, "USD")}</span>
+                      <span>Sale USD (display FX)</span>
+                      <span>{formatMoney(viewDealDerived?.derived.saleUsd ?? 0, "USD")}</span>
                     </div>
+                    {viewDeal.invoice_declared_usd != null && viewDeal.invoice_declared_usd > 0 ? (
+                      <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
+                        <span>Invoice declared USD</span>
+                        <span>{formatMoney(viewDeal.invoice_declared_usd, "USD")}</span>
+                      </div>
+                    ) : null}
                   </>
                 )}
               </div>
@@ -2353,14 +2504,14 @@ export default function DealsPage() {
                 <div className="rounded-md border border-app bg-white p-3 text-xs text-app">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-app">Profit</span>
-                    <span className="text-[var(--color-accent)]">{formatMoney(viewDeal.profit, "AED")}</span>
+                    <span className="text-[var(--color-accent)]">
+                      {formatMoney(viewDealDerived?.derived.profitAed ?? 0, "AED")}
+                    </span>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                    <span>Profit (DZD)</span>
+                    <span>Profit (DZD, display FX)</span>
                     <span className="text-app">
-                      {viewDeal.rate && viewDeal.rate > 0
-                        ? formatMoney((viewDeal.profit || 0) * viewDeal.rate, "DZD")
-                        : "-"}
+                      {formatMoney(viewDealDerived?.derived.profitDzd ?? 0, "DZD")}
                     </span>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
@@ -2388,7 +2539,7 @@ export default function DealsPage() {
               {!isStaff && (
               <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                  Expenses (AED)
+                  Cost &amp; expenses
                 </div>
                 {(() => {
                   const dealCar = cars.find((c) => c.id === viewDeal.car_id);
@@ -2401,31 +2552,45 @@ export default function DealsPage() {
                     </div>
                   );
                 })()}
-                <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                <div className="mt-2 space-y-1 text-[11px]">
                   <div className="flex items-center justify-between gap-2 text-app">
-                    <span className="text-muted">Car Cost</span>
-                    <span>{formatMoney(viewDeal.cost_car, "AED")}</span>
+                    <span className="text-muted">Car cost (deal)</span>
+                    <span>
+                      {formatMoney(
+                        viewDeal.cost_amount,
+                        (viewDeal.cost_currency || "AED") as "AED" | "USD" | "DZD" | "EUR"
+                      )}
+                      <span className="ml-2 text-muted">
+                        (
+                        {formatMoney(
+                          toAed(viewDeal.cost_amount, viewDeal.cost_currency, viewDeal.cost_rate_to_aed),
+                          "AED"
+                        )}
+                        )
+                      </span>
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between gap-2 text-app">
-                    <span className="text-muted">Shipping</span>
-                    <span>{formatMoney(viewDeal.cost_shipping, "AED")}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 text-app">
-                    <span className="text-muted">Inspection</span>
-                    <span>{formatMoney(viewDeal.cost_inspection, "AED")}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 text-app">
-                    <span className="text-muted">Recovery</span>
-                    <span>{formatMoney(viewDeal.cost_recovery, "AED")}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 text-app">
-                    <span className="text-muted">Maintenance</span>
-                    <span>{formatMoney(viewDeal.cost_maintenance, "AED")}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 text-app">
-                    <span className="text-muted">Other</span>
-                    <span>{formatMoney(viewDeal.cost_other, "AED")}</span>
-                  </div>
+                  {(dealExpensesByDealId[viewDeal.id] ?? []).map((ex) => (
+                    <div
+                      key={ex.id ?? `${ex.expense_type}-${ex.amount}-${ex.currency}`}
+                      className="flex items-center justify-between gap-2 border-t border-app/40 pt-1 text-app"
+                    >
+                      <span className="text-muted capitalize">
+                        {(ex.expense_type || "").replace(/_/g, " ")}
+                      </span>
+                      <span>
+                        {formatMoney(
+                          ex.amount,
+                          (ex.currency || "AED") as "AED" | "USD" | "DZD" | "EUR"
+                        )}
+                        <span className="ml-2 text-muted">
+                          (
+                          {formatMoney(toAed(ex.amount, ex.currency, ex.rate_to_aed), "AED")}
+                          )
+                        </span>
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
               )}
@@ -2542,10 +2707,11 @@ export default function DealsPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold text-app">{formatDate(p.date ?? p.created_at)}</span>
                           <span className="text-app">
-                            {formatMoney(p.dzd, "DZD")}
+                            {formatMoney(paymentAmountDzd(p), "DZD")}
                           </span>
                           {p.notes ? <span className="text-gray-400">{p.notes}</span> : null}
                         </div>
+                        {canDelete ? (
                         <button
                           type="button"
                           onClick={() => handleDeletePayment(p)}
@@ -2554,6 +2720,7 @@ export default function DealsPage() {
                         >
                           {deletingPaymentId === p.id ? "Removing..." : "Delete"}
                         </button>
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -2569,7 +2736,7 @@ export default function DealsPage() {
                         key={status}
                         type="button"
                         onClick={() => handleLifecycleTransition(status)}
-                        disabled={lifecycleSaving}
+                        disabled={lifecycleSaving || isInvestorReadOnly}
                         className="rounded border border-app bg-white px-2 py-1 text-[10px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
                       >
                         {status}

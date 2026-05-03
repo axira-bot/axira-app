@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/context/AuthContext";
 
 const ROLES = ["Sales Staff", "Manager", "Accountant", "Operations"] as const;
 const STATUSES = ["Active", "Inactive"] as const;
@@ -43,7 +44,6 @@ type DealRow = {
   date: string | null;
   car_label: string | null;
   client_name: string | null;
-  profit: number | null;
 };
 
 type EmployeeFormState = {
@@ -109,6 +109,7 @@ function monthFromDate(dateStr: string | null | undefined): string {
 }
 
 export default function EmployeesPage() {
+  const { canDelete } = useAuth();
   const [activeTab, setActiveTab] = useState<"Employees" | "Commissions">("Employees");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -169,7 +170,7 @@ export default function EmployeesPage() {
       ] = await Promise.all([
         supabase.from("employees").select("*").order("name", { ascending: true }),
         supabase.from("commissions").select("*").order("created_at", { ascending: false }),
-        supabase.from("deals").select("id, date, car_label, client_name, profit"),
+        supabase.from("deals").select("id, date, car_label, client_name"),
       ]);
 
       if (empErr || commErr) {
@@ -348,6 +349,7 @@ export default function EmployeesPage() {
   };
 
   const handleDelete = async (e: Employee) => {
+    if (!canDelete) return;
     if (!window.confirm(`Delete employee "${e.name}"? This cannot be undone.`)) return;
     setDeletingId(e.id);
     const { error: delErr } = await supabase.from("employees").delete().eq("id", e.id);
@@ -657,6 +659,7 @@ export default function EmployeesPage() {
                             >
                               View
                             </button>
+                            {canDelete ? (
                             <button
                               type="button"
                               onClick={() => handleDelete(e)}
@@ -665,6 +668,7 @@ export default function EmployeesPage() {
                             >
                               {deletingId === e.id ? "Deleting..." : "Delete"}
                             </button>
+                            ) : null}
                             {(e.status || "").toLowerCase() === "active" && (
                               <span className="text-[11px] text-muted">Use Payroll page for payouts</span>
                             )}

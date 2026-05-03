@@ -27,6 +27,7 @@ export interface LogActivityParams {
   description: string;
   amount?: number | null;
   currency?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export async function logActivity(params: LogActivityParams): Promise<void> {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { legacyRateInputToAedPerUnit, toAed } from "@/lib/finance/dealMoney";
 import { convertCurrencyAmount, requirePoAccess, recomputePoTotals } from "@/lib/services/purchaseOrders/service";
 
 export const dynamic = "force-dynamic";
@@ -26,21 +27,17 @@ export async function POST(
     const amount = Number(body.amount || 0);
     if (amount <= 0) return NextResponse.json({ error: "amount must be > 0" }, { status: 400 });
     const currency = body.currency || "USD";
-    const rate = body.rate_snapshot ?? null;
+    const rateRaw = body.rate_snapshot ?? null;
+    const rateToAed = legacyRateInputToAedPerUnit(currency, rateRaw);
     const admin = createAdminClient();
     const poRes = await admin.from("purchase_orders").select("currency").eq("id", id).maybeSingle();
     const poCurrency = ((poRes.data as { currency?: "USD" | "AED" | "DZD" | "EUR" } | null)?.currency || "USD");
-    const aedEquivalent = convertCurrencyAmount({
-      amount,
-      fromCurrency: currency,
-      toCurrency: "AED",
-      rateSnapshot: rate,
-    });
+    const aedEquivalent = toAed(amount, currency, rateToAed);
     const amountInPoCurrency = convertCurrencyAmount({
       amount,
       fromCurrency: currency,
       toCurrency: poCurrency,
-      rateSnapshot: rate,
+      rateSnapshot: rateRaw,
       aedEquivalent,
     });
     const payIns = await admin
@@ -49,7 +46,7 @@ export async function POST(
         kind: "supplier_payment",
         amount,
         currency,
-        rate_snapshot: rate,
+        rate_to_aed: rateToAed,
         aed_equivalent: aedEquivalent,
         pocket: body.pocket || "bank",
         method: body.method || "bank_transfer",
@@ -71,7 +68,7 @@ export async function POST(
         category: "Car Purchase",
         amount,
         currency,
-        rate,
+        rate: rateToAed,
         aed_equivalent: aedEquivalent,
         pocket: body.pocket || "bank",
         method: body.method || "bank_transfer",
@@ -92,7 +89,7 @@ export async function POST(
         date: body.date || new Date().toISOString().slice(0, 10),
         amount,
         currency,
-        rate_snapshot: rate,
+        rate_snapshot: rateRaw,
         aed_equivalent: aedEquivalent,
         amount_in_po_currency: amountInPoCurrency,
         pocket: body.pocket || "bank",
@@ -108,8 +105,8 @@ export async function POST(
       return NextResponse.json({ error: poPayment.error?.message ?? "Failed to insert PO payment" }, { status: 400 });
     }
 
-    const totals = await recomputePoTotals(id);
-    return NextResponse.json({ row: poPayment.data, totals }, { status: 201 });
+    await recomputePoTotals(id);
+    return NextResponse.json({ row: poPayment.data });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error";
     return NextResponse.json({ error: message }, { status: 500 });

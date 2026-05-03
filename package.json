@@ -7,10 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "validate-i18n": "node scripts/validate-i18n.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
+    "@heroui/react": "^3.0.3",
+    "@heroui/styles": "^3.0.3",
     "@react-pdf/renderer": "^4.3.2",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.99.0",
@@ -29,6 +32,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.5"
   }
 }

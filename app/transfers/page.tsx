@@ -6,6 +6,7 @@ import type { Movement } from "@/lib/types";
 import type { ReceiptPDFData } from "@/lib/pdf/pdfTypes";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/context/AuthContext";
 
 const ReceiptDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.ReceiptDownloadButton),
@@ -168,6 +169,7 @@ function generateExchangeId(): string {
 }
 
 export default function TransfersPage() {
+  const { canDelete } = useAuth();
   const [activeTab, setActiveTab] = useState<"Conversions" | "Cash Exchange">("Conversions");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -674,6 +676,7 @@ export default function TransfersPage() {
   };
 
   const handleDeleteConversion = async (ref: string) => {
+    if (!canDelete) return;
     if (
       !window.confirm(
         "Delete this conversion? This cannot be undone."
@@ -693,6 +696,7 @@ export default function TransfersPage() {
   };
 
   const handleDeleteExchange = async (ref: string) => {
+    if (!canDelete) return;
     if (
       !window.confirm(
         "Delete this exchange? Both movements will be removed."
@@ -844,6 +848,7 @@ export default function TransfersPage() {
                               >
                                 Approve
                               </button>
+                              {canDelete ? (
                               <button
                                 type="button"
                                 onClick={() => handleDeleteConversion(ref)}
@@ -852,6 +857,7 @@ export default function TransfersPage() {
                               >
                                 {deletingRef === ref ? "Deleting..." : "Delete"}
                               </button>
+                              ) : null}
                             </td>
                           </tr>
                         ))}
@@ -931,6 +937,7 @@ export default function TransfersPage() {
                               </span>
                             </td>
                             <td className="px-4 py-3">
+                              {canDelete ? (
                               <button
                                 type="button"
                                 onClick={() => handleDeleteConversion(ref)}
@@ -939,6 +946,7 @@ export default function TransfersPage() {
                               >
                                 {deletingRef === ref ? "Deleting..." : "Delete"}
                               </button>
+                              ) : null}
                             </td>
                           </tr>
                         ))}
@@ -1038,6 +1046,7 @@ export default function TransfersPage() {
                               {rate.toFixed(4)}
                             </td>
                             <td className="px-4 py-3">
+                              {canDelete ? (
                               <button
                                 type="button"
                                 onClick={() => handleDeleteExchange(ex.ref)}
@@ -1048,6 +1057,7 @@ export default function TransfersPage() {
                                   ? "Deleting..."
                                   : "Delete"}
                               </button>
+                              ) : null}
                             </td>
                           </tr>
                         );

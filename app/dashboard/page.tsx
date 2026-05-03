@@ -14,6 +14,8 @@ import { useEffect, useState } from "react";
 import type { Car, Deal, Movement, Rent } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
+import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
+import { dealListSaleDzd } from "@/app/deals/dealFinanceHelpers";
 
 type CashPosition = {
   id: string;
@@ -112,8 +114,9 @@ function StaffBlurGate({
 }
 
 export default function DashboardPage() {
-  const { role } = useAuth();
+  const { role, permissions } = useAuth();
   const isStaff = role === "staff";
+  const activityLogHref = permissions.audit_log ? "/audit" : "/activity";
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -225,7 +228,9 @@ export default function DashboardPage() {
       }
 
       setCashPositions(cashPositionsData ?? []);
-      setDeals(dealsData ?? []);
+      const rawDeals = (dealsData as Deal[]) ?? [];
+      const enrichedDeals = await attachDealCoreMetrics(supabase, rawDeals);
+      setDeals(enrichedDeals);
       setCars(carsData ?? []);
       setMovements(movementsData ?? []);
       setContainers(containersData ?? []);
@@ -293,7 +298,7 @@ export default function DashboardPage() {
 
   const realisedProfitAed = deals
     .filter((d) => d.status === "closed")
-    .reduce((sum, d) => sum + (d.profit || 0), 0);
+    .reduce((sum, d) => sum + (d.profit_aed ?? 0), 0);
 
   const pendingRevenueDzd = deals.reduce(
     (sum, d) => sum + (d.pending_dzd || 0),
@@ -920,7 +925,7 @@ export default function DashboardPage() {
                     Activity
                   </h2>
                   <Link
-                    href="/activity"
+                    href={activityLogHref}
                     className="text-xs font-medium hover:underline"
                     style={{ color: "var(--color-accent)" }}
                   >
@@ -1128,10 +1133,20 @@ export default function DashboardPage() {
                           <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
                             <span>{deal.car_label ?? "Car"}</span>
                             <span>
-                              Sale: <span className="font-semibold" style={{ color: "var(--color-text)" }}>{formatCurrency(deal.sale_dzd || 0, "DZD")}</span>
+                              Sale:{" "}
+                              <span className="font-semibold" style={{ color: "var(--color-text)" }}>
+                                {(() => {
+                                  const dzd = dealListSaleDzd(deal);
+                                  if (dzd > 0) return formatCurrency(dzd, "DZD");
+                                  return formatCurrency(deal.sale_amount || 0, deal.sale_currency || "DZD");
+                                })()}
+                              </span>
                             </span>
                             <span>
-                              Profit: <span className="font-semibold" style={{ color: "var(--color-accent)" }}>{formatCurrency(deal.profit || 0, "AED")}</span>
+                              Profit:{" "}
+                              <span className="font-semibold" style={{ color: "var(--color-accent)" }}>
+                                {formatCurrency(deal.profit_aed ?? 0, "AED")}
+                              </span>
                             </span>
                           </div>
                         </div>

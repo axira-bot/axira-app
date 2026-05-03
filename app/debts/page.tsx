@@ -43,6 +43,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Car } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/context/AuthContext";
 
 type Debt = {
   id: string;
@@ -141,6 +142,7 @@ function carLabel(c: Car): string {
 }
 
 export default function DebtsPage() {
+  const { canDelete } = useAuth();
   const [activeTab, setActiveTab] = useState<"receivables" | "payables">("receivables");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -400,6 +402,7 @@ export default function DebtsPage() {
   };
 
   const handleDeleteDebt = async (d: Debt) => {
+    if (!canDelete) return;
     if (!window.confirm("Delete this debt record? This cannot be undone.")) return;
     setDeletingId(d.id);
     const { error: delErr } = await supabase.from("debts").delete().eq("id", d.id);
@@ -583,6 +586,7 @@ export default function DebtsPage() {
   };
 
   const handleDeletePayment = async (payment: DebtPayment) => {
+    if (!canDelete) return;
     if (!viewDebt) return;
     const amount = payment.amount ?? 0;
     if (amount <= 0) return;
@@ -786,6 +790,7 @@ export default function DebtsPage() {
                                 Mark settled
                               </button>
                             )}
+                            {canDelete ? (
                             <button
                               type="button"
                               onClick={() => handleDeleteDebt(d)}
@@ -794,6 +799,7 @@ export default function DebtsPage() {
                             >
                               {deletingId === d.id ? "Deleting..." : "Delete"}
                             </button>
+                            ) : null}
                           </td>
                         </tr>
                       ))}
@@ -896,6 +902,7 @@ export default function DebtsPage() {
                                       Mark settled
                                     </button>
                                   )}
+                                  {canDelete ? (
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteDebt(d)}
@@ -904,6 +911,7 @@ export default function DebtsPage() {
                                   >
                                     {deletingId === d.id ? "Deleting..." : "Delete"}
                                   </button>
+                                  ) : null}
                                 </>
                               )}
                               {isSupplier && (
@@ -1150,6 +1158,7 @@ export default function DebtsPage() {
                           <span className="text-gray-400">{p.pocket}</span>
                           {p.notes && <span className="text-gray-400">{p.notes}</span>}
                         </div>
+                        {canDelete ? (
                         <button
                           type="button"
                           onClick={() => handleDeletePayment(p)}
@@ -1158,6 +1167,7 @@ export default function DebtsPage() {
                         >
                           {deletingPaymentId === p.id ? "Removing..." : "Delete"}
                         </button>
+                        ) : null}
                       </div>
                     ))}
                   </div>

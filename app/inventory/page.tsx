@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Car } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
+import { useAuth } from "@/lib/context/AuthContext";
 
 type PaidPocket =
   | "Dubai Cash"
@@ -165,6 +166,7 @@ const inputCls = "w-full rounded-md border border-app bg-white px-3 py-2 text-sm
 const labelCls = "space-y-1 text-xs text-app";
 
 export default function InventoryPage() {
+  const { canDelete, isInvestorReadOnly } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cars, setCars] = useState<Car[]>([]);
@@ -411,6 +413,7 @@ export default function InventoryPage() {
   };
 
   const handlePhotoUpload = async (files: FileList) => {
+    if (isInvestorReadOnly) return;
     if (!files.length) return;
     setIsUploadingPhoto(true);
     const newUrls: string[] = [];
@@ -430,6 +433,7 @@ export default function InventoryPage() {
   };
 
   const handleDeletePhoto = async (url: string, index: number) => {
+    if (!canDelete) return;
     const marker = "/car-photos/";
     const markerIdx = url.indexOf(marker);
     if (markerIdx !== -1) {
@@ -440,6 +444,7 @@ export default function InventoryPage() {
   };
 
   const handleSave = async () => {
+    if (isInvestorReadOnly) return;
     const message = validate();
     if (message) {
       setError(message);
@@ -596,6 +601,7 @@ export default function InventoryPage() {
   };
 
   const handleDelete = async (car: Car) => {
+    if (!canDelete) return;
     const name = `${car.brand || ""} ${car.model || ""}`.trim() || "this car";
     if (!window.confirm(`Delete ${name}? This cannot be undone.`)) return;
 
@@ -663,6 +669,7 @@ export default function InventoryPage() {
   };
 
   const handlePublishToggle = async (car: Car) => {
+    if (isInvestorReadOnly) return;
     setIsPublishingId(car.id);
     const newValue = !car.is_published;
     const { error: err } = await supabase.from("cars").update({ is_published: newValue }).eq("id", car.id);
@@ -673,6 +680,7 @@ export default function InventoryPage() {
   };
 
   const handleMarkSold = async (car: Car) => {
+    if (isInvestorReadOnly) return;
     const isAlreadySold = getEffectiveStatus(car) === "sold";
     if (isAlreadySold) {
       // Block restore if there is an active deal — must delete the deal first
@@ -705,6 +713,7 @@ export default function InventoryPage() {
   };
 
   const handleConvertToAxira = async (car: Car) => {
+    if (isInvestorReadOnly) return;
     if (!window.confirm(`Convert "${car.brand} ${car.model} ${car.year}" from Supplier Listing to AXIRA Stock? This will include it in financial reports.`)) return;
     setIsConvertingId(car.id);
     const { error: err } = await supabase.from("cars").update({ stock_type: "axira", supplier_name: null }).eq("id", car.id);
@@ -736,7 +745,11 @@ export default function InventoryPage() {
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Inventory</h1>
             <p className="text-sm font-medium text-[var(--color-accent)]">Vehicle Management</p>
+            {isInvestorReadOnly ? (
+              <p className="text-sm text-muted">View-only access.</p>
+            ) : null}
           </div>
+          {!isInvestorReadOnly ? (
           <button
             type="button"
             onClick={openAddModal}
@@ -744,6 +757,7 @@ export default function InventoryPage() {
           >
             + Add {stockTypeTab === "supplier" ? "Supplier Listing" : "Car"}
           </button>
+          ) : null}
         </header>
 
         {/* Stock type tabs */}
@@ -925,6 +939,9 @@ export default function InventoryPage() {
                           <PublishedBadge published={car.is_published} />
                         </td>
                         <td className="px-4 py-3">
+                          {isInvestorReadOnly ? (
+                            <span className="text-[11px] text-muted">View only</span>
+                          ) : (
                           <div className="flex flex-wrap items-center gap-1.5">
                             <button
                               type="button"
@@ -997,6 +1014,7 @@ export default function InventoryPage() {
                                 Deal Exists
                               </span>
                             )}
+                            {canDelete ? (
                             <button
                               type="button"
                               onClick={() => handleDelete(car)}
@@ -1005,7 +1023,9 @@ export default function InventoryPage() {
                             >
                               {isDeletingId === car.id ? "Deleting..." : "Delete"}
                             </button>
+                            ) : null}
                           </div>
+                          )}
                         </td>
                       </tr>
                     );

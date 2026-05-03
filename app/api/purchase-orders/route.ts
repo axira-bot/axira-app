@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { legacyRateInputToAedPerUnit, toAed } from "@/lib/finance/dealMoney";
 import { convertCurrencyAmount, requirePoAccess, recomputePoTotals } from "@/lib/services/purchaseOrders/service";
 
 export const dynamic = "force-dynamic";
@@ -225,18 +226,14 @@ export async function POST(request: NextRequest) {
         const amount = Number(payment.amount || 0);
         if (amount <= 0) continue;
         const currency = payment.currency || "USD";
-        const rate = payment.rate_snapshot ?? null;
-        const aedEquivalent = convertCurrencyAmount({
-          amount,
-          fromCurrency: currency,
-          toCurrency: "AED",
-          rateSnapshot: rate,
-        });
+        const rateRaw = payment.rate_snapshot ?? null;
+        const rateToAed = legacyRateInputToAedPerUnit(currency, rateRaw);
+        const aedEquivalent = toAed(amount, currency, rateToAed);
         const amountInPoCurrency = convertCurrencyAmount({
           amount,
           fromCurrency: currency,
           toCurrency: (body.currency || "USD"),
-          rateSnapshot: rate,
+          rateSnapshot: rateRaw,
           aedEquivalent,
         });
 
@@ -246,7 +243,7 @@ export async function POST(request: NextRequest) {
             kind: "supplier_payment",
             amount,
             currency,
-            rate_snapshot: rate,
+            rate_to_aed: rateToAed,
             aed_equivalent: aedEquivalent,
             pocket: payment.pocket || "bank",
             method: payment.method || "bank_transfer",
@@ -268,7 +265,7 @@ export async function POST(request: NextRequest) {
             category: "Car Purchase",
             amount,
             currency,
-            rate: rate,
+            rate: rateToAed,
             aed_equivalent: aedEquivalent,
             pocket: payment.pocket || "bank",
             method: payment.method || "bank_transfer",
@@ -289,7 +286,7 @@ export async function POST(request: NextRequest) {
             date: payment.date || new Date().toISOString().slice(0, 10),
             amount,
             currency,
-            rate_snapshot: rate,
+            rate_snapshot: rateRaw,
             aed_equivalent: aedEquivalent,
             amount_in_po_currency: amountInPoCurrency,
             pocket: payment.pocket || "bank",
