@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
-import { normalizeRole } from "@/lib/auth/roles";
+import { resolveEffectiveRole } from "@/lib/auth/resolveUserRole";
 import { canUseDestructiveActions } from "@/lib/auth/roleMatrix";
 
 export async function deletionForbiddenResponse(): Promise<NextResponse | null> {
@@ -17,11 +17,7 @@ export async function deletionForbiddenResponse(): Promise<NextResponse | null> 
     .eq("id", user.id)
     .maybeSingle();
   const profileRole = (profile as { role?: string } | null)?.role ?? null;
-  const metadataRole =
-    (user.user_metadata as { role?: string } | null)?.role ??
-    (user.app_metadata as { role?: string } | null)?.role ??
-    null;
-  const effectiveRole = normalizeRole(profileRole || metadataRole);
+  const effectiveRole = resolveEffectiveRole(profileRole, user);
   if (!canUseDestructiveActions(effectiveRole)) {
     return NextResponse.json({ error: "Forbidden: delete not allowed for this role" }, { status: 403 });
   }

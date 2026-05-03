@@ -8,6 +8,7 @@ import {
   roleFallbackAllowsFeature,
 } from "@/lib/auth/roleMatrix";
 import { isOwnerLikeRole } from "@/lib/auth/roles";
+import { resolveEffectiveRole } from "@/lib/auth/resolveUserRole";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://rcodmxamakoklzezjxyi.supabase.co";
 const supabaseAnonKey =
@@ -107,12 +108,7 @@ export async function updateSession(request: NextRequest) {
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
-      const loginRole =
-        ((profile as { role?: string } | null)?.role ||
-          (user.user_metadata as { role?: string } | null)?.role ||
-          (user.app_metadata as { role?: string } | null)?.role ||
-          "staff")
-          .toLowerCase();
+      const loginRole = resolveEffectiveRole((profile as { role?: string } | null)?.role, user);
       const redirect = NextResponse.redirect(new URL(defaultRouteForRole(loginRole), request.url));
       forwardAuthCookies(response, redirect);
       return redirect;
@@ -132,11 +128,7 @@ export async function updateSession(request: NextRequest) {
     .eq("id", user.id)
     .maybeSingle();
   const profileRole = (profile as { role?: string } | null)?.role ?? null;
-  const metadataRole =
-    (user.user_metadata as { role?: string } | null)?.role ??
-    (user.app_metadata as { role?: string } | null)?.role ??
-    null;
-  const effectiveRole = (profileRole || metadataRole || "staff").toLowerCase();
+  const effectiveRole = resolveEffectiveRole(profileRole, user);
 
   if (path.startsWith("/admin/users")) {
     if (profileError || !isOwnerLikeRole(effectiveRole)) {

@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { FEATURE_KEYS, type FeaturePermissions } from "@/lib/auth/featureKeys";
+import { resolveEffectiveRole } from "@/lib/auth/resolveUserRole";
 import { isOwnerLikeRole } from "@/lib/auth/roles";
 import { canUseDestructiveActions, isInvestorReadOnly } from "@/lib/auth/roleMatrix";
 import type { User } from "@supabase/supabase-js";
@@ -78,18 +79,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Non-blocking fallback: keep session usable even if profile query fails.
             console.warn("Failed to fetch user profile:", profileError.message);
           }
+          const resolvedRole = resolveEffectiveRole(
+            profileRow ? (profileRow as { role?: string | null }).role : null,
+            authUser
+          );
           const profileData: UserProfile = profileRow
             ? {
                 id: profileRow.id,
                 name: profileRow.name ?? authUser.email ?? "",
-                role: profileRow.role ?? "owner",
+                role: resolvedRole,
                 employee_id: profileRow.employee_id,
                 investor_id: profileRow.investor_id,
               }
             : {
                 id: authUser.id,
                 name: authUser.email ?? "",
-                role: "owner",
+                role: resolvedRole,
               };
           setProfile(profileData);
           const permRes = await fetch("/api/auth/permissions", { cache: "no-store" });
