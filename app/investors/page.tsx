@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getRates, type AppRates } from "@/lib/rates";
+import { eurPerAedFromAppEurSetting, usdPerAedFromAppUsdSetting } from "@/lib/finance/dealMoney";
 import { useAuth } from "@/lib/context/AuthContext";
 
 const CURRENCIES = ["AED", "DZD", "EUR", "USD"] as const;
@@ -116,6 +117,8 @@ export default function InvestorsPage() {
   const [bonusPocket, setBonusPocket] = useState<string>(AED_POCKETS[0]);
   const [isSavingBonus, setIsSavingBonus] = useState(false);
   const [rates, setRates] = useState<AppRates>({ DZD: 0, EUR: 0, USD: 0, GBP: 0 });
+  const usdPerAed = useMemo(() => usdPerAedFromAppUsdSetting(rates.USD), [rates.USD]);
+  const eurPerAed = useMemo(() => eurPerAedFromAppEurSetting(rates.EUR), [rates.EUR]);
   const [ownerName, setOwnerName] = useState<string>("Rami");
   const [ownerCapital, setOwnerCapital] = useState<string>("");
   const [ownerCapitalCurrency, setOwnerCapitalCurrency] = useState<"AED" | "DZD" | "EUR" | "USD">("AED");
@@ -295,10 +298,10 @@ export default function InvestorsPage() {
       if (fx > 0) return amt / fx;
       return manualRate > 0 ? amt / manualRate : amt;
     }
-    if (form.currency === "EUR" && rates.EUR > 0) return amt / rates.EUR;
-    if (form.currency === "USD" && rates.USD > 0) return amt / rates.USD;
+    if (form.currency === "EUR" && eurPerAed > 0) return amt / eurPerAed;
+    if (form.currency === "USD" && usdPerAed > 0) return amt / usdPerAed;
     return amt;
-  }, [form.investmentAmount, form.currency, form.rate, rates]);
+  }, [form.investmentAmount, form.currency, form.rate, rates.DZD, usdPerAed, eurPerAed]);
 
   const handleSave = async () => {
     if (isInvestorReadOnly) return;
@@ -312,10 +315,10 @@ export default function InvestorsPage() {
     if (form.currency === "DZD") {
       const fx = rates.DZD;
       investmentAed = fx > 0 ? amount / fx : manualRate > 0 ? amount / manualRate : amount;
-    } else if (form.currency === "EUR" && rates.EUR > 0) {
-      investmentAed = amount / rates.EUR;
-    } else if (form.currency === "USD" && rates.USD > 0) {
-      investmentAed = amount / rates.USD;
+    } else if (form.currency === "EUR" && eurPerAed > 0) {
+      investmentAed = amount / eurPerAed;
+    } else if (form.currency === "USD" && usdPerAed > 0) {
+      investmentAed = amount / usdPerAed;
     }
     const baseTotalCapital = effectiveTotalCapital || 0;
     const newTotalCapital =
@@ -839,8 +842,8 @@ export default function InvestorsPage() {
                     const amt = parseNum(ownerCapital);
                     let aed = amt;
                     if (ownerCapitalCurrency === "DZD" && rates.DZD > 0) aed = amt / rates.DZD;
-                    else if (ownerCapitalCurrency === "EUR" && rates.EUR > 0) aed = amt / rates.EUR;
-                    else if (ownerCapitalCurrency === "USD" && rates.USD > 0) aed = amt / rates.USD;
+                    else if (ownerCapitalCurrency === "EUR" && eurPerAed > 0) aed = amt / eurPerAed;
+                    else if (ownerCapitalCurrency === "USD" && usdPerAed > 0) aed = amt / usdPerAed;
                     return formatMoney(aed, "AED");
                   })()}{" "}
                   <span className="text-[10px]">
@@ -945,8 +948,8 @@ export default function InvestorsPage() {
               const ownerAmt = parseNum(ownerCapital);
               let ownerAed = ownerAmt;
               if (ownerCapitalCurrency === "DZD" && rates.DZD > 0) ownerAed = ownerAmt / rates.DZD;
-              else if (ownerCapitalCurrency === "EUR" && rates.EUR > 0) ownerAed = ownerAmt / rates.EUR;
-              else if (ownerCapitalCurrency === "USD" && rates.USD > 0) ownerAed = ownerAmt / rates.USD;
+              else if (ownerCapitalCurrency === "EUR" && eurPerAed > 0) ownerAed = ownerAmt / eurPerAed;
+              else if (ownerCapitalCurrency === "USD" && usdPerAed > 0) ownerAed = ownerAmt / usdPerAed;
               const valuation = parseNum(businessValuation);
               const myPct = valuation > 0 ? (ownerAed / valuation) * 100 : 0;
               const investorCapitalAed = investors.reduce(

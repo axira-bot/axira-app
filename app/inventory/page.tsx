@@ -1260,10 +1260,17 @@ export default function InventoryPage() {
               </label>
 
               {showRate ? (
-                <label className={labelCls}>
+                  <label className={labelCls}>
                   <span className="font-semibold">Rate <span className="text-[var(--color-accent)]">*</span></span>
                   <input type="number" value={form.purchaseRate} onChange={(e) => updateField("purchaseRate", e.target.value)}
-                    placeholder="DZD per AED" className={inputCls} />
+                    placeholder={
+                      form.purchaseCurrency === "DZD"
+                        ? "DZD per 1 AED (dashboard)"
+                        : form.purchaseCurrency === "USD"
+                          ? "AED per 1 USD (e.g. 3.67)"
+                          : "AED per 1 EUR"
+                    }
+                    className={inputCls} />
                 </label>
               ) : <div className="hidden sm:block" />}
 
