@@ -112,8 +112,9 @@ function StaffBlurGate({
 }
 
 export default function DashboardPage() {
-  const { role } = useAuth();
+  const { role, permissions } = useAuth();
   const isStaff = role === "staff";
+  const activityLogHref = permissions.audit_log ? "/audit" : "/activity";
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -920,7 +921,7 @@ export default function DashboardPage() {
                     Activity
                   </h2>
                   <Link
-                    href="/activity"
+                    href={activityLogHref}
                     className="text-xs font-medium hover:underline"
                     style={{ color: "var(--color-accent)" }}
                   >

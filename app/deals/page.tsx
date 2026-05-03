@@ -183,7 +183,7 @@ function formatVinShort(vin: string | null | undefined): string {
 export default function DealsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, role, isStaff } = useAuth();
+  const { user, role, isStaff, canDelete, isInvestorReadOnly } = useAuth();
   /** Cleared when URL no longer has `addDeal=1`, so the same car can be deep-linked again after `router.replace`. */
   const prefillCarIdProcessedRef = useRef<string>("");
 
@@ -443,6 +443,7 @@ export default function DealsPage() {
   };
 
   const deleteDummyDoc = async (id: string) => {
+    if (!canDelete) return;
     if (!window.confirm("Delete this dummy document?")) return;
     setDummyError(null);
     const res = await fetch(`/api/deals/dummy-docs?id=${encodeURIComponent(id)}`, { method: "DELETE" });
@@ -1204,6 +1205,7 @@ export default function DealsPage() {
   };
 
   const handleDelete = async (deal: Deal) => {
+    if (!canDelete) return;
     if (!window.confirm("Delete this deal? This cannot be undone.")) return;
     setIsDeletingId(deal.id);
     setError(null);
@@ -1543,6 +1545,7 @@ export default function DealsPage() {
   };
 
   const handleDeletePayment = async (payment: DealPayment) => {
+    if (!canDelete) return;
     if (!viewDeal) return;
     const amount = payment.dzd ?? 0;
     if (amount <= 0) return;
@@ -1650,6 +1653,9 @@ export default function DealsPage() {
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Deals</h1>
             <p className="text-sm font-medium text-[var(--color-accent)]">Sales & Profit</p>
           </div>
+          {isInvestorReadOnly ? (
+            <p className="text-sm text-muted">You have view-only access to deals.</p>
+          ) : (
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -1676,6 +1682,7 @@ export default function DealsPage() {
               Add Deal
             </button>
           </div>
+          )}
         </header>
 
         <div className="flex flex-wrap gap-2">
@@ -1837,11 +1844,12 @@ export default function DealsPage() {
                             <button
                               type="button"
                               onClick={() => openEditModal(d)}
-                              disabled={isStaff && !isPrivilegedRole}
+                              disabled={(isStaff && !isPrivilegedRole) || isInvestorReadOnly}
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
                               Edit
                             </button>
+                            {canDelete ? (
                             <button
                               type="button"
                               onClick={() => handleDelete(d)}
@@ -1850,6 +1858,7 @@ export default function DealsPage() {
                             >
                               {isDeletingId === d.id ? "Deleting..." : "Delete"}
                             </button>
+                            ) : null}
                             <button
                               type="button"
                               onClick={() => openView(d)}
@@ -2546,6 +2555,7 @@ export default function DealsPage() {
                           </span>
                           {p.notes ? <span className="text-gray-400">{p.notes}</span> : null}
                         </div>
+                        {canDelete ? (
                         <button
                           type="button"
                           onClick={() => handleDeletePayment(p)}
@@ -2554,6 +2564,7 @@ export default function DealsPage() {
                         >
                           {deletingPaymentId === p.id ? "Removing..." : "Delete"}
                         </button>
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -2569,7 +2580,7 @@ export default function DealsPage() {
                         key={status}
                         type="button"
                         onClick={() => handleLifecycleTransition(status)}
-                        disabled={lifecycleSaving}
+                        disabled={lifecycleSaving || isInvestorReadOnly}
                         className="rounded border border-app bg-white px-2 py-1 text-[10px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
                       >
                         {status}

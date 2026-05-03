@@ -4,10 +4,13 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://rcodmxamakoklzezjxyi.supabase.co";
+const supabaseAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjb2RteGFtYWtva2x6ZXpqeHlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDExMzAsImV4cCI6MjA4ODU3NzEzMH0.ae3ueUIeEVtMfuGMB5xFokI47X_PvT5B_d0FJ_xRf-8";
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // ── Fetch business snapshot from Supabase ──────────────────────────────────
 async function getBusinessContext() {
@@ -141,10 +144,6 @@ const tools: Anthropic.Tool[] = [
 // ── Route handler ──────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
   try {
     const { messages } = await req.json();
 

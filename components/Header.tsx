@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/context/AuthContext";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard":   "Dashboard",
+  "/audit":       "Audit log",
   "/activity":    "Activity",
   "/inventory":   "Inventory",
   "/deals":       "Deals",
@@ -23,6 +24,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 const PAGE_SUBTITLES: Record<string, string> = {
   "/dashboard":   "Overview of your business",
+  "/audit":       "Who changed what — full trail",
   "/activity":    "Recent transactions & events",
   "/inventory":   "Cars in stock",
   "/deals":       "Sales & purchases",

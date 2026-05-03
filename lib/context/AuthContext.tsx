@@ -1,8 +1,10 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { supabase } from "@/lib/supabase/client";
 import { FEATURE_KEYS, type FeaturePermissions } from "@/lib/auth/featureKeys";
+import { isOwnerLikeRole } from "@/lib/auth/roles";
+import { canUseDestructiveActions, isInvestorReadOnly } from "@/lib/auth/roleMatrix";
 import type { User } from "@supabase/supabase-js";
 
 type UserProfile = {
@@ -19,10 +21,13 @@ type AuthContextType = {
   loading: boolean;
   role: string | null;
   isOwner: boolean;
+  isOwnerLike: boolean;
   isManager: boolean;
   isStaff: boolean;
   isAccountant: boolean;
   isInvestor: boolean;
+  canDelete: boolean;
+  isInvestorReadOnly: boolean;
   permissions: FeaturePermissions;
 };
 
@@ -37,10 +42,13 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   role: null,
   isOwner: false,
+  isOwnerLike: false,
   isManager: false,
   isStaff: false,
   isAccountant: false,
   isInvestor: false,
+  canDelete: false,
+  isInvestorReadOnly: false,
   permissions: EMPTY_PERMISSIONS,
 });
 
@@ -52,11 +60,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isLoadingUserRef = useRef(false);
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
     async function loadUser() {
       if (isLoadingUserRef.current) return;
       isLoadingUserRef.current = true;
@@ -119,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const role = profile?.role ?? null;
+  const normalizedRole = role?.toLowerCase() ?? null;
 
   return (
     <AuthContext.Provider
@@ -127,11 +131,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile,
         loading,
         role,
-        isOwner: role === "owner",
-        isManager: role === "manager",
-        isStaff: role === "staff",
-        isAccountant: role === "accountant",
-        isInvestor: role === "investor",
+        isOwner: normalizedRole === "owner",
+        isOwnerLike: isOwnerLikeRole(role),
+        isManager: normalizedRole === "manager",
+        isStaff: normalizedRole === "staff",
+        isAccountant: normalizedRole === "accountant",
+        isInvestor: normalizedRole === "investor",
+        canDelete: canUseDestructiveActions(role),
+        isInvestorReadOnly: isInvestorReadOnly(role),
         permissions,
       }}
     >

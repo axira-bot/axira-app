@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Car, Deal } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
+import { useAuth } from "@/lib/context/AuthContext";
 
 type Container = {
   id: string;
@@ -116,6 +117,7 @@ function formatDate(value: string | null | undefined): string {
 }
 
 export default function ContainersPage() {
+  const { canDelete } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -367,6 +369,7 @@ export default function ContainersPage() {
   };
 
   const handleDeleteContainer = async (container: Container) => {
+    if (!canDelete) return;
     const carsInContainer = containerCars.filter((cc) => cc.container_id === container.id);
     if (carsInContainer.length > 0) {
       setError("Remove all cars from container before deleting.");
@@ -1097,6 +1100,7 @@ export default function ContainersPage() {
                             >
                               Edit
                             </button>
+                            {canDelete ? (
                             <button
                               type="button"
                               onClick={() => handleDeleteContainer(container)}
@@ -1104,6 +1108,7 @@ export default function ContainersPage() {
                             >
                               Delete
                             </button>
+                            ) : null}
                           </div>
                         </td>
                       </tr>

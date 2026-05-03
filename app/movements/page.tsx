@@ -6,6 +6,7 @@ import type { Movement, Rent } from "@/lib/types";
 import type { ReceiptPDFData } from "@/lib/pdf/pdfTypes";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/context/AuthContext";
 
 const ReceiptDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.ReceiptDownloadButton),
@@ -154,6 +155,16 @@ function parseNum(s: string): number {
   return Number.isFinite(v) ? v : 0;
 }
 
+function sortMovementsByDateDesc(items: Movement[]): Movement[] {
+  return [...items].sort((a, b) => {
+    const da = a.date ?? "";
+    const db = b.date ?? "";
+    const byDate = db.localeCompare(da);
+    if (byDate !== 0) return byDate;
+    return (b.id ?? "").localeCompare(a.id ?? "");
+  });
+}
+
 function formatDate(value: string | null | undefined): string {
   if (!value) return "-";
   const d = new Date(value);
@@ -166,6 +177,7 @@ function formatDate(value: string | null | undefined): string {
 }
 
 export default function MovementsPage() {
+  const { canDelete } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -217,7 +229,11 @@ export default function MovementsPage() {
       { data: rentsData, error: rentsError },
     ] = await Promise.all([
       supabase.from("cash_positions").select("id, pocket, amount, currency"),
-      supabase.from("movements").select("*").order("date", { ascending: false }),
+      supabase
+        .from("movements")
+        .select("*")
+        .order("date", { ascending: false })
+        .order("id", { ascending: false }),
       supabase
         .from("deals")
         .select("id, client_name, car_label, status")
@@ -273,10 +289,12 @@ export default function MovementsPage() {
   }, [cashPositions]);
 
   const filteredMovements = useMemo(() => {
-    if (activeTab === "All") return movements;
-    if (activeTab === "In") return movements.filter((m) => (m.type || "").toLowerCase() === "in");
-    if (activeTab === "Out") return movements.filter((m) => (m.type || "").toLowerCase() === "out");
-    return movements.filter((m) => (m.pocket || "") === activeTab);
+    let list: Movement[];
+    if (activeTab === "All") list = movements;
+    else if (activeTab === "In") list = movements.filter((m) => (m.type || "").toLowerCase() === "in");
+    else if (activeTab === "Out") list = movements.filter((m) => (m.type || "").toLowerCase() === "out");
+    else list = movements.filter((m) => (m.pocket || "") === activeTab);
+    return sortMovementsByDateDesc(list);
   }, [activeTab, movements]);
 
   const updateField = <K extends keyof MovementFormState>(key: K, value: MovementFormState[K]) => {
@@ -587,6 +605,7 @@ export default function MovementsPage() {
   };
 
   const handleDelete = async (movement: Movement) => {
+    if (!canDelete) return;
     if (!window.confirm("Delete this movement? This cannot be undone.")) return;
     setIsDeletingId(movement.id);
     setError(null);
@@ -932,6 +951,7 @@ export default function MovementsPage() {
   };
 
   const handleDeleteRent = async (r: Rent) => {
+    if (!canDelete) return;
     if (
       !window.confirm(
         "Delete this rent and its linked annual payment movement(s)? This will also reverse cash position."
@@ -1163,6 +1183,7 @@ export default function MovementsPage() {
                       >
                         Edit
                       </button>
+                      {canDelete ? (
                       <button
                         type="button"
                         onClick={() => handleDeleteRent(r)}
@@ -1171,6 +1192,7 @@ export default function MovementsPage() {
                       >
                         {isDeletingRentId === r.id ? "Deleting…" : "Delete"}
                       </button>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -1282,6 +1304,7 @@ export default function MovementsPage() {
                               >
                                 Edit
                               </button>
+                              {canDelete ? (
                               <button
                                 type="button"
                                 onClick={() => handleDelete(m)}
@@ -1290,6 +1313,7 @@ export default function MovementsPage() {
                               >
                                 {isDeletingId === m.id ? "Deleting..." : "Delete"}
                               </button>
+                              ) : null}
                             </>
                           ) : (
                             <span className="text-gray-400 text-[11px]">—</span>

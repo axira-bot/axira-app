@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getRates, type AppRates } from "@/lib/rates";
+import { useAuth } from "@/lib/context/AuthContext";
 
 const CURRENCIES = ["AED", "DZD", "EUR", "USD"] as const;
 const AED_POCKETS = ["Dubai Cash", "Dubai Bank", "Qatar"] as const;
@@ -90,6 +91,7 @@ function monthFromDate(dateStr: string | null | undefined): string {
 }
 
 export default function InvestorsPage() {
+  const { canDelete, isInvestorReadOnly } = useAuth();
   const [activeTab, setActiveTab] = useState<"Investors" | "Returns" | "Owner">("Investors");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -299,6 +301,7 @@ export default function InvestorsPage() {
   }, [form.investmentAmount, form.currency, form.rate, rates]);
 
   const handleSave = async () => {
+    if (isInvestorReadOnly) return;
     if (!form.name.trim()) {
       setError("Full name is required.");
       return;
@@ -377,6 +380,7 @@ export default function InvestorsPage() {
   };
 
   const handleDelete = async (i: Investor) => {
+    if (!canDelete) return;
     if (!window.confirm(`Delete investor "${i.name}"? This cannot be undone.`)) return;
     setDeletingId(i.id);
     const { error: delErr } = await supabase.from("investors").delete().eq("id", i.id);
@@ -600,6 +604,7 @@ export default function InvestorsPage() {
                 </p>
               </div>
               <div className="flex justify-end">
+                {!isInvestorReadOnly ? (
                 <button
                   type="button"
                   onClick={openAdd}
@@ -607,6 +612,7 @@ export default function InvestorsPage() {
                 >
                   Add Investor
                 </button>
+                ) : null}
               </div>
             </div>
             {isLoading ? (
@@ -654,6 +660,8 @@ export default function InvestorsPage() {
                           <td className="px-4 py-3 font-medium text-[var(--color-accent)]">{formatMoney(balance, "AED")}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
+                              {!isInvestorReadOnly ? (
+                              <>
                               <button type="button" onClick={() => openEdit(i)} className="text-[var(--color-accent)] hover:underline">
                                 Edit
                               </button>
@@ -670,6 +678,7 @@ export default function InvestorsPage() {
                               >
                                 Add Bonus
                               </button>
+                              {canDelete ? (
                               <button
                                 type="button"
                                 onClick={() => handleDelete(i)}
@@ -678,6 +687,11 @@ export default function InvestorsPage() {
                               >
                                 {deletingId === i.id ? "Deleting..." : "Delete"}
                               </button>
+                              ) : null}
+                              </>
+                              ) : (
+                                <span className="text-[11px] text-muted">View only</span>
+                              )}
                             </div>
                           </td>
                         </tr>
