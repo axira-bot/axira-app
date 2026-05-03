@@ -24,7 +24,8 @@ import {
   dealListSaleDzd,
   expensesByTypeToFormFields,
   formLinesToExpenseFacts,
-  rateFieldFromDeal,
+  rateFieldFromDealWithDashboardFallback,
+  withDealSaleRateDashboardFallback,
   type DealExpenseRow,
 } from "@/app/deals/dealFinanceHelpers";
 
@@ -518,18 +519,25 @@ export default function DealsPage() {
     [rates.USD, rates.DZD, rates.EUR]
   );
 
+  const appRatesSlice = useMemo(
+    () => ({ USD: rates.USD, DZD: rates.DZD, EUR: rates.EUR }),
+    [rates.USD, rates.DZD, rates.EUR]
+  );
+
   const dealsWithDerived = useMemo(() => {
     return deals.map((d) => {
       const ex = (dealExpensesByDealId[d.id] ?? []).map((r) => dbDealExpenseToFact(r));
-      return mergeDealWithDerived(d, ex, fxList);
+      const row = withDealSaleRateDashboardFallback(d, appRatesSlice);
+      return mergeDealWithDerived(row, ex, fxList);
     });
-  }, [deals, dealExpensesByDealId, fxList]);
+  }, [deals, dealExpensesByDealId, fxList, appRatesSlice]);
 
   const viewDealDerived = useMemo(() => {
     if (!viewDeal) return null;
     const ex = (dealExpensesByDealId[viewDeal.id] ?? []).map((r) => dbDealExpenseToFact(r));
-    return mergeDealWithDerived(viewDeal, ex, fxList);
-  }, [viewDeal, dealExpensesByDealId, fxList]);
+    const row = withDealSaleRateDashboardFallback(viewDeal, appRatesSlice);
+    return mergeDealWithDerived(row, ex, fxList);
+  }, [viewDeal, dealExpensesByDealId, fxList, appRatesSlice]);
 
   const filteredDeals = useMemo(() => {
     const selectedClientId = (searchParams.get("clientId") || "").trim();
@@ -765,7 +773,7 @@ export default function DealsPage() {
       saleDzd: String(dealListSaleDzd(deal) || deal.sale_amount || ""),
       amountReceivedDzd:
         deal.collected_dzd != null ? String(deal.collected_dzd) : "0",
-      rate: rateFieldFromDeal(deal, usdPerAed),
+      rate: rateFieldFromDealWithDashboardFallback(deal, usdPerAed, appRatesSlice),
       shippingAed: exForm.shippingAed,
       shippingUsd: exForm.shippingUsd,
       inspectionAed: exForm.inspectionAed,
@@ -2232,6 +2240,22 @@ export default function DealsPage() {
                       onChange={(e) => updateField("rate", e.target.value)}
                       className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                     />
+                    <p className="text-[11px] leading-snug text-muted">
+                      How many Algerian dinars (DZD) equaled one US dollar when this deal priced the car. Used to
+                      convert the DZD list price into AED/USD for profit. If this row was migrated without a saved
+                      rate, we pre-fill from your current dashboard FX — adjust to the real historical rate if needed,
+                      then save.
+                    </p>
+                    {editingDealId
+                      ? (() => {
+                          const ed = deals.find((x) => x.id === editingDealId);
+                          return ed?.financial_migration_status === "needs_review" ? (
+                            <p className="text-[11px] text-amber-800">
+                              Flagged: missing FX snapshot — confirm the rate and save to lock it in the database.
+                            </p>
+                          ) : null;
+                        })()
+                      : null}
                   </label>
 
                   {isAedSourcedCar && (
