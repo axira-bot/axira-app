@@ -2,6 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  Alert,
+  Button,
+  Card,
+  Input,
+  Label,
+  TextField,
+} from "@heroui/react";
 import { supabase } from "@/lib/supabase/client";
 import { FEATURE_KEYS, type FeatureKey } from "@/lib/auth/featureKeys";
 
@@ -259,60 +267,62 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto max-w-4xl px-4 py-6 md:px-8">
         <header className="mb-6 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               User management
             </h1>
-            <p className="text-sm font-medium text-[var(--color-accent)]">
+            <p className="text-sm font-medium text-danger">
               Owner only — manage users, access, and password resets
             </p>
           </div>
           <Link
             href="/dashboard"
-            className="text-sm font-medium text-muted hover:text-[var(--color-accent)]"
+            className="text-sm font-medium text-default-500 hover:text-danger"
           >
             Back to Dashboard
           </Link>
         </header>
 
-        {error && (
-          <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert.Root status="danger" className="mb-4">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
-        <section className="mb-8 rounded-lg border border-app surface p-4">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
+        <Card.Root className="mb-8 border border-default-200 shadow-sm">
+          <Card.Content className="space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-default-500">
             Add user
           </h2>
           <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-4">
-            <label className="min-w-[180px]">
-              <span className="mb-1 block text-xs text-muted">Email</span>
-              <input
-                type="email"
-                value={addEmail}
-                onChange={(e) => setAddEmail(e.target.value)}
-                required
-                className="w-full rounded-md border border-app surface px-3 py-2 text-sm text-app"
-                placeholder="user@company.com"
-              />
-            </label>
-            <label className="min-w-[180px]">
-              <span className="mb-1 block text-xs text-muted">Full name (required)</span>
-              <input
-                type="text"
-                value={addName}
-                onChange={(e) => setAddName(e.target.value)}
-                required
-                className="w-full rounded-md border border-app surface px-3 py-2 text-sm text-app"
-                placeholder="Full name"
-              />
-            </label>
-            <label>
-              <span className="mb-1 block text-xs text-muted">Role</span>
+            <TextField
+              name="addEmail"
+              type="email"
+              value={addEmail}
+              onChange={setAddEmail}
+              isRequired
+              className="min-w-[180px]"
+            >
+              <Label className="text-xs text-default-500">Email</Label>
+              <Input className="text-sm" placeholder="user@company.com" />
+            </TextField>
+            <TextField
+              name="addName"
+              value={addName}
+              onChange={setAddName}
+              isRequired
+              className="min-w-[180px]"
+            >
+              <Label className="text-xs text-default-500">Full name (required)</Label>
+              <Input className="text-sm" placeholder="Full name" />
+            </TextField>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-default-500">Role</Label>
               <select
                 value={addRole}
                 onChange={(e) => {
@@ -320,7 +330,7 @@ export default function AdminUsersPage() {
                   setAddEmployeeId("");
                   setAddInvestorId("");
                 }}
-                className="rounded-md border border-app surface px-3 py-2 text-sm text-app"
+                className="rounded-lg border border-default-200 bg-content1 px-3 py-2 text-sm outline-none focus:border-danger"
               >
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
@@ -328,14 +338,14 @@ export default function AdminUsersPage() {
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
             {(addRole === "staff" || addRole === "manager") && (
-              <label className="min-w-[180px]">
-                <span className="mb-1 block text-xs text-muted">Employee (optional)</span>
+              <div className="flex min-w-[180px] flex-col gap-1">
+                <Label className="text-xs text-default-500">Employee (optional)</Label>
                 <select
                   value={addEmployeeId}
                   onChange={(e) => setAddEmployeeId(e.target.value)}
-                  className="w-full rounded-md border border-app surface px-3 py-2 text-sm text-app"
+                  className="w-full rounded-lg border border-default-200 bg-content1 px-3 py-2 text-sm outline-none focus:border-danger"
                 >
                   <option value="">— None</option>
                   {employees.map((e) => (
@@ -344,15 +354,15 @@ export default function AdminUsersPage() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
             )}
             {addRole === "investor" && (
-              <label className="min-w-[180px]">
-                <span className="mb-1 block text-xs text-muted">Investor (optional)</span>
+              <div className="flex min-w-[180px] flex-col gap-1">
+                <Label className="text-xs text-default-500">Investor (optional)</Label>
                 <select
                   value={addInvestorId}
                   onChange={(e) => setAddInvestorId(e.target.value)}
-                  className="w-full rounded-md border border-app surface px-3 py-2 text-sm text-app"
+                  className="w-full rounded-lg border border-default-200 bg-content1 px-3 py-2 text-sm outline-none focus:border-danger"
                 >
                   <option value="">— None</option>
                   {investors.map((i) => (
@@ -361,36 +371,34 @@ export default function AdminUsersPage() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
             )}
-            <label className="min-w-[160px]">
-              <span className="mb-1 block text-xs text-muted">
-                Password (optional, min 6)
-              </span>
-              <input
-                type="password"
-                value={addPassword}
-                onChange={(e) => setAddPassword(e.target.value)}
-                minLength={6}
-                className="w-full rounded-md border border-app surface px-3 py-2 text-sm text-app"
-                placeholder="Leave blank for invite"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={adding}
-              className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            <TextField
+              name="addPassword"
+              type="password"
+              value={addPassword}
+              onChange={setAddPassword}
+              className="min-w-[160px]"
             >
+              <Label className="text-xs text-default-500">Password (optional, min 6)</Label>
+              <Input className="text-sm" placeholder="Leave blank for invite" minLength={6} />
+            </TextField>
+            <Button type="submit" variant="primary" size="sm" isDisabled={adding}>
               {adding ? "Adding…" : "Add user"}
-            </button>
+            </Button>
           </form>
-          {addError && (
-            <p className="mt-2 text-sm text-red-300">{addError}</p>
-          )}
-        </section>
+          {addError ? (
+            <Alert.Root status="danger">
+              <Alert.Content>
+                <Alert.Description>{addError}</Alert.Description>
+              </Alert.Content>
+            </Alert.Root>
+          ) : null}
+          </Card.Content>
+        </Card.Root>
 
-        <section className="rounded-lg border border-app surface overflow-hidden">
-          <h2 className="border-b border-app px-4 py-3 text-sm font-semibold uppercase tracking-wide text-muted">
+        <Card.Root className="overflow-hidden border border-default-200 shadow-sm">
+          <h2 className="border-b border-default-200 px-4 py-3 text-sm font-semibold uppercase tracking-wide text-default-500">
             All users
           </h2>
           {users.length === 0 ? (
@@ -429,32 +437,38 @@ export default function AdminUsersPage() {
                         {!u.employee_id && !u.investor_id ? "—" : ""}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <button
+                        <div className="flex items-center gap-2">
+                          <Button
                             type="button"
-                            onClick={() => {
+                            variant="ghost"
+                            size="sm"
+                            className="min-h-7 text-xs text-primary"
+                            onPress={() => {
                               setResetUser(u);
                               setResetPassword("");
                             }}
-                            className="text-xs font-medium text-blue-400 hover:underline"
                           >
                             Reset Password
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             type="button"
-                            onClick={() => handleOpenAccess(u)}
-                            className="text-xs font-medium text-[var(--color-accent)] hover:underline"
+                            variant="ghost"
+                            size="sm"
+                            className="min-h-7 text-xs text-danger"
+                            onPress={() => handleOpenAccess(u)}
                           >
                             Edit Access
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             type="button"
-                            onClick={() => handleDelete(u.id)}
-                            disabled={deletingId === u.id}
-                            className="text-xs font-medium text-red-400 hover:underline disabled:opacity-50"
+                            variant="ghost"
+                            size="sm"
+                            className="min-h-7 text-xs text-danger"
+                            isDisabled={deletingId === u.id}
+                            onPress={() => handleDelete(u.id)}
                           >
                             {deletingId === u.id ? "Removing…" : "Remove"}
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -463,7 +477,7 @@ export default function AdminUsersPage() {
               </table>
             </div>
           )}
-        </section>
+        </Card.Root>
       </div>
 
       {resetUser && (
@@ -482,21 +496,18 @@ export default function AdminUsersPage() {
               />
             </label>
             <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setResetUser(null)}
-                className="rounded-md border border-app px-3 py-2 text-sm text-muted"
-              >
+              <Button type="button" variant="outline" size="sm" onPress={() => setResetUser(null)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                onClick={handleResetPassword}
-                disabled={resetting}
-                className="rounded-md bg-[var(--color-accent)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                variant="primary"
+                size="sm"
+                isDisabled={resetting}
+                onPress={handleResetPassword}
               >
                 {resetting ? "Saving…" : "Save"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -597,21 +608,18 @@ export default function AdminUsersPage() {
             </div>
 
             <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setAccessUser(null)}
-                className="rounded-md border border-app px-3 py-2 text-sm text-muted"
-              >
+              <Button type="button" variant="outline" size="sm" onPress={() => setAccessUser(null)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                onClick={handleSaveAccess}
-                disabled={savingAccess}
-                className="rounded-md bg-[var(--color-accent)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                variant="primary"
+                size="sm"
+                isDisabled={savingAccess}
+                onPress={handleSaveAccess}
               >
                 {savingAccess ? "Saving…" : "Save Access"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

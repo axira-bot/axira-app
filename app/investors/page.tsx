@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Alert, Button } from "@heroui/react";
 import { supabase } from "@/lib/supabase";
 import { getRates, type AppRates } from "@/lib/rates";
 import { eurPerAedFromAppEurSetting, usdPerAedFromAppUsdSetting } from "@/lib/finance/dealMoney";
@@ -551,34 +552,37 @@ export default function InvestorsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-app text-app">
-      <div className="border-b border-app surface px-4 py-4">
-        <h1 className="text-xl font-semibold text-app">Investor Dashboard</h1>
-        <p className="mt-1 text-xs text-muted">Manage investors and profit share returns.</p>
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
+      <div className="border-b border-default-200 bg-content1 px-4 py-4">
+        <h1 className="text-xl font-semibold">Investor Dashboard</h1>
+        <p className="mt-1 text-xs text-default-500">Manage investors and profit share returns.</p>
       </div>
 
-      <div className="flex border-b border-app surface px-4">
+      <div className="flex border-b border-default-200 bg-content1 px-4">
         {(["Investors", "Returns", "Owner"] as const).map((tab) => (
-          <button
+          <Button
             key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`border-b-2 px-4 py-3 text-sm font-medium transition ${
-              activeTab === tab
-                ? "border-[var(--color-accent)] text-[var(--color-accent)]"
-                : "border-transparent text-muted hover:text-app"
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={`rounded-none border-b-2 px-4 py-3 ${
+              activeTab === tab ? "border-danger text-danger" : "border-transparent text-default-500"
             }`}
+            onPress={() => setActiveTab(tab)}
           >
             {tab}
-          </button>
+          </Button>
         ))}
       </div>
 
       <div className="p-4">
-        {error && (
-          <div className="mb-4 rounded-md border border-red-800 bg-red-950/30 px-4 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert.Root status="danger" className="mb-4">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
         {activeTab === "Investors" && (
           <>
@@ -608,13 +612,9 @@ export default function InvestorsPage() {
               </div>
               <div className="flex justify-end">
                 {!isInvestorReadOnly ? (
-                <button
-                  type="button"
-                  onClick={openAdd}
-                  className="h-10 rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a03020]"
-                >
+                <Button type="button" variant="primary" size="sm" className="h-10" onPress={openAdd}>
                   Add Investor
-                </button>
+                </Button>
                 ) : null}
               </div>
             </div>

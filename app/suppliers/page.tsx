@@ -2,6 +2,16 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Button,
+  Card,
+  Input,
+  Label,
+  Spinner,
+  Text,
+  TextField,
+} from "@heroui/react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { normalizeRole } from "@/lib/auth/roles";
 
@@ -15,9 +25,6 @@ type Supplier = {
   active: boolean;
   created_at: string | null;
 };
-
-const inputCls =
-  "w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]";
 
 export default function SuppliersPage() {
   const { user, profile, permissions } = useAuth();
@@ -110,23 +117,30 @@ export default function SuppliersPage() {
 
   if (!canAccess) {
     return (
-      <main className="p-6 text-app">
-        <p className="text-sm text-muted">You do not have access to manage suppliers.</p>
-        <Link href="/dashboard" className="mt-4 inline-block text-sm text-[var(--color-accent)] hover:underline">
-          Back to dashboard
-        </Link>
+      <main className="min-h-full p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
+        <Card.Root className="max-w-md border border-default-200 shadow-sm">
+          <Card.Content className="space-y-3">
+            <Text className="text-sm text-default-600">You do not have access to manage suppliers.</Text>
+            <Link
+              href="/dashboard"
+              className="inline-flex min-h-8 items-center justify-center rounded-lg border border-default-200 bg-transparent px-3 py-1.5 text-sm font-semibold text-danger hover:bg-danger/10"
+            >
+              Back to dashboard
+            </Link>
+          </Card.Content>
+        </Card.Root>
       </main>
     );
   }
 
   return (
-    <main className="space-y-6 p-6 text-app">
+    <main className="min-h-full space-y-6 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Suppliers</h1>
-          <p className="text-xs text-muted">
+          <p className="text-xs text-default-600">
             Add suppliers here. Active suppliers appear in{" "}
-            <Link href="/purchase-orders" className="text-[var(--color-accent)] hover:underline">
+            <Link href="/purchase-orders" className="text-danger hover:underline">
               Purchase Orders
             </Link>
             .
@@ -134,76 +148,85 @@ export default function SuppliersPage() {
         </div>
         <Link
           href="/purchase-orders"
-          className="rounded-md border border-app bg-panel px-4 py-2 text-sm font-semibold hover:bg-white/80"
+          className="inline-flex min-h-8 items-center justify-center rounded-lg border border-default-200 bg-content1 px-3 py-1.5 text-sm font-semibold text-default-700 hover:bg-default-100"
         >
           Open Purchase Orders
         </Link>
       </div>
 
-      <section className="rounded-xl border border-app bg-panel p-4">
-        <h2 className="mb-3 text-base font-semibold">Add supplier</h2>
-        <form className="grid gap-3 md:grid-cols-6" onSubmit={createSupplier}>
-          <label className="space-y-1 text-xs md:col-span-2">
-            <span className="text-muted">Name *</span>
-            <input
-              className={inputCls}
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Eric Trading"
-              required
-            />
-          </label>
-          <label className="space-y-1 text-xs md:col-span-1">
-            <span className="text-muted">Country</span>
-            <input
-              className={inputCls}
-              value={form.country}
-              onChange={(e) => setForm((p) => ({ ...p, country: e.target.value }))}
-              placeholder="China / UAE"
-            />
-          </label>
-          <label className="space-y-1 text-xs md:col-span-1">
-            <span className="text-muted">Default currency</span>
-            <select
-              className={inputCls}
-              value={form.default_currency}
-              onChange={(e) => setForm((p) => ({ ...p, default_currency: e.target.value as "USD" | "AED" }))}
-            >
-              <option value="USD">USD</option>
-              <option value="AED">AED</option>
-            </select>
-          </label>
-          <label className="space-y-1 text-xs md:col-span-1">
-            <span className="text-muted">Contact name</span>
-            <input
-              className={inputCls}
-              value={form.contact_name}
-              onChange={(e) => setForm((p) => ({ ...p, contact_name: e.target.value }))}
-            />
-          </label>
-          <label className="space-y-1 text-xs md:col-span-1">
-            <span className="text-muted">Contact phone</span>
-            <input
-              className={inputCls}
-              value={form.contact_phone}
-              onChange={(e) => setForm((p) => ({ ...p, contact_phone: e.target.value }))}
-            />
-          </label>
-          <div className="md:col-span-6">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {saving ? "Saving…" : "Add supplier"}
-            </button>
-          </div>
-        </form>
-      </section>
+      {error ? (
+        <Alert.Root status="danger">
+          <Alert.Content>
+            <Alert.Description>{error}</Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+      ) : null}
 
-      <section className="overflow-x-auto rounded-xl border border-app bg-panel">
-        <table className="min-w-full text-sm">
-          <thead className="bg-black/5 text-xs uppercase text-muted">
+      <Card.Root className="border border-default-200 shadow-sm">
+        <Card.Content className="space-y-4">
+          <h2 className="text-base font-semibold">Add supplier</h2>
+          <form className="grid gap-3 md:grid-cols-6" onSubmit={createSupplier}>
+            <TextField
+              name="name"
+              value={form.name}
+              onChange={(v) => setForm((p) => ({ ...p, name: v }))}
+              isRequired
+              className="md:col-span-2"
+            >
+              <Label className="text-xs text-default-500">Name</Label>
+              <Input className="text-sm" placeholder="e.g. Eric Trading" />
+            </TextField>
+            <TextField
+              name="country"
+              value={form.country}
+              onChange={(v) => setForm((p) => ({ ...p, country: v }))}
+              className="md:col-span-1"
+            >
+              <Label className="text-xs text-default-500">Country</Label>
+              <Input className="text-sm" placeholder="China / UAE" />
+            </TextField>
+            <div className="flex min-w-0 flex-col gap-1 md:col-span-1">
+              <Label className="text-xs text-default-500">Default currency</Label>
+              <select
+                value={form.default_currency}
+                onChange={(e) => setForm((p) => ({ ...p, default_currency: e.target.value as "USD" | "AED" }))}
+                className="rounded-lg border border-default-200 bg-content1 px-3 py-2 text-sm outline-none focus:border-danger"
+              >
+                <option value="USD">USD</option>
+                <option value="AED">AED</option>
+              </select>
+            </div>
+            <TextField
+              name="contact_name"
+              value={form.contact_name}
+              onChange={(v) => setForm((p) => ({ ...p, contact_name: v }))}
+              className="md:col-span-1"
+            >
+              <Label className="text-xs text-default-500">Contact name</Label>
+              <Input className="text-sm" />
+            </TextField>
+            <TextField
+              name="contact_phone"
+              value={form.contact_phone}
+              onChange={(v) => setForm((p) => ({ ...p, contact_phone: v }))}
+              className="md:col-span-1"
+            >
+              <Label className="text-xs text-default-500">Contact phone</Label>
+              <Input className="text-sm" />
+            </TextField>
+            <div className="md:col-span-6">
+              <Button type="submit" variant="primary" size="sm" isDisabled={saving}>
+                {saving ? "Saving…" : "Add supplier"}
+              </Button>
+            </div>
+          </form>
+        </Card.Content>
+      </Card.Root>
+
+      <Card.Root className="overflow-hidden border border-default-200 shadow-sm">
+        <Card.Content className="p-0">
+          <table className="min-w-full text-sm">
+          <thead className="bg-default-50 text-xs uppercase text-default-500">
             <tr>
               <th className="px-3 py-2 text-left">Name</th>
               <th className="px-3 py-2 text-left">Country</th>
@@ -216,8 +239,11 @@ export default function SuppliersPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="px-3 py-4 text-muted" colSpan={6}>
-                  Loading…
+                <td className="px-3 py-8" colSpan={6}>
+                  <div className="flex flex-col items-center justify-center gap-2 text-default-500">
+                    <Spinner size="md" color="danger" />
+                    <span className="text-sm">Loading…</span>
+                  </div>
                 </td>
               </tr>
             ) : rows.length === 0 ? (
@@ -237,22 +263,17 @@ export default function SuppliersPage() {
                   </td>
                   <td className="px-3 py-2">{r.active ? "Yes" : "No"}</td>
                   <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleActive(r)}
-                      className="rounded-md border border-app px-3 py-1 text-xs font-semibold hover:bg-white/70"
-                    >
+                    <Button type="button" variant="outline" size="sm" onPress={() => toggleActive(r)}>
                       {r.active ? "Deactivate" : "Activate"}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
-      </section>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
+        </Card.Content>
+      </Card.Root>
     </main>
   );
 }

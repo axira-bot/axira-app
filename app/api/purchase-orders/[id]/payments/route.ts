@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { legacyRateInputToAedPerUnit, toAed } from "@/lib/finance/dealMoney";
-import { convertCurrencyAmount, requirePoAccess, recomputePoTotals } from "@/lib/services/purchaseOrders/service";
+import { insertLinkedPoPayment } from "@/lib/services/purchaseOrders/linkedPoPaymentInsert";
+import { requirePoAccess, recomputePoTotals } from "@/lib/services/purchaseOrders/service";
 
 export const dynamic = "force-dynamic";
 
@@ -26,87 +26,27 @@ export async function POST(
     const body = (await request.json()) as Body;
     const amount = Number(body.amount || 0);
     if (amount <= 0) return NextResponse.json({ error: "amount must be > 0" }, { status: 400 });
-    const currency = body.currency || "USD";
-    const rateRaw = body.rate_snapshot ?? null;
-    const rateToAed = legacyRateInputToAedPerUnit(currency, rateRaw);
+    const currency = (body.currency || "USD") as "USD" | "AED" | "DZD" | "EUR";
     const admin = createAdminClient();
-    const poRes = await admin.from("purchase_orders").select("currency").eq("id", id).maybeSingle();
-    const poCurrency = ((poRes.data as { currency?: "USD" | "AED" | "DZD" | "EUR" } | null)?.currency || "USD");
-    const aedEquivalent = toAed(amount, currency, rateToAed);
-    const amountInPoCurrency = convertCurrencyAmount({
+
+    const inserted = await insertLinkedPoPayment(admin, {
+      purchaseOrderId: id,
+      date: body.date,
       amount,
-      fromCurrency: currency,
-      toCurrency: poCurrency,
-      rateSnapshot: rateRaw,
-      aedEquivalent,
+      currency,
+      rateSnapshot: body.rate_snapshot ?? null,
+      pocket: body.pocket,
+      method: body.method,
+      notes: body.notes,
+      createdBy: auth.user.id,
+      supplierId: null,
     });
-    const payIns = await admin
-      .from("payments")
-      .insert({
-        kind: "supplier_payment",
-        amount,
-        currency,
-        rate_to_aed: rateToAed,
-        aed_equivalent: aedEquivalent,
-        pocket: body.pocket || "bank",
-        method: body.method || "bank_transfer",
-        notes: body.notes || `PO payment ${id}`,
-        supplier_id: null,
-        status: "paid",
-      })
-      .select("id")
-      .single();
-    if (payIns.error || !payIns.data?.id) {
-      return NextResponse.json({ error: payIns.error?.message ?? "Failed to insert payment" }, { status: 400 });
-    }
-
-    const movIns = await admin
-      .from("movements")
-      .insert({
-        date: body.date || new Date().toISOString().slice(0, 10),
-        type: "Out",
-        category: "Car Purchase",
-        amount,
-        currency,
-        rate: rateToAed,
-        aed_equivalent: aedEquivalent,
-        pocket: body.pocket || "bank",
-        method: body.method || "bank_transfer",
-        reference: `po:${id}:payment:${payIns.data.id}`,
-        note: body.notes || `Purchase order payment`,
-        status: "posted",
-      })
-      .select("id")
-      .single();
-    if (movIns.error || !movIns.data?.id) {
-      return NextResponse.json({ error: movIns.error?.message ?? "Failed to insert movement" }, { status: 400 });
-    }
-
-    const poPayment = await admin
-      .from("purchase_order_payments")
-      .insert({
-        purchase_order_id: id,
-        date: body.date || new Date().toISOString().slice(0, 10),
-        amount,
-        currency,
-        rate_snapshot: rateRaw,
-        aed_equivalent: aedEquivalent,
-        amount_in_po_currency: amountInPoCurrency,
-        pocket: body.pocket || "bank",
-        method: body.method || "bank_transfer",
-        notes: body.notes || null,
-        movement_id: movIns.data.id,
-        payment_id: payIns.data.id,
-        created_by: auth.user.id,
-      })
-      .select("*")
-      .single();
-    if (poPayment.error || !poPayment.data) {
-      return NextResponse.json({ error: poPayment.error?.message ?? "Failed to insert PO payment" }, { status: 400 });
+    if (!inserted.ok) {
+      return NextResponse.json({ error: inserted.error }, { status: 400 });
     }
 
     await recomputePoTotals(id);
-    return NextResponse.json({ row: poPayment.data });
+    return NextResponse.json({ row: inserted.row });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error";
     return NextResponse.json({ error: message }, { status: 500 });

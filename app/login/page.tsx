@@ -3,6 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import {
+  Alert,
+  Button,
+  Card,
+  Form,
+  Input,
+  Label,
+  Text,
+  TextField,
+} from "@heroui/react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,82 +42,51 @@ export default function LoginPage() {
       className="flex min-h-screen flex-col items-center justify-center px-4"
       style={{ background: "var(--color-bg)" }}
     >
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center">
-          <h1
-            className="text-2xl font-semibold tracking-tight"
-            style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
-          >
+      <Card.Root className="w-full max-w-md shadow-lg">
+        <Card.Header className="flex flex-col gap-1 pb-0">
+          <Card.Title className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
             Axira Trading FZE
-          </h1>
-          <p className="mt-1 text-sm font-medium" style={{ color: "var(--color-accent)" }}>
+          </Card.Title>
+          <Card.Description className="text-sm font-medium text-[hsl(var(--heroui-primary))]">
             Sign in
-          </p>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block">
-            <span
-              className="mb-1 block text-xs font-medium"
-              style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}
-            >
-              Email
-            </span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              className="input w-full px-3 py-2 text-sm placeholder:opacity-60"
-              style={{ color: "var(--color-text)" }}
-              placeholder="you@company.com"
-            />
-          </label>
-          <label className="block">
-            <span
-              className="mb-1 block text-xs font-medium"
-              style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}
-            >
-              Password
-            </span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              className="input w-full px-3 py-2 text-sm placeholder:opacity-60"
-              style={{ color: "var(--color-text)" }}
-              placeholder="••••••••"
-            />
-          </label>
-          {error && (
-            <div
-              className="rounded-md border px-3 py-2 text-xs"
-              style={{
-                borderColor: "var(--color-primary)",
-                background: "rgba(91,15,21,0.4)",
-                color: "var(--color-text)",
-              }}
-            >
-              {error}
-            </div>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full px-3 py-2 text-sm font-semibold disabled:opacity-50"
-          >
-            {loading ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
-        <p
-          className="text-center text-xs"
-          style={{ color: "var(--color-text-muted)" }}
-        >
-          Accounts are created by an administrator.
-        </p>
-      </div>
+          </Card.Description>
+        </Card.Header>
+        <Card.Content className="pt-6">
+          <Form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <TextField name="email" type="email" value={email} onChange={setEmail} isRequired>
+              <Label className="text-xs font-medium text-default-500">Email</Label>
+              <Input
+                placeholder="you@company.com"
+                autoComplete="email"
+                className="w-full"
+              />
+            </TextField>
+            <TextField name="password" type="password" value={password} onChange={setPassword} isRequired>
+              <Label className="text-xs font-medium text-default-500">Password</Label>
+              <Input
+                placeholder="••••••••"
+                autoComplete="current-password"
+                className="w-full"
+              />
+            </TextField>
+            {error ? (
+              <Alert.Root status="danger">
+                <Alert.Content>
+                  <Alert.Description>{error}</Alert.Description>
+                </Alert.Content>
+              </Alert.Root>
+            ) : null}
+            <Button type="submit" variant="primary" fullWidth isDisabled={loading}>
+              {loading ? "Signing in…" : "Sign in"}
+            </Button>
+          </Form>
+        </Card.Content>
+        <Card.Footer className="pt-0">
+          <Text className="w-full text-center text-xs text-default-500">
+            Accounts are created by an administrator.
+          </Text>
+        </Card.Footer>
+      </Card.Root>
     </div>
   );
 }

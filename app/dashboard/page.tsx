@@ -11,6 +11,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Alert, Button, Card, Spinner } from "@heroui/react";
 import type { Car, Deal, Movement, Rent } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -584,30 +585,22 @@ export default function DashboardPage() {
                     )}
                     {isEditing ? (
                       <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={handleSaveRate}
-                          className="btn-primary px-2 py-1 text-xs"
-                        >
+                        <Button type="button" size="sm" variant="primary" onPress={handleSaveRate}>
                           Save
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCancelEditRate}
-                          className="btn-secondary px-2 py-1 text-xs"
-                        >
+                        </Button>
+                        <Button type="button" size="sm" variant="secondary" onPress={handleCancelEditRate}>
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     ) : (
-                      <button
+                      <Button
                         type="button"
-                        onClick={() => handleStartEditRate(key)}
-                        className="rounded-md border px-2 py-1 text-xs font-medium transition hover:opacity-90"
-                        style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
+                        size="sm"
+                        variant="outline"
+                        onPress={() => handleStartEditRate(key)}
                       >
                         Edit
-                      </button>
+                      </Button>
                     )}
                   </div>
                   <div className="mt-1 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
@@ -682,8 +675,8 @@ export default function DashboardPage() {
                     )}
                     {isEditing ? (
                       <div className="flex gap-1">
-                        <button type="button" onClick={handleSaveListingRate} className="btn-primary px-2 py-1 text-xs">Save</button>
-                        <button type="button" onClick={() => { setEditingListingRateKey(null); setEditingListingRateValue(""); }} className="btn-secondary px-2 py-1 text-xs">Cancel</button>
+                        <Button type="button" size="sm" variant="primary" onPress={handleSaveListingRate}>Save</Button>
+                        <Button type="button" size="sm" variant="secondary" onPress={() => { setEditingListingRateKey(null); setEditingListingRateValue(""); }}>Cancel</Button>
                       </div>
                     ) : (
                       <button
@@ -716,22 +709,21 @@ export default function DashboardPage() {
           <p className="text-sm font-medium" style={{ color: "var(--color-accent)" }}>Dashboard</p>
         </header>
 
-        {error && (
-          <div
-            className="rounded-md border px-3 py-2 text-xs"
-            style={{ borderColor: "var(--color-primary)", background: "rgba(196,18,48,0.08)", color: "var(--color-text)" }}
-          >
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert.Root status="danger">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
         {isLoading ? (
-          <div
-            className="rounded-lg border p-6 text-sm card"
-            style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
-          >
-            Loading dashboard data...
-          </div>
+          <Card.Root className="border border-default-200">
+            <Card.Content className="flex flex-col items-center justify-center gap-3 py-12">
+              <Spinner size="lg" color="danger" />
+              <span className="text-sm text-default-500">Loading dashboard data…</span>
+            </Card.Content>
+          </Card.Root>
         ) : (
           <>
             {/* Section 1 - Top stats */}
@@ -1024,21 +1016,19 @@ export default function DashboardPage() {
                                   className="input w-full px-2 py-1 text-xs"
                                 />
                                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                  <button
+                                  <Button
                                     type="button"
-                                    onClick={handleSaveEdit}
-                                    disabled={updatingPocketId === pocket.id}
-                                    className="btn-primary flex-1 px-2 py-1 text-xs disabled:opacity-50"
+                                    size="sm"
+                                    variant="primary"
+                                    className="flex-1"
+                                    onPress={handleSaveEdit}
+                                    isDisabled={updatingPocketId === pocket.id}
                                   >
                                     {updatingPocketId === pocket.id ? "Saving..." : "Save"}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={handleCancelEdit}
-                                    className="btn-secondary flex-1 px-2 py-1 text-xs"
-                                  >
+                                  </Button>
+                                  <Button type="button" size="sm" variant="secondary" className="flex-1" onPress={handleCancelEdit}>
                                     Cancel
-                                  </button>
+                                  </Button>
                                 </div>
                               </div>
                             ) : (

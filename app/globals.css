@@ -1,7 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap");
+@import "tailwindcss";
+@import "@heroui/styles";
 
-/* ── Brand Tokens ──────────────────────────────────────────── */
+/* ── Brand Tokens + HeroUI primary (Axira red) ─────────────── */
 :root {
+  --heroui-primary: 196 18 48;
+  --heroui-primary-foreground: 255 255 255;
+
   /* Layout backgrounds */
   --color-bg:            #F4F4F4;      /* page background — light grey */
   --color-surface:       #FFFFFF;      /* cards, panels */
@@ -77,57 +82,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   box-shadow: var(--shadow-card);
 }
 
-/* ── Buttons ────────────────────────────────────────────────── */
-.btn-primary {
-  background: var(--color-accent);
-  color: #FFFFFF;
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 0.875rem;
-  border: none;
-  border-radius: 8px;
-  padding: 0.5rem 1.125rem;
-  transition: filter 0.15s, transform 0.1s;
-  cursor: pointer;
-  letter-spacing: 0.01em;
-}
-.btn-primary:hover  { filter: brightness(0.88); }
-.btn-primary:active { transform: scale(0.98); }
-
-.btn-secondary {
-  background: transparent;
-  color: var(--color-accent);
-  border: 1.5px solid var(--color-accent);
-  font-family: var(--font-heading);
-  font-weight: 500;
-  font-size: 0.875rem;
-  border-radius: 8px;
-  padding: 0.5rem 1.125rem;
-  transition: background 0.15s, color 0.15s;
-  cursor: pointer;
-}
-.btn-secondary:hover {
-  background: rgba(196, 18, 48, 0.06);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--color-text-muted);
-  border: 1.5px solid var(--color-border);
-  font-family: var(--font-heading);
-  font-weight: 500;
-  font-size: 0.875rem;
-  border-radius: 8px;
-  padding: 0.5rem 1.125rem;
-  transition: background 0.15s, border-color 0.15s;
-  cursor: pointer;
-}
-.btn-ghost:hover {
-  background: var(--color-bg);
-  border-color: #CCCCCC;
-}
-
-/* ── Inputs ─────────────────────────────────────────────────── */
+/* ── Inputs (legacy dashboard fields; prefer HeroUI TextField elsewhere) ── */
 .input {
   background: var(--color-surface);
   border: 1.5px solid var(--color-border);
@@ -149,58 +104,6 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 /* ── Select ─────────────────────────────────────────────────── */
 select.input {
   cursor: pointer;
-}
-
-/* ── Status Badges ──────────────────────────────────────────── */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 0.2rem 0.65rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  font-family: var(--font-body);
-}
-
-.badge-pending {
-  background: rgba(196, 18, 48, 0.08);
-  color: var(--color-accent);
-  border: 1px solid rgba(196, 18, 48, 0.2);
-  border-radius: 999px;
-  padding: 0.2rem 0.65rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.badge-success {
-  background: rgba(22, 163, 74, 0.1);
-  color: #15803D;
-  border: 1px solid rgba(22, 163, 74, 0.25);
-  border-radius: 999px;
-  padding: 0.2rem 0.65rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.badge-danger {
-  background: rgba(196, 18, 48, 0.1);
-  color: #C41230;
-  border: 1px solid rgba(196, 18, 48, 0.25);
-  border-radius: 999px;
-  padding: 0.2rem 0.65rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.badge-neutral {
-  background: rgba(138, 138, 138, 0.1);
-  color: #6B6B6B;
-  border: 1px solid rgba(138, 138, 138, 0.2);
-  border-radius: 999px;
-  padding: 0.2rem 0.65rem;
-  font-size: 0.72rem;
-  font-weight: 600;
 }
 
 /* ── Table ──────────────────────────────────────────────────── */
@@ -238,34 +141,3 @@ table tbody td {
   color: var(--color-text);
 }
 
-/* ── Modal overlay ──────────────────────────────────────────── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(2px);
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-.modal-panel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.15);
-  width: 100%;
-  max-width: 540px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-/* ── Mobile utilities ──────────────────────────────────── */
-@media (max-width: 640px) {
-  .modal-content {
-    margin: 1rem;
-    max-height: calc(100vh - 2rem);
-    overflow-y: auto;
-  }
-}

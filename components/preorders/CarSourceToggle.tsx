@@ -1,3 +1,6 @@
+"use client";
+
+import { Button } from "@heroui/react";
 import type { PreorderSource } from "./types";
 
 export default function CarSourceToggle({
@@ -13,30 +16,22 @@ export default function CarSourceToggle({
         Car source
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
-        <button
+        <Button
           type="button"
-          onClick={() => onChange("PRE_ORDER_CATALOG")}
-          className={[
-            "rounded-full border px-3 py-1 text-xs font-semibold transition",
-            source === "PRE_ORDER_CATALOG"
-              ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
-              : "border-app text-app",
-          ].join(" ")}
+          size="sm"
+          variant={source === "PRE_ORDER_CATALOG" ? "primary" : "outline"}
+          onPress={() => onChange("PRE_ORDER_CATALOG")}
         >
           From catalog
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          onClick={() => onChange("PRE_ORDER_CUSTOM")}
-          className={[
-            "rounded-full border px-3 py-1 text-xs font-semibold transition",
-            source === "PRE_ORDER_CUSTOM"
-              ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
-              : "border-app text-app",
-          ].join(" ")}
+          size="sm"
+          variant={source === "PRE_ORDER_CUSTOM" ? "primary" : "outline"}
+          onPress={() => onChange("PRE_ORDER_CUSTOM")}
         >
           Custom request
-        </button>
+        </Button>
       </div>
     </div>
   );

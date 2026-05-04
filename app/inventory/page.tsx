@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Alert, Button, Spinner } from "@heroui/react";
 import type { Car } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
@@ -739,24 +740,20 @@ export default function InventoryPage() {
   );
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Inventory</h1>
-            <p className="text-sm font-medium text-[var(--color-accent)]">Vehicle Management</p>
+            <p className="text-sm font-medium text-danger">Vehicle Management</p>
             {isInvestorReadOnly ? (
-              <p className="text-sm text-muted">View-only access.</p>
+              <p className="text-sm text-default-500">View-only access.</p>
             ) : null}
           </div>
           {!isInvestorReadOnly ? (
-          <button
-            type="button"
-            onClick={openAddModal}
-            className="btn-primary inline-flex items-center justify-center px-4 py-2 text-sm font-semibold"
-          >
+          <Button type="button" variant="primary" size="sm" onPress={openAddModal}>
             + Add {stockTypeTab === "supplier" ? "Supplier Listing" : "Car"}
-          </button>
+          </Button>
           ) : null}
         </header>
 
@@ -825,19 +822,15 @@ export default function InventoryPage() {
         {/* Location / status filter tabs */}
         <div className="flex flex-wrap gap-2">
           {(["All", "Dubai", "Algeria", "In Transit", "Sold"] as FilterTab[]).map((tab) => (
-            <button
+            <Button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
-              className={[
-                "rounded-full border px-3 py-1 text-xs font-semibold transition",
-                activeTab === tab
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-[#C41230]/70",
-              ].join(" ")}
+              size="sm"
+              variant={activeTab === tab ? "primary" : "outline"}
+              onPress={() => setActiveTab(tab)}
             >
               {filterTabLabels[tab]}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -870,13 +863,20 @@ export default function InventoryPage() {
           </div>
         )}
 
-        {error && (
-          <div className="rounded-md border border-app surface px-3 py-2 text-xs text-app">{error}</div>
-        )}
+        {error ? (
+          <Alert.Root status="danger">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
         <div className="rounded-lg border border-app surface">
           {isLoading ? (
-            <div className="p-4 text-sm text-muted">Loading cars...</div>
+            <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
+              <Spinner size="md" color="danger" />
+              <span className="text-sm">Loading cars…</span>
+            </div>
           ) : filteredCars.length === 0 ? (
             <div className="p-4 text-sm text-muted">No cars found.</div>
           ) : (
@@ -1426,14 +1426,12 @@ export default function InventoryPage() {
             </div>
 
             <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={closeModal} disabled={isSaving}
-                className="rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50">
+              <Button type="button" variant="outline" size="sm" isDisabled={isSaving} onPress={closeModal}>
                 Cancel
-              </button>
-              <button type="button" onClick={handleSave} disabled={isSaving}
-                className="btn-primary rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-50">
+              </Button>
+              <Button type="button" variant="primary" size="sm" isDisabled={isSaving} onPress={handleSave}>
                 {isSaving ? "Saving..." : "Save"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

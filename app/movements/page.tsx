@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Alert, Button, Spinner } from "@heroui/react";
 import dynamic from "next/dynamic";
 import type { Movement, Rent } from "@/lib/types";
 import type { ReceiptPDFData } from "@/lib/pdf/pdfTypes";
@@ -1029,24 +1030,20 @@ export default function MovementsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               Movements
             </h1>
-              <p className="text-sm font-medium text-[var(--color-accent)]">
+              <p className="text-sm font-medium text-danger">
                 Cash flow & pockets
               </p>
             </div>
-            <button
-              type="button"
-              onClick={openModal}
-              className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-            >
+            <Button type="button" variant="primary" size="sm" onPress={openModal}>
               Add Movement
-            </button>
+            </Button>
           </header>
 
         {/* Pocket balances */}
@@ -1085,27 +1082,25 @@ export default function MovementsPage() {
               "USD Cash",
             ] as FilterTab[]
           ).map((tab) => (
-            <button
+            <Button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
-              className={[
-                "rounded-full border px-3 py-1 text-xs font-semibold transition",
-                activeTab === tab
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
-                  : "border-[#222222] surface text-app hover:border-[var(--color-accent)]/70",
-              ].join(" ")}
+              size="sm"
+              variant={activeTab === tab ? "primary" : "outline"}
+              onPress={() => setActiveTab(tab)}
             >
               {tab}
-            </button>
+            </Button>
           ))}
         </div>
 
-        {error && (
-          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert.Root status="danger">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
         {/* Rent & Fixed Expenses */}
         <section className="space-y-3">
@@ -1113,9 +1108,11 @@ export default function MovementsPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
               Rent &amp; Fixed Expenses
             </h2>
-            <button
+            <Button
               type="button"
-              onClick={() => {
+              variant="outline"
+              size="sm"
+              onPress={() => {
                 setRentError(null);
                 setEditingRent(null);
                 setRentForm({
@@ -1129,10 +1126,9 @@ export default function MovementsPage() {
                 });
                 setIsRentModalOpen(true);
               }}
-              className="inline-flex items-center justify-center rounded-md border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20"
             >
               Add Rent
-            </button>
+            </Button>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {rents.map((r) => {
@@ -1209,7 +1205,10 @@ export default function MovementsPage() {
         {/* Movements table */}
         <div className="rounded-lg border border-[#222222] surface">
           {isLoading ? (
-            <div className="p-4 text-sm text-muted">Loading movements...</div>
+            <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
+              <Spinner size="md" color="danger" />
+              <span className="text-sm">Loading movements…</span>
+            </div>
           ) : filteredMovements.length === 0 ? (
             <div className="p-4 text-sm text-muted">No movements found.</div>
           ) : (

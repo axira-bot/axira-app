@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Alert, Button, Spinner } from "@heroui/react";
 import type { Car, Deal } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
@@ -1772,72 +1773,57 @@ export default function DealsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Deals</h1>
-            <p className="text-sm font-medium text-[var(--color-accent)]">Sales & Profit</p>
+            <p className="text-sm font-medium text-danger">Sales & Profit</p>
           </div>
           {isInvestorReadOnly ? (
-            <p className="text-sm text-muted">You have view-only access to deals.</p>
+            <p className="text-sm text-default-500">You have view-only access to deals.</p>
           ) : (
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setIsPreorderModalOpen(true)}
-              className="inline-flex items-center justify-center rounded-md border border-[var(--color-accent)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10"
-            >
+            <Button type="button" variant="outline" size="sm" onPress={() => setIsPreorderModalOpen(true)}>
               Add Pre-Order
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              onClick={() => {
+              variant="outline"
+              size="sm"
+              onPress={() => {
                 setDummyError(null);
                 setIsDummyDocsOpen(true);
               }}
-              className="inline-flex items-center justify-center rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
             >
               Dummy Docs
-            </button>
-            <button
-              type="button"
-              onClick={openAddModal}
-              className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-            >
+            </Button>
+            <Button type="button" variant="primary" size="sm" onPress={openAddModal}>
               Add Deal
-            </button>
+            </Button>
           </div>
           )}
         </header>
 
         <div className="flex flex-wrap gap-2">
           {(["All", "Pending", "Closed"] as FilterTab[]).map((tab) => (
-            <button
+            <Button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
-              className={[
-                "rounded-full border px-3 py-1 text-xs font-semibold transition",
-                activeTab === tab
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-[#C41230]/70",
-              ].join(" ")}
+              size="sm"
+              variant={activeTab === tab ? "primary" : "outline"}
+              onPress={() => setActiveTab(tab)}
             >
               {tab}
-            </button>
+            </Button>
           ))}
         </div>
         {(searchParams.get("clientId") || searchParams.get("clientName")) && (
           <div className="flex items-center gap-2 text-xs text-muted">
             <span>Filtered by client</span>
-            <button
-              type="button"
-              onClick={() => router.replace("/deals")}
-              className="rounded-md border border-app bg-white px-2 py-1 font-semibold text-app"
-            >
+            <Button type="button" variant="outline" size="sm" onPress={() => router.replace("/deals")}>
               Clear filter
-            </button>
+            </Button>
           </div>
         )}
 
@@ -1862,15 +1848,20 @@ export default function DealsPage() {
           </div>
         )}
 
-        {error && (
-          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert.Root status="danger">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
         <div className="rounded-lg border border-app surface">
           {isLoading ? (
-            <div className="p-4 text-sm text-muted">Loading deals...</div>
+            <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
+              <Spinner size="md" color="danger" />
+              <span className="text-sm">Loading deals…</span>
+            </div>
           ) : filteredDeals.length === 0 ? (
             <div className="p-4 text-sm text-muted">No deals found.</div>
           ) : (

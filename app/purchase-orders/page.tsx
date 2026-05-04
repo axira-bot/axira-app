@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Alert, Button, Spinner } from "@heroui/react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
 import { normalizeRole } from "@/lib/auth/roles";
+import { cashPocketOptionsForCurrency, validatePocketForCurrency } from "@/lib/finance/cashPockets";
 
 type Supplier = { id: string; name: string | null };
 type PurchaseOrder = {
@@ -109,7 +111,7 @@ export default function PurchaseOrdersPage() {
       amount: "",
       currency: "USD",
       rate_snapshot: "",
-      pocket: "bank",
+      pocket: "",
       method: "bank_transfer",
       notes: "",
     },
@@ -169,6 +171,16 @@ export default function PurchaseOrdersPage() {
     if (!isPrivileged) return;
     setSaving(true);
     setError(null);
+    for (const payment of payments) {
+      if (Number(payment.amount || 0) <= 0) continue;
+      const pocketErr = validatePocketForCurrency(payment.pocket.trim(), payment.currency);
+      if (pocketErr) {
+        setSaving(false);
+        setError(pocketErr);
+        return;
+      }
+    }
+
     const normalizedItems = lineItems
       .map((item) => ({
         brand: item.brand.trim(),
@@ -243,7 +255,7 @@ export default function PurchaseOrdersPage() {
         amount: "",
         currency: "USD",
         rate_snapshot: "",
-        pocket: "bank",
+        pocket: "",
         method: "bank_transfer",
         notes: "",
       },
@@ -331,7 +343,7 @@ export default function PurchaseOrdersPage() {
         amount: "",
         currency: form.currency as "USD" | "AED" | "DZD" | "EUR",
         rate_snapshot: "",
-        pocket: "bank",
+        pocket: "",
         method: "bank_transfer",
         notes: "",
       },
@@ -341,7 +353,19 @@ export default function PurchaseOrdersPage() {
     setPayments((prev) => (prev.length === 1 ? prev : prev.filter((x) => x.rowId !== rowId)));
   };
   const updatePaymentRow = (rowId: string, field: keyof PoPaymentDraft, value: string) => {
-    setPayments((prev) => prev.map((row) => (row.rowId === rowId ? { ...row, [field]: value } : row)));
+    setPayments((prev) =>
+      prev.map((row) => {
+        if (row.rowId !== rowId) return row;
+        const next = { ...row, [field]: value } as PoPaymentDraft;
+        if (field === "currency") {
+          const cur = value as PoPaymentDraft["currency"];
+          if (validatePocketForCurrency(next.pocket.trim(), cur)) {
+            next.pocket = "";
+          }
+        }
+        return next;
+      })
+    );
   };
 
   const removeLineItem = (rowId: string) => {
@@ -369,7 +393,14 @@ export default function PurchaseOrdersPage() {
   };
 
   return (
-    <main className="space-y-5 p-6 text-app">
+    <main className="min-h-full space-y-5 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
+      {error ? (
+        <Alert.Root status="danger">
+          <Alert.Content>
+            <Alert.Description>{error}</Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Purchase Orders</h1>
@@ -633,7 +664,19 @@ export default function PurchaseOrdersPage() {
                       <option value="EUR">EUR</option>
                     </select>
                     <input className={`${inputCls} md:col-span-2`} placeholder="Rate snapshot" value={payment.rate_snapshot} onChange={(e) => updatePaymentRow(payment.rowId, "rate_snapshot", e.target.value)} />
-                    <input className={`${inputCls} md:col-span-2`} placeholder="Pocket" value={payment.pocket} onChange={(e) => updatePaymentRow(payment.rowId, "pocket", e.target.value)} />
+                    <select
+                      required={Number(payment.amount || 0) > 0}
+                      className={`${inputCls} md:col-span-2`}
+                      value={payment.pocket}
+                      onChange={(e) => updatePaymentRow(payment.rowId, "pocket", e.target.value)}
+                    >
+                      <option value="">Cash pocket…</option>
+                      {cashPocketOptionsForCurrency(payment.currency).map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
                     <input className={`${inputCls} md:col-span-2`} placeholder="Method" value={payment.method} onChange={(e) => updatePaymentRow(payment.rowId, "method", e.target.value)} />
                     <button type="button" onClick={() => removePaymentRow(payment.rowId)} className="rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 md:col-span-1">Remove</button>
                     <input className={`${inputCls} md:col-span-11`} placeholder="Notes" value={payment.notes} onChange={(e) => updatePaymentRow(payment.rowId, "notes", e.target.value)} />
@@ -672,13 +715,9 @@ export default function PurchaseOrdersPage() {
               </label>
             </div>
             <div className="md:col-span-5">
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-              >
+              <Button type="submit" variant="primary" size="sm" isDisabled={saving}>
                 {saving ? "Creating..." : "Create PO"}
-              </button>
+              </Button>
             </div>
           </form>
         </section>
@@ -702,8 +741,11 @@ export default function PurchaseOrdersPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="px-3 py-4 text-muted" colSpan={isOwner ? 9 : 8}>
-                  Loading...
+                <td className="px-3 py-8" colSpan={isOwner ? 9 : 8}>
+                  <div className="flex flex-col items-center justify-center gap-2 text-default-500">
+                    <Spinner size="md" color="danger" />
+                    <span className="text-sm">Loading…</span>
+                  </div>
                 </td>
               </tr>
             ) : rows.length === 0 ? (
@@ -729,13 +771,9 @@ export default function PurchaseOrdersPage() {
                   <td className="px-3 py-2">{row.created_at ? new Date(row.created_at).toLocaleDateString() : "-"}</td>
                   {isOwner && (
                     <td className="px-3 py-2">
-                      <button
-                        type="button"
-                        onClick={() => removePo(row.id)}
-                        className="rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
-                      >
+                      <Button type="button" variant="danger-soft" size="sm" onPress={() => removePo(row.id)}>
                         Remove
-                      </button>
+                      </Button>
                     </td>
                   )}
                 </tr>
@@ -744,7 +782,6 @@ export default function PurchaseOrdersPage() {
           </tbody>
         </table>
       </section>
-      {error && <p className="text-sm text-red-600">{error}</p>}
     </main>
   );
 }

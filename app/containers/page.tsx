@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Alert, Button, Spinner } from "@heroui/react";
 import type { Car } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
@@ -905,20 +906,22 @@ export default function ContainersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               Containers
             </h1>
-            <p className="text-sm font-medium text-[var(--color-accent)]">
+            <p className="text-sm font-medium text-danger">
               Shipping & logistics
             </p>
           </div>
-          <button
+          <Button
             type="button"
-            onClick={() => {
+            variant="primary"
+            size="sm"
+            onPress={() => {
               setEditingContainerId(null);
               setNewForm({
                 ref: "",
@@ -932,22 +935,26 @@ export default function ContainersPage() {
               setIsNewModalOpen(true);
               setError(null);
             }}
-            className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
           >
             New Container
-          </button>
+          </Button>
         </header>
 
-        {error && (
-          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert.Root status="danger">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
         {/* Containers list */}
         <div className="rounded-lg border border-app surface">
           {isLoading ? (
-            <div className="p-4 text-sm text-muted">Loading containers...</div>
+            <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
+              <Spinner size="md" color="danger" />
+              <span className="text-sm">Loading containers…</span>
+            </div>
           ) : containers.length === 0 ? (
             <div className="p-4 text-sm text-muted">No containers yet.</div>
           ) : (

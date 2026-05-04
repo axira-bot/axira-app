@@ -1,6 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Alert,
+  Button,
+  Card,
+  Input,
+  Label,
+  Spinner,
+  Text,
+  TextField,
+} from "@heroui/react";
 import { supabase } from "@/lib/supabase";
 
 type Inquiry = {
@@ -161,73 +171,128 @@ export default function InquiriesPage() {
   const newCount = inquiries.filter((i) => i.status === "new").length;
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Inquiries</h1>
-            <p className="text-sm font-medium text-[var(--color-accent)]">
+            <p className="text-sm font-medium text-danger">
               Client requests from the public website
             </p>
           </div>
           {newCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
               {newCount} new
             </span>
           )}
         </header>
 
-        {/* Filter tabs */}
         <div className="flex flex-wrap gap-2">
           {["all", ...STATUS_OPTIONS].map((s) => (
-            <button
+            <Button
               key={s}
               type="button"
-              onClick={() => setFilter(s)}
-              className={[
-                "rounded-full border px-3 py-1 text-xs font-semibold transition capitalize",
-                filter === s
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-[#C41230]/70",
-              ].join(" ")}
+              size="sm"
+              variant={filter === s ? "primary" : "outline"}
+              className="capitalize"
+              onPress={() => setFilter(s)}
             >
               {s === "all" ? `All (${inquiries.length})` : s}
-            </button>
+            </Button>
           ))}
         </div>
 
-        <div className="rounded-lg border border-app surface p-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">WhatsApp Intake</div>
-          {waError ? (
-            <div className="mb-2 rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700">
-              {waError}
+        <Card.Root className="border border-default-200 shadow-sm">
+          <Card.Content className="space-y-3">
+            <Text className="text-xs font-semibold uppercase tracking-wide text-default-500">WhatsApp Intake</Text>
+            {waError ? (
+              <Alert.Root status="danger">
+                <Alert.Content>
+                  <Alert.Description>{waError}</Alert.Description>
+                </Alert.Content>
+              </Alert.Root>
+            ) : null}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <TextField
+                name="waName"
+                value={newWa.name}
+                onChange={(v) => setNewWa((p) => ({ ...p, name: v }))}
+              >
+                <Label className="text-xs text-default-500">Client name</Label>
+                <Input className="text-xs" placeholder="Client name" />
+              </TextField>
+              <TextField
+                name="waPhone"
+                value={newWa.phone}
+                onChange={(v) => setNewWa((p) => ({ ...p, phone: v }))}
+              >
+                <Label className="text-xs text-default-500">Phone</Label>
+                <Input className="text-xs" placeholder="Phone" />
+              </TextField>
+              <TextField
+                name="waRef"
+                value={newWa.whatsappRef}
+                onChange={(v) => setNewWa((p) => ({ ...p, whatsappRef: v }))}
+              >
+                <Label className="text-xs text-default-500">WhatsApp ref</Label>
+                <Input className="text-xs" placeholder="Thread id" />
+              </TextField>
+              <TextField
+                name="waCar"
+                value={newWa.carLabel}
+                onChange={(v) => setNewWa((p) => ({ ...p, carLabel: v }))}
+              >
+                <Label className="text-xs text-default-500">Car label</Label>
+                <Input className="text-xs" placeholder="Car label" />
+              </TextField>
+              <TextField
+                name="waMsg"
+                value={newWa.message}
+                onChange={(v) => setNewWa((p) => ({ ...p, message: v }))}
+                className="sm:col-span-2"
+              >
+                <Label className="text-xs text-default-500">Message</Label>
+                <Input className="text-xs" placeholder="Message" />
+              </TextField>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-default-500">Assign</Label>
+                <select
+                  value={newWa.assignedEmployeeId}
+                  onChange={(e) => setNewWa((p) => ({ ...p, assignedEmployeeId: e.target.value }))}
+                  className="rounded-lg border border-default-200 bg-content1 px-3 py-2 text-xs outline-none focus:border-danger"
+                >
+                  <option value="">Assign later</option>
+                  {employees.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name || "—"}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          ) : null}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <input placeholder="Client name" value={newWa.name} onChange={(e) => setNewWa((p) => ({ ...p, name: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app" />
-            <input placeholder="Phone" value={newWa.phone} onChange={(e) => setNewWa((p) => ({ ...p, phone: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app" />
-            <input placeholder="WhatsApp ref / thread id" value={newWa.whatsappRef} onChange={(e) => setNewWa((p) => ({ ...p, whatsappRef: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app" />
-            <input placeholder="Car label" value={newWa.carLabel} onChange={(e) => setNewWa((p) => ({ ...p, carLabel: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app" />
-            <input placeholder="Message" value={newWa.message} onChange={(e) => setNewWa((p) => ({ ...p, message: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2" />
-            <select value={newWa.assignedEmployeeId} onChange={(e) => setNewWa((p) => ({ ...p, assignedEmployeeId: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app">
-              <option value="">Assign later</option>
-              {employees.map((e) => <option key={e.id} value={e.id}>{e.name || "—"}</option>)}
-            </select>
-          </div>
-          <button type="button" onClick={createWhatsAppInquiry} className="mt-2 rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white">Create WhatsApp Inquiry</button>
-        </div>
+            <Button type="button" variant="primary" size="sm" onPress={createWhatsAppInquiry}>
+              Create WhatsApp Inquiry
+            </Button>
+          </Card.Content>
+        </Card.Root>
 
-        {/* List */}
         <div className="flex flex-col gap-3">
           {isLoading ? (
-            <div className="rounded-lg border border-app surface p-6 text-sm text-muted">Loading inquiries...</div>
+            <Card.Root className="border border-default-200 shadow-sm">
+              <Card.Content className="flex flex-col items-center justify-center gap-3 py-10">
+                <Spinner size="md" color="danger" />
+                <span className="text-sm text-default-500">Loading inquiries…</span>
+              </Card.Content>
+            </Card.Root>
           ) : filtered.length === 0 ? (
-            <div className="rounded-lg border border-app surface p-6 text-sm text-muted">No inquiries found.</div>
+            <Card.Root className="border border-default-200 shadow-sm">
+              <Card.Content className="p-6 text-sm text-default-500">No inquiries found.</Card.Content>
+            </Card.Root>
           ) : (
             filtered.map((inq) => {
               const isExpanded = expandedId === inq.id;
               return (
-                <div key={inq.id} className="rounded-lg border border-app surface">
+                <Card.Root key={inq.id} className="border border-default-200 shadow-sm">
                   {/* Main row */}
                   <div
                     className="flex flex-col gap-2 p-4 cursor-pointer sm:flex-row sm:items-start sm:justify-between"
@@ -304,14 +369,16 @@ export default function InquiriesPage() {
                           rows={2}
                           className="w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                         />
-                        <button
+                        <Button
                           type="button"
-                          onClick={() => saveNotes(inq.id)}
-                          disabled={updatingId === inq.id}
-                          className="mt-1.5 rounded-md bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 px-3 py-1 text-xs font-semibold text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20 disabled:opacity-50"
+                          variant="outline"
+                          size="sm"
+                          className="mt-1.5"
+                          isDisabled={updatingId === inq.id}
+                          onPress={() => saveNotes(inq.id)}
                         >
                           {updatingId === inq.id ? "Saving..." : "Save Notes"}
-                        </button>
+                        </Button>
                       </div>
                       <div className="flex gap-4 text-xs text-muted">
                         <a href={`tel:${inq.phone}`} className="hover:text-app font-medium">📞 Call</a>
@@ -320,7 +387,7 @@ export default function InquiriesPage() {
                       </div>
                     </div>
                   )}
-                </div>
+                </Card.Root>
               );
             })
           )}

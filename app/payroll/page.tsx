@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Alert, Button, Card, Spinner } from "@heroui/react";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 
@@ -231,14 +232,15 @@ export default function PayrollPage() {
   };
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
         <header className="mb-5">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Payroll</h1>
-          <p className="text-sm text-[var(--color-accent)]">Salary + commissions (DZD)</p>
+          <p className="text-sm text-danger">Salary + commissions (DZD)</p>
         </header>
 
-        <div className="mb-4 grid gap-3 rounded-lg border border-app surface p-3 md:grid-cols-5">
+        <Card.Root className="mb-4 border border-default-200 shadow-sm">
+          <Card.Content className="grid gap-3 p-3 md:grid-cols-5">
           <label className="text-xs text-muted">
             Month
             <select
@@ -290,29 +292,48 @@ export default function PayrollPage() {
             <div className="text-xs text-muted">Total payable</div>
             <div className="text-lg font-semibold text-app">{formatMoney(monthTotal)}</div>
           </div>
-        </div>
+          </Card.Content>
+        </Card.Root>
 
         <div className="mb-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-app surface px-4 py-3">
-            <div className="text-xs text-muted">Total payable (filtered)</div>
-            <div className="text-lg font-semibold text-app">{formatMoney(monthTotal)}</div>
-          </div>
-          <div className="rounded-lg border border-app surface px-4 py-3">
-            <div className="text-xs text-muted">Due employees</div>
-            <div className="text-lg font-semibold text-amber-400">{dueEmployeesCount}</div>
-          </div>
-          <div className="rounded-lg border border-app surface px-4 py-3">
-            <div className="text-xs text-muted">Already paid</div>
-            <div className="text-lg font-semibold text-emerald-400">{paidEmployeesCount}</div>
-          </div>
+          <Card.Root className="border border-default-200 shadow-sm">
+            <Card.Content className="px-4 py-3">
+            <div className="text-xs text-default-500">Total payable (filtered)</div>
+            <div className="text-lg font-semibold text-foreground">{formatMoney(monthTotal)}</div>
+            </Card.Content>
+          </Card.Root>
+          <Card.Root className="border border-default-200 shadow-sm">
+            <Card.Content className="px-4 py-3">
+            <div className="text-xs text-default-500">Due employees</div>
+            <div className="text-lg font-semibold text-warning">{dueEmployeesCount}</div>
+            </Card.Content>
+          </Card.Root>
+          <Card.Root className="border border-default-200 shadow-sm">
+            <Card.Content className="px-4 py-3">
+            <div className="text-xs text-default-500">Already paid</div>
+            <div className="text-lg font-semibold text-success">{paidEmployeesCount}</div>
+            </Card.Content>
+          </Card.Root>
         </div>
 
-        {error && <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+        {error ? (
+          <Alert.Root status="danger" className="mb-4">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
         {loading ? (
-          <div className="rounded-lg border border-app surface p-4 text-sm text-muted">Loading payroll...</div>
+          <Card.Root className="border border-default-200 shadow-sm">
+            <Card.Content className="flex flex-col items-center justify-center gap-3 py-10">
+              <Spinner size="md" color="danger" />
+              <span className="text-sm text-default-500">Loading payroll…</span>
+            </Card.Content>
+          </Card.Root>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-app surface">
+          <Card.Root className="overflow-hidden border border-default-200 shadow-sm">
+          <Card.Content className="overflow-x-auto p-0">
             <table className="min-w-[780px] w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-app text-muted">
@@ -334,14 +355,15 @@ export default function PayrollPage() {
                     <td className="px-4 py-3 text-app">{formatMoney(r.pendingCommissionDzd)}</td>
                     <td className="px-4 py-3 font-semibold text-app">{formatMoney(r.totalDzd)}</td>
                     <td className="px-4 py-3">
-                      <button
+                      <Button
                         type="button"
-                        onClick={() => handlePayEmployee(r.employee, r.salaryDzd, r.pendingCommissionDzd)}
-                        disabled={payingEmployeeId === r.employee.id || r.isPaidForMonth}
-                        className="rounded-md border border-app bg-white px-3 py-1.5 text-xs font-semibold text-app hover:bg-gray-50 disabled:opacity-50"
+                        variant="outline"
+                        size="sm"
+                        isDisabled={payingEmployeeId === r.employee.id || r.isPaidForMonth}
+                        onPress={() => handlePayEmployee(r.employee, r.salaryDzd, r.pendingCommissionDzd)}
                       >
                         {payingEmployeeId === r.employee.id ? "Paying..." : r.isPaidForMonth ? "Paid" : "Pay Employee"}
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -354,7 +376,8 @@ export default function PayrollPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </Card.Content>
+          </Card.Root>
         )}
       </div>
     </div>

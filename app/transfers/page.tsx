@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Alert, Button, Spinner } from "@heroui/react";
 import dynamic from "next/dynamic";
 import type { Movement } from "@/lib/types";
 import type { ReceiptPDFData } from "@/lib/pdf/pdfTypes";
@@ -716,14 +717,14 @@ export default function TransfersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               Transfers
             </h1>
-            <p className="text-sm font-medium text-[var(--color-accent)]">
+            <p className="text-sm font-medium text-danger">
               Conversions &amp; cash exchange
             </p>
           </div>
@@ -745,43 +746,43 @@ export default function TransfersPage() {
           </section>
         )}
 
-        <div className="flex flex-wrap gap-2 border-b border-app pb-2">
+        <div className="flex flex-wrap gap-2 border-b border-default-200 pb-2">
           {(["Conversions", "Cash Exchange"] as const).map((tab) => (
-            <button
+            <Button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
-              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                activeTab === tab
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-[#C41230]/70"
-              }`}
+              size="sm"
+              variant={activeTab === tab ? "primary" : "outline"}
+              onPress={() => setActiveTab(tab)}
             >
               {tab}
-            </button>
+            </Button>
           ))}
         </div>
 
-        {error && (
-          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert.Root status="danger">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
         {activeTab === "Conversions" && (
           <>
             <div className="flex justify-end">
-              <button
+              <Button
                 type="button"
-                onClick={() => {
+                variant="primary"
+                size="sm"
+                onPress={() => {
                   setConversionForm(emptyConversionForm());
                   setIsConversionModalOpen(true);
                   setError(null);
                 }}
-                className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
               >
                 Add Conversion
-              </button>
+              </Button>
             </div>
 
             <div className="space-y-6">
@@ -962,23 +963,25 @@ export default function TransfersPage() {
         {activeTab === "Cash Exchange" && (
           <>
             <div className="flex justify-end">
-              <button
+              <Button
                 type="button"
-                onClick={() => {
+                variant="primary"
+                size="sm"
+                onPress={() => {
                   setExchangeForm(emptyExchangeForm());
                   setExchangeRefId(generateExchangeId());
                   setIsExchangeModalOpen(true);
                   setError(null);
                 }}
-                className="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
               >
                 Add Exchange
-              </button>
+              </Button>
             </div>
             <div className="rounded-lg border border-app surface">
               {isLoading ? (
-                <div className="p-4 text-sm text-muted">
-                  Loading exchanges...
+                <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
+                  <Spinner size="md" color="danger" />
+                  <span className="text-sm">Loading exchanges…</span>
                 </div>
               ) : exchanges.length === 0 ? (
                 <div className="p-4 text-sm text-muted">

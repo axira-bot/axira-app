@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Alert, Button, Spinner } from "@heroui/react";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -561,49 +562,49 @@ export default function EmployeesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-app text-app">
-      <div className="border-b border-app surface px-4 py-4">
-        <h1 className="text-xl font-semibold text-app">Employee & Commission Management</h1>
-        <p className="mt-1 text-xs text-muted">Manage staff and track commissions.</p>
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
+      <div className="border-b border-default-200 bg-content1 px-4 py-4">
+        <h1 className="text-xl font-semibold">Employee & Commission Management</h1>
+        <p className="mt-1 text-xs text-default-500">Manage staff and track commissions.</p>
       </div>
 
-      <div className="flex border-b border-app surface px-4">
+      <div className="flex border-b border-default-200 bg-content1 px-4">
         {(["Employees", "Commissions"] as const).map((tab) => (
-          <button
+          <Button
             key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`border-b-2 px-4 py-3 text-sm font-medium transition ${
-              activeTab === tab
-                ? "border-[var(--color-accent)] text-[var(--color-accent)]"
-                : "border-transparent text-muted hover:text-app"
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={`rounded-none border-b-2 px-4 py-3 ${
+              activeTab === tab ? "border-danger text-danger" : "border-transparent text-default-500"
             }`}
+            onPress={() => setActiveTab(tab)}
           >
             {tab}
-          </button>
+          </Button>
         ))}
       </div>
 
       <div className="p-4">
-        {error && (
-          <div className="mb-4 rounded-md border border-red-800 bg-red-950/30 px-4 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert.Root status="danger" className="mb-4">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
         {activeTab === "Employees" && (
           <>
             <div className="mb-4 flex justify-end">
-              <button
-                type="button"
-                onClick={openAdd}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a03020]"
-              >
+              <Button type="button" variant="primary" size="sm" onPress={openAdd}>
                 Add Employee
-              </button>
+              </Button>
             </div>
             {isLoading ? (
-              <div className="rounded-lg border border-app surface p-6 text-center text-muted">
-                Loading...
+              <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-default-200 bg-content1 p-10">
+                <Spinner size="md" color="danger" />
+                <span className="text-sm text-default-500">Loading…</span>
               </div>
             ) : (
               <div className="overflow-x-auto rounded-lg border border-app surface">

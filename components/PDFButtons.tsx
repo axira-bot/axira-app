@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@heroui/react";
 import type { InvoicePDFData, SalesAgreementPDFData, ReceiptPDFData } from "@/lib/pdf/pdfTypes";
-
-const btnClass =
-  "inline-flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-[11px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
 export function InvoiceDownloadButton({
   data,
@@ -39,14 +37,16 @@ export function InvoiceDownloadButton({
   };
 
   return (
-    <button
+    <Button
       type="button"
-      onClick={handleClick}
-      disabled={loading}
-      className={`${btnClass} border-[#F1E193]/40 bg-[#F1E193]/10 text-[#F1E193] hover:bg-[#F1E193]/20`}
+      size="sm"
+      variant="outline"
+      className="min-h-7 border-[#F1E193]/40 bg-[#F1E193]/10 text-[11px] text-[#F1E193] hover:bg-[#F1E193]/20"
+      isDisabled={loading}
+      onPress={() => void handleClick()}
     >
       {loading ? "Generating..." : "Invoice"}
-    </button>
+    </Button>
   );
 }
 
@@ -83,14 +83,16 @@ export function AgreementDownloadButton({
   };
 
   return (
-    <button
+    <Button
       type="button"
-      onClick={handleClick}
-      disabled={loading}
-      className={`${btnClass} border-[#5B0F15]/60 bg-[#5B0F15]/20 text-[#F5EDD8] hover:bg-[#5B0F15]/40`}
+      size="sm"
+      variant="outline"
+      className="min-h-7 border-[#5B0F15]/60 bg-[#5B0F15]/20 text-[11px] text-[#F5EDD8] hover:bg-[#5B0F15]/40"
+      isDisabled={loading}
+      onPress={() => void handleClick()}
     >
       {loading ? "Generating..." : "Agreement"}
-    </button>
+    </Button>
   );
 }
 
@@ -129,16 +131,18 @@ export function ReceiptDownloadButton({
   };
 
   return (
-    <button
+    <Button
       type="button"
-      onClick={handleClick}
-      disabled={loading}
+      size="sm"
+      variant="outline"
       className={
         className ??
-        `${btnClass} border-[#C41230]/50 bg-[#C41230]/10 text-[#C41230] hover:bg-[#C41230]/20`
+        "min-h-7 border-[#C41230]/50 bg-[#C41230]/10 text-[11px] text-[#C41230] hover:bg-[#C41230]/20"
       }
+      isDisabled={loading}
+      onPress={() => void handleClick()}
     >
       {loading ? "Generating..." : label}
-    </button>
+    </Button>
   );
 }

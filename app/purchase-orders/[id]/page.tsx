@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { Alert, Button, Spinner } from "@heroui/react";
 import { useAuth } from "@/lib/context/AuthContext";
+import { cashPocketOptionsForCurrency, validatePocketForCurrency } from "@/lib/finance/cashPockets";
 
 type PurchaseOrder = {
   id: string;
@@ -45,6 +47,7 @@ type Payment = {
   date: string | null;
   amount: number;
   currency: string;
+  rate_snapshot?: number | null;
   aed_equivalent: number | null;
   amount_in_po_currency?: number | null;
   pocket: string | null;
@@ -101,10 +104,12 @@ export default function PurchaseOrderDetailPage() {
     amount: "",
     currency: "USD",
     rate_snapshot: "",
-    pocket: "bank",
+    pocket: "",
     method: "bank_transfer",
     notes: "",
   });
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [paymentMenuId, setPaymentMenuId] = useState<string | null>(null);
 
   const carsPerItem = useMemo(() => {
     const m = new Map<string, number>();
@@ -173,30 +178,99 @@ export default function PurchaseOrderDetailPage() {
     load();
   };
 
-  const addPayment = async (e: React.FormEvent) => {
+  const resetPaymentFormAfterSave = () => {
+    setEditingPaymentId(null);
+    setPaymentForm((p) => ({
+      date: new Date().toISOString().slice(0, 10),
+      amount: "",
+      currency: p.currency,
+      rate_snapshot: "",
+      pocket: "",
+      method: "bank_transfer",
+      notes: "",
+    }));
+  };
+
+  const savePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !isOwner) return;
+    const pocketErr = validatePocketForCurrency(paymentForm.pocket.trim(), paymentForm.currency);
+    if (pocketErr) {
+      setError(pocketErr);
+      return;
+    }
     setSavingPayment(true);
-    const res = await fetch(`/api/purchase-orders/${id}/payments`, {
-      method: "POST",
+    setError(null);
+    const payload = {
+      date: paymentForm.date,
+      amount: Number(paymentForm.amount || 0),
+      currency: paymentForm.currency,
+      rate_snapshot: paymentForm.rate_snapshot ? Number(paymentForm.rate_snapshot) : null,
+      pocket: paymentForm.pocket.trim(),
+      method: paymentForm.method,
+      notes: paymentForm.notes || null,
+    };
+    const url = editingPaymentId
+      ? `/api/purchase-orders/${id}/payments/${editingPaymentId}`
+      : `/api/purchase-orders/${id}/payments`;
+    const res = await fetch(url, {
+      method: editingPaymentId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        date: paymentForm.date,
-        amount: Number(paymentForm.amount || 0),
-        currency: paymentForm.currency,
-        rate_snapshot: paymentForm.rate_snapshot ? Number(paymentForm.rate_snapshot) : null,
-        pocket: paymentForm.pocket,
-        method: paymentForm.method,
-        notes: paymentForm.notes || null,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     setSavingPayment(false);
     if (!res.ok) {
-      setError(data.error || "Failed to add payment");
+      setError(data.error || "Failed to save payment");
       return;
     }
-    setPaymentForm((p) => ({ ...p, amount: "", rate_snapshot: "", notes: "" }));
+    resetPaymentFormAfterSave();
+    setPaymentMenuId(null);
+    load();
+  };
+
+  const startEditPayment = (p: Payment) => {
+    setEditingPaymentId(p.id);
+    setPaymentMenuId(null);
+    setError(null);
+    setPaymentForm({
+      date: (p.date || new Date().toISOString().slice(0, 10)).slice(0, 10),
+      amount: String(p.amount ?? ""),
+      currency: p.currency || "USD",
+      rate_snapshot: p.rate_snapshot != null && p.rate_snapshot !== undefined ? String(p.rate_snapshot) : "",
+      pocket: (p.pocket || "").trim(),
+      method: p.method || "bank_transfer",
+      notes: p.notes || "",
+    });
+  };
+
+  const cancelPaymentEdit = () => {
+    setEditingPaymentId(null);
+    setPaymentForm((p) => ({
+      ...p,
+      date: new Date().toISOString().slice(0, 10),
+      amount: "",
+      rate_snapshot: "",
+      pocket: "",
+      notes: "",
+    }));
+  };
+
+  const deletePayment = async (paymentId: string) => {
+    if (!id || !isOwner) return;
+    if (!window.confirm("Delete this payment? The linked movement will be removed and the pocket will be credited back.")) {
+      setPaymentMenuId(null);
+      return;
+    }
+    setError(null);
+    const res = await fetch(`/api/purchase-orders/${id}/payments/${paymentId}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    setPaymentMenuId(null);
+    if (!res.ok) {
+      setError(data.error || "Failed to delete payment");
+      return;
+    }
+    if (editingPaymentId === paymentId) cancelPaymentEdit();
     load();
   };
 
@@ -236,11 +310,18 @@ export default function PurchaseOrderDetailPage() {
   const owed = Number(row?.supplier_owed ?? (computedGrandTotal - paid));
 
   return (
-    <main className="space-y-5 p-6 text-app">
+    <main className="min-h-full space-y-5 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
       {loading ? (
-        <p className="text-sm text-muted">Loading purchase order...</p>
+        <div className="flex flex-col items-center justify-center gap-3 py-12">
+          <Spinner size="md" color="danger" />
+          <span className="text-sm text-default-500">Loading purchase order…</span>
+        </div>
       ) : !row ? (
-        <p className="text-sm text-red-600">{error || "PO not found."}</p>
+        <Alert.Root status="danger">
+          <Alert.Content>
+            <Alert.Description>{error || "PO not found."}</Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
       ) : (
         <>
           <section className="rounded-xl border border-app bg-panel p-4">
@@ -278,13 +359,9 @@ export default function PurchaseOrderDetailPage() {
                 <input className={inputCls} placeholder="VIN (optional)" value={itemForm.vin} onChange={(e) => setItemForm((p) => ({ ...p, vin: e.target.value }))} />
                 <input className={inputCls} placeholder="Qty" value={itemForm.quantity} onChange={(e) => setItemForm((p) => ({ ...p, quantity: e.target.value }))} />
                 <input className={inputCls} placeholder="Unit cost" value={itemForm.unit_cost} onChange={(e) => setItemForm((p) => ({ ...p, unit_cost: e.target.value }))} />
-                <button
-                  type="submit"
-                  disabled={savingItem}
-                  className="rounded-md bg-[var(--color-accent)] px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-                >
+                <Button type="submit" variant="primary" size="sm" isDisabled={savingItem}>
                   {savingItem ? "Adding..." : "Add item"}
-                </button>
+                </Button>
                 <input className={`${inputCls} md:col-span-8`} placeholder="Notes" value={itemForm.notes} onChange={(e) => setItemForm((p) => ({ ...p, notes: e.target.value }))} />
               </form>
             )}
@@ -335,24 +412,57 @@ export default function PurchaseOrderDetailPage() {
           <section className="rounded-xl border border-app bg-panel p-4">
             <h2 className="mb-3 text-base font-semibold">Payment Ledger</h2>
             {isOwner && (
-              <form className="mb-4 grid gap-2 md:grid-cols-7" onSubmit={addPayment}>
+              <form className="mb-4 grid gap-2 md:grid-cols-7" onSubmit={savePayment}>
+                {editingPaymentId ? (
+                  <div className="md:col-span-7 flex flex-wrap items-center gap-2 text-xs text-amber-800">
+                    <span>Editing payment</span>
+                    <button type="button" className="underline font-medium" onClick={cancelPaymentEdit}>
+                      Cancel edit
+                    </button>
+                  </div>
+                ) : null}
                 <input className={inputCls} type="date" value={paymentForm.date} onChange={(e) => setPaymentForm((p) => ({ ...p, date: e.target.value }))} />
                 <input className={inputCls} placeholder="Amount" value={paymentForm.amount} onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))} />
-                <select className={inputCls} value={paymentForm.currency} onChange={(e) => setPaymentForm((p) => ({ ...p, currency: e.target.value }))}>
+                <select
+                  className={inputCls}
+                  value={paymentForm.currency}
+                  onChange={(e) => {
+                    const cur = e.target.value;
+                    setPaymentForm((p) => {
+                      const next = { ...p, currency: cur };
+                      if (validatePocketForCurrency(p.pocket.trim(), cur)) {
+                        next.pocket = "";
+                      }
+                      return next;
+                    });
+                  }}
+                >
                   <option value="USD">USD</option>
                   <option value="AED">AED</option>
                   <option value="DZD">DZD</option>
                   <option value="EUR">EUR</option>
                 </select>
                 <input className={inputCls} placeholder="Rate snapshot" value={paymentForm.rate_snapshot} onChange={(e) => setPaymentForm((p) => ({ ...p, rate_snapshot: e.target.value }))} />
-                <input className={inputCls} placeholder="Pocket" value={paymentForm.pocket} onChange={(e) => setPaymentForm((p) => ({ ...p, pocket: e.target.value }))} />
+                <select
+                  required
+                  className={inputCls}
+                  value={paymentForm.pocket}
+                  onChange={(e) => setPaymentForm((p) => ({ ...p, pocket: e.target.value }))}
+                >
+                  <option value="">Cash pocket (required)…</option>
+                  {cashPocketOptionsForCurrency(paymentForm.currency).map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
                 <input className={inputCls} placeholder="Method" value={paymentForm.method} onChange={(e) => setPaymentForm((p) => ({ ...p, method: e.target.value }))} />
                 <button
                   type="submit"
                   disabled={savingPayment}
                   className="rounded-md bg-[var(--color-accent)] px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  {savingPayment ? "Saving..." : "Add payment"}
+                  {savingPayment ? "Saving…" : editingPaymentId ? "Save changes" : "Add payment"}
                 </button>
                 <input className={`${inputCls} md:col-span-7`} placeholder="Notes" value={paymentForm.notes} onChange={(e) => setPaymentForm((p) => ({ ...p, notes: e.target.value }))} />
               </form>
@@ -368,6 +478,7 @@ export default function PurchaseOrderDetailPage() {
                     <th className="px-2 py-2 text-left">Pocket</th>
                     <th className="px-2 py-2 text-left">Method</th>
                     <th className="px-2 py-2 text-left">Notes</th>
+                    {isOwner ? <th className="px-2 py-2 w-10 text-right"> </th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -380,6 +491,38 @@ export default function PurchaseOrderDetailPage() {
                       <td className="px-2 py-2">{p.pocket || "-"}</td>
                       <td className="px-2 py-2">{p.method || "-"}</td>
                       <td className="px-2 py-2">{p.notes || "-"}</td>
+                      {isOwner ? (
+                        <td className="px-2 py-2 text-right">
+                          <div className="relative inline-block text-left">
+                            <button
+                              type="button"
+                              className="rounded px-1.5 py-0.5 text-lg leading-none text-muted hover:bg-black/5"
+                              aria-label="Payment actions"
+                              onClick={() => setPaymentMenuId((open) => (open === p.id ? null : p.id))}
+                            >
+                              ⋮
+                            </button>
+                            {paymentMenuId === p.id ? (
+                              <div className="absolute right-0 z-20 mt-1 min-w-[8rem] rounded-md border border-app bg-panel py-1 text-xs shadow-md">
+                                <button
+                                  type="button"
+                                  className="block w-full px-3 py-1.5 text-left hover:bg-black/5"
+                                  onClick={() => startEditPayment(p)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className="block w-full px-3 py-1.5 text-left text-red-700 hover:bg-red-50"
+                                  onClick={() => deletePayment(p.id)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
@@ -420,26 +563,34 @@ export default function PurchaseOrderDetailPage() {
                 ))}
               </div>
               <div className="flex flex-wrap gap-2">
-                <button
+                <Button
                   type="button"
-                  disabled={receiving}
-                  onClick={() => receive(receiveMode)}
-                  className="rounded-md border border-app px-4 py-2 text-sm hover:bg-white/70 disabled:opacity-50"
+                  variant="outline"
+                  size="sm"
+                  isDisabled={receiving}
+                  onPress={() => receive(receiveMode)}
                 >
                   {receiving ? "Processing..." : `Mark ${receiveMode === "available" ? "Available" : "Arrived"}`}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  disabled={receiving}
-                  onClick={() => receive("available")}
-                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                  variant="secondary"
+                  size="sm"
+                  isDisabled={receiving}
+                  onPress={() => receive("available")}
                 >
                   Mark Available
-                </button>
+                </Button>
               </div>
             </section>
           )}
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error ? (
+            <Alert.Root status="danger">
+              <Alert.Content>
+                <Alert.Description>{error}</Alert.Description>
+              </Alert.Content>
+            </Alert.Root>
+          ) : null}
         </>
       )}
     </main>

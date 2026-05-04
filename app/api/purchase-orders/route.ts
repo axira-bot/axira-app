@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { legacyRateInputToAedPerUnit, toAed } from "@/lib/finance/dealMoney";
-import { convertCurrencyAmount, requirePoAccess, recomputePoTotals } from "@/lib/services/purchaseOrders/service";
+import { insertLinkedPoPayment } from "@/lib/services/purchaseOrders/linkedPoPaymentInsert";
+import { requirePoAccess, recomputePoTotals } from "@/lib/services/purchaseOrders/service";
 
 export const dynamic = "force-dynamic";
 
@@ -225,79 +225,21 @@ export async function POST(request: NextRequest) {
       for (const payment of initialPayments) {
         const amount = Number(payment.amount || 0);
         if (amount <= 0) continue;
-        const currency = payment.currency || "USD";
-        const rateRaw = payment.rate_snapshot ?? null;
-        const rateToAed = legacyRateInputToAedPerUnit(currency, rateRaw);
-        const aedEquivalent = toAed(amount, currency, rateToAed);
-        const amountInPoCurrency = convertCurrencyAmount({
+        const currency = (payment.currency || "USD") as "USD" | "AED" | "DZD" | "EUR";
+        const inserted = await insertLinkedPoPayment(admin, {
+          purchaseOrderId: poId,
+          date: payment.date,
           amount,
-          fromCurrency: currency,
-          toCurrency: (body.currency || "USD"),
-          rateSnapshot: rateRaw,
-          aedEquivalent,
+          currency,
+          rateSnapshot: payment.rate_snapshot ?? null,
+          pocket: payment.pocket,
+          method: payment.method,
+          notes: payment.notes,
+          createdBy: auth.user.id,
+          supplierId: body.supplier_id || null,
         });
-
-        const payIns = await admin
-          .from("payments")
-          .insert({
-            kind: "supplier_payment",
-            amount,
-            currency,
-            rate_to_aed: rateToAed,
-            aed_equivalent: aedEquivalent,
-            pocket: payment.pocket || "bank",
-            method: payment.method || "bank_transfer",
-            notes: payment.notes || `PO payment ${poId}`,
-            supplier_id: body.supplier_id || null,
-            status: "paid",
-          })
-          .select("id")
-          .single();
-        if (payIns.error || !payIns.data?.id) {
-          return NextResponse.json({ error: payIns.error?.message || "Failed to insert initial payment." }, { status: 400 });
-        }
-
-        const movIns = await admin
-          .from("movements")
-          .insert({
-            date: payment.date || new Date().toISOString().slice(0, 10),
-            type: "Out",
-            category: "Car Purchase",
-            amount,
-            currency,
-            rate: rateToAed,
-            aed_equivalent: aedEquivalent,
-            pocket: payment.pocket || "bank",
-            method: payment.method || "bank_transfer",
-            reference: `po:${poId}:payment:${payIns.data.id}`,
-            note: payment.notes || "Purchase order payment",
-            status: "posted",
-          })
-          .select("id")
-          .single();
-        if (movIns.error || !movIns.data?.id) {
-          return NextResponse.json({ error: movIns.error?.message || "Failed to insert initial movement." }, { status: 400 });
-        }
-
-        const poPayIns = await admin
-          .from("purchase_order_payments")
-          .insert({
-            purchase_order_id: poId,
-            date: payment.date || new Date().toISOString().slice(0, 10),
-            amount,
-            currency,
-            rate_snapshot: rateRaw,
-            aed_equivalent: aedEquivalent,
-            amount_in_po_currency: amountInPoCurrency,
-            pocket: payment.pocket || "bank",
-            method: payment.method || "bank_transfer",
-            notes: payment.notes || null,
-            movement_id: movIns.data.id,
-            payment_id: payIns.data.id,
-            created_by: auth.user.id,
-          });
-        if (poPayIns.error) {
-          return NextResponse.json({ error: poPayIns.error.message || "Failed to link initial PO payment." }, { status: 400 });
+        if (!inserted.ok) {
+          return NextResponse.json({ error: inserted.error }, { status: 400 });
         }
       }
     }

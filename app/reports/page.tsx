@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, Button, Spinner } from "@heroui/react";
 import type { Car, Deal, Movement, Rent } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx-js-style";
@@ -923,43 +924,43 @@ export default function ReportsPage() {
   const tabs = ["P&L", "Inventory", "Deals", "Cash Flow"] as const;
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Reports
           </h1>
-          <p className="text-sm font-medium text-[var(--color-accent)]">
+          <p className="text-sm font-medium text-danger">
             P&L, Inventory, Deals &amp; Cash Flow
           </p>
         </header>
 
-        <div className="flex flex-wrap gap-2 border-b border-app pb-2">
+        <div className="flex flex-wrap gap-2 border-b border-default-200 pb-2">
           {tabs.map((tab) => (
-            <button
+            <Button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
-              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                activeTab === tab
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-white"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-[#C41230]/70"
-              }`}
+              size="sm"
+              variant={activeTab === tab ? "primary" : "outline"}
+              onPress={() => setActiveTab(tab)}
             >
               {tab}
-            </button>
+            </Button>
           ))}
         </div>
 
-        {error && (
-          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert.Root status="danger">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
         {isLoading ? (
-          <div className="rounded-lg border border-app surface p-8 text-center text-muted">
-            Loading reports...
+          <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-default-200 bg-content1 p-12">
+            <Spinner size="md" color="danger" />
+            <span className="text-sm text-default-500">Loading reports…</span>
           </div>
         ) : (
           <>
@@ -984,13 +985,9 @@ export default function ReportsPage() {
                       className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                   </label>
-                  <button
-                    type="button"
-                    onClick={exportPl}
-                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-                  >
+                  <Button type="button" variant="primary" size="sm" onPress={exportPl}>
                     Export to Excel
-                  </button>
+                  </Button>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-lg border border-app surface p-4">
@@ -1143,13 +1140,9 @@ export default function ReportsPage() {
                     <option value="ready_to_ship">READY_TO_SHIP</option>
                     <option value="delivered">DELIVERED</option>
                   </select>
-                  <button
-                    type="button"
-                    onClick={exportInventory}
-                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-                  >
+                  <Button type="button" variant="primary" size="sm" onPress={exportInventory}>
                     Export to Excel
-                  </button>
+                  </Button>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                   <div className="rounded-lg border border-app surface p-4">
@@ -1255,13 +1248,9 @@ export default function ReportsPage() {
                       className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                   </label>
-                  <button
-                    type="button"
-                    onClick={exportDeals}
-                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-                  >
+                  <Button type="button" variant="primary" size="sm" onPress={exportDeals}>
                     Export to Excel
-                  </button>
+                  </Button>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                   <div className="rounded-lg border border-app surface p-4">
@@ -1377,13 +1366,9 @@ export default function ReportsPage() {
                       className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                     />
                   </label>
-                  <button
-                    type="button"
-                    onClick={exportCashFlow}
-                    className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-                  >
+                  <Button type="button" variant="primary" size="sm" onPress={exportCashFlow}>
                     Export to Excel
-                  </button>
+                  </Button>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
                   {POCKETS.map((p) => (

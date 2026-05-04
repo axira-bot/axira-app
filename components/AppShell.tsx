@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Spinner } from "@heroui/react";
 import Sidebar, { MobileDrawer, MobileMenuButton } from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -59,7 +60,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user || loading || isLogin) return;
-    // Warm the most-used admin routes to reduce click-to-render latency.
     prefetchTargets.forEach((href) => {
       if (href !== pathname) router.prefetch(href);
     });
@@ -67,11 +67,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--color-bg)" }}>
-        <div
-          className="h-8 w-8 animate-spin rounded-full border-2 border-transparent"
-          style={{ borderTopColor: "#C41230" }}
-        />
+      <div
+        className="flex min-h-screen flex-col items-center justify-center gap-4"
+        style={{ background: "var(--color-bg)" }}
+      >
+        <Spinner size="lg" color="danger" />
+        <span className="text-sm text-default-500">Loading…</span>
       </div>
     );
   }
@@ -81,16 +82,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen" style={{ background: "var(--color-bg)" }}>
-      {/* Desktop sidebar */}
       <Sidebar />
 
-      {/* Mobile drawer */}
       <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
-      {/* Main content */}
       <div className="flex flex-1 flex-col min-w-0 md:ml-[240px]">
 
-        {/* Mobile top bar */}
         <div
           className="flex items-center gap-3 px-4 py-3 md:hidden"
           style={{
@@ -98,7 +95,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             borderBottom: "1px solid rgba(255,255,255,0.07)",
           }}
         >
-          <MobileMenuButton onClick={() => setMobileOpen(true)} />
+          <MobileMenuButton onPress={() => setMobileOpen(true)} />
           <div className="flex items-center gap-2 flex-1">
             <svg width="20" height="20" viewBox="0 0 40 40">
               <polygon points="20,2 38,36 2,36" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" />
@@ -119,10 +116,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </span>
         </div>
 
-        {/* Desktop header */}
         <Header />
 
-        {/* Page content */}
         <main className="flex-1 overflow-auto">
           {children}
         </main>

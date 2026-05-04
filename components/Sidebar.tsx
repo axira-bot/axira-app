@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Button } from "@heroui/react";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/context/AuthContext";
 import { type FeatureKey } from "@/lib/auth/featureKeys";
@@ -187,21 +188,23 @@ function AxiraLogo() {
 }
 
 /* ── Mobile Hamburger Button ───────────────────────────────── */
-export function MobileMenuButton({ onClick }: { onClick: () => void }) {
+export function MobileMenuButton({ onPress }: { onPress: () => void }) {
   return (
-    <button
+    <Button
       type="button"
-      onClick={onClick}
-      className="flex items-center justify-center w-9 h-9 rounded-lg md:hidden"
-      style={{ color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.08)" }}
+      variant="ghost"
+      isIconOnly
+      size="sm"
+      onPress={onPress}
       aria-label="Open menu"
+      className="md:hidden min-w-9 w-9 text-white/80 bg-white/10 hover:bg-white/15"
     >
       <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <line x1="2" y1="5" x2="16" y2="5" />
         <line x1="2" y1="10" x2="16" y2="10" />
         <line x1="2" y1="15" x2="16" y2="15" />
       </svg>
-    </button>
+    </Button>
   );
 }
 
@@ -270,20 +273,21 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             </span>
           </div>
         </div>
-        {onClose && (
-          <button
+        {onClose ? (
+          <Button
             type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg transition"
-            style={{ color: "rgba(255,255,255,0.4)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#fff"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.4)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+            variant="ghost"
+            isIconOnly
+            size="sm"
+            onPress={onClose}
+            aria-label="Close menu"
+            className="text-white/40 hover:text-white hover:bg-white/10"
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="3" y1="3" x2="13" y2="13" /><line x1="13" y1="3" x2="3" y2="13" />
             </svg>
-          </button>
-        )}
+          </Button>
+        ) : null}
       </div>
 
       {/* Divider */}
@@ -344,21 +348,21 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             )}
           </div>
           {/* Logout */}
-          <button
+          <Button
             type="button"
-            onClick={handleLogout}
-            title="Log out"
-            className="p-1.5 rounded-lg transition"
-            style={{ color: "rgba(255,255,255,0.4)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#C41230"; (e.currentTarget as HTMLElement).style.background = "rgba(196,18,48,0.12)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.4)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+            variant="ghost"
+            isIconOnly
+            size="sm"
+            onPress={() => void handleLogout()}
+            aria-label="Log out"
+            className="text-white/40 hover:text-danger hover:bg-danger/10"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
               <polyline points="16 17 21 12 16 7"/>
               <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
-          </button>
+          </Button>
         </div>
       </div>
     </div>

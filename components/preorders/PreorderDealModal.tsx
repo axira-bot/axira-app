@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Alert, Button } from "@heroui/react";
 import CarSourceToggle from "./CarSourceToggle";
 import CustomerBlock from "./CustomerBlock";
 import PricingBlock from "./PricingBlock";
@@ -188,14 +189,9 @@ export default function PreorderDealModal({
             <div className="text-lg font-semibold text-app">Add Pre-Order Deal</div>
             <div className="text-xs text-muted">One deal flow (catalog or custom)</div>
           </div>
-          <button
-            type="button"
-            onClick={() => !saving && onClose()}
-            className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app"
-            disabled={saving}
-          >
+          <Button type="button" variant="outline" size="sm" isDisabled={saving} onPress={() => !saving && onClose()}>
             Close
-          </button>
+          </Button>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4">
@@ -318,30 +314,22 @@ export default function PreorderDealModal({
             </label>
           </div>
 
-          {error && (
-            <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {error}
-            </div>
-          )}
+          {error ? (
+            <Alert.Root status="danger">
+              <Alert.Content>
+                <Alert.Description>{error}</Alert.Description>
+              </Alert.Content>
+            </Alert.Root>
+          ) : null}
         </div>
 
         <div className="mt-4 flex justify-end gap-2 border-t border-app pt-3">
-          <button
-            type="button"
-            onClick={() => !saving && onClose()}
-            className="rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-app"
-            disabled={saving}
-          >
+          <Button type="button" variant="outline" size="sm" isDisabled={saving} onPress={() => !saving && onClose()}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={submit}
-            className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            disabled={saving}
-          >
+          </Button>
+          <Button type="button" variant="primary" size="sm" isDisabled={saving} onPress={() => void submit()}>
             {saving ? "Saving..." : "Create Pre-Order"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

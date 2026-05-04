@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Alert, Card, Chip, Input, Label, Spinner, TextField } from "@heroui/react";
 import { supabase } from "@/lib/supabase";
 import type { ActivityEntity } from "@/lib/activity";
 
@@ -136,132 +137,120 @@ export default function AuditPage() {
   }, [fetchAll]);
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Audit log</h1>
-          <p className="text-sm font-medium text-[var(--color-accent)]">
+          <p className="text-sm font-medium text-danger">
             Create, update, delete and payment events with actor and record id
           </p>
         </header>
 
-        {error && (
-          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert.Root status="danger">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
-        <div className="flex flex-wrap items-end gap-4">
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            From
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            To
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            Entity
-            <select
-              value={entityFilter}
-              onChange={(e) => setEntityFilter(e.target.value as ActivityEntity | "")}
-              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-            >
-              {ENTITY_OPTIONS.map((o) => (
-                <option key={o.value || "all"} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            Action
-            <input
-              type="text"
-              value={actionFilter}
-              onChange={(e) => setActionFilter(e.target.value)}
-              placeholder="e.g. deleted"
-              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app w-36"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            Actor
-            <input
-              type="search"
-              value={actorQuery}
-              onChange={(e) => setActorQuery(e.target.value)}
-              placeholder="Name or user id"
-              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app min-w-[200px]"
-            />
-          </label>
-        </div>
-
-        <div className="rounded-lg border border-app surface overflow-hidden">
-          {isLoading ? (
-            <div className="p-6 text-sm text-muted">Loading audit trail...</div>
-          ) : rows.length === 0 ? (
-            <div className="p-6 text-sm text-muted">No events in this range.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
-                  <tr>
-                    <th className="px-3 py-3">Time</th>
-                    <th className="px-3 py-3">Actor</th>
-                    <th className="px-3 py-3">Action</th>
-                    <th className="px-3 py-3">Entity</th>
-                    <th className="px-3 py-3">Record id</th>
-                    <th className="px-3 py-3">Description</th>
-                    <th className="px-3 py-3 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((a) => (
-                    <tr key={a.id} className="border-b border-app last:border-b-0">
-                      <td className="px-3 py-3 text-app whitespace-nowrap align-top">
-                        {formatDate(a.created_at)}
-                        <span className="ml-2 text-gray-400">({timeAgo(a.created_at)})</span>
-                      </td>
-                      <td className="px-3 py-3 text-app align-top">
-                        <div className="font-medium">{a.actor_name || "—"}</div>
-                        {a.actor_user_id ? (
-                          <div className="text-[10px] text-muted break-all">{a.actor_user_id}</div>
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-app">
-                          {a.action}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-app">
-                          {displayType(a.entity)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-app font-mono text-[10px] break-all align-top">
-                        {a.entity_id || "—"}
-                      </td>
-                      <td className="px-3 py-3 text-app align-top max-w-md">{a.description}</td>
-                      <td className="px-3 py-3 text-right text-app align-top whitespace-nowrap">
-                        {a.amount != null && a.currency ? formatMoney(a.amount, a.currency) : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <Card.Root className="border border-default-200 shadow-sm">
+          <Card.Content className="flex flex-wrap items-end gap-4 pb-6">
+            <TextField name="dateFrom" type="date" value={dateFrom} onChange={setDateFrom} className="min-w-[160px]">
+              <Label className="text-xs text-default-500">From</Label>
+              <Input className="text-sm" />
+            </TextField>
+            <TextField name="dateTo" type="date" value={dateTo} onChange={setDateTo} className="min-w-[160px]">
+              <Label className="text-xs text-default-500">To</Label>
+              <Input className="text-sm" />
+            </TextField>
+            <div className="flex min-w-[160px] flex-col gap-1">
+              <Label className="text-xs text-default-500">Entity</Label>
+              <select
+                value={entityFilter}
+                onChange={(e) => setEntityFilter(e.target.value as ActivityEntity | "")}
+                className="rounded-lg border border-default-200 bg-content1 px-3 py-2 text-sm outline-none focus:border-danger"
+              >
+                {ENTITY_OPTIONS.map((o) => (
+                  <option key={o.value || "all"} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
-        </div>
+            <TextField
+              name="action"
+              value={actionFilter}
+              onChange={setActionFilter}
+              className="min-w-[140px]"
+            >
+              <Label className="text-xs text-default-500">Action</Label>
+              <Input className="text-sm" placeholder="e.g. deleted" />
+            </TextField>
+            <TextField name="actor" value={actorQuery} onChange={setActorQuery} className="min-w-[200px]">
+              <Label className="text-xs text-default-500">Actor</Label>
+              <Input className="text-sm" placeholder="Name or user id" type="search" />
+            </TextField>
+          </Card.Content>
+        </Card.Root>
+
+        <Card.Root className="border border-default-200 shadow-sm overflow-hidden">
+          <Card.Content className="p-0">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-12">
+                <Spinner size="md" color="danger" />
+                <span className="text-sm text-default-500">Loading audit trail…</span>
+              </div>
+            ) : rows.length === 0 ? (
+              <div className="p-6 text-sm text-default-500">No events in this range.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-default-200 bg-default-50 text-[11px] uppercase tracking-wide text-default-500">
+                    <tr>
+                      <th className="px-3 py-3">Time</th>
+                      <th className="px-3 py-3">Actor</th>
+                      <th className="px-3 py-3">Action</th>
+                      <th className="px-3 py-3">Entity</th>
+                      <th className="px-3 py-3">Record id</th>
+                      <th className="px-3 py-3">Description</th>
+                      <th className="px-3 py-3 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((a) => (
+                      <tr key={a.id} className="border-b border-default-100 last:border-b-0 hover:bg-default-50/80">
+                        <td className="px-3 py-3 whitespace-nowrap align-top">
+                          {formatDate(a.created_at)}
+                          <span className="ml-2 text-default-400">({timeAgo(a.created_at)})</span>
+                        </td>
+                        <td className="px-3 py-3 align-top">
+                          <div className="font-medium">{a.actor_name || "—"}</div>
+                          {a.actor_user_id ? (
+                            <div className="text-[10px] text-default-500 break-all">{a.actor_user_id}</div>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-3 align-top">
+                          <Chip size="sm" variant="soft">{a.action}</Chip>
+                        </td>
+                        <td className="px-3 py-3 align-top">
+                          <Chip size="sm" variant="secondary">{displayType(a.entity)}</Chip>
+                        </td>
+                        <td className="px-3 py-3 font-mono text-[10px] break-all align-top">
+                          {a.entity_id || "—"}
+                        </td>
+                        <td className="px-3 py-3 align-top max-w-md">{a.description}</td>
+                        <td className="px-3 py-3 text-right align-top whitespace-nowrap">
+                          {a.amount != null && a.currency ? formatMoney(a.amount, a.currency) : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card.Content>
+        </Card.Root>
       </div>
     </div>
   );

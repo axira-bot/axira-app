@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, Card, Chip, Input, Label, Spinner, TextField } from "@heroui/react";
 import { supabase } from "@/lib/supabase";
 import type { ActivityEntity } from "@/lib/activity";
 
@@ -120,109 +121,104 @@ export default function ActivityPage() {
   }, [fetchAll]);
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 md:px-8">
         <header className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            Activity Log
-          </h1>
-          <p className="text-sm font-medium text-[var(--color-accent)]">
-            System activity in chronological order
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Activity Log</h1>
+          <p className="text-sm font-medium text-danger">System activity in chronological order</p>
         </header>
 
-        {error && (
-          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert.Root status="danger">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            From
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            To
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            Type
-            <select
-              value={entityFilter}
-              onChange={(e) => setEntityFilter(e.target.value as ActivityEntity | "")}
-              className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-            >
-              {ENTITY_OPTIONS.map((o) => (
-                <option key={o.value || "all"} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="rounded-lg border border-app surface overflow-hidden">
-          {isLoading ? (
-            <div className="p-6 text-sm text-muted">Loading activity...</div>
-          ) : rows.length === 0 ? (
-            <div className="p-6 text-sm text-muted">No activity in this range.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
-                  <tr>
-                    <th className="px-4 py-3">Time</th>
-                    <th className="px-4 py-3">Action</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">User</th>
-                    <th className="px-4 py-3">Description</th>
-                    <th className="px-4 py-3 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((a) => (
-                    <tr key={a.id} className="border-b border-app last:border-b-0">
-                      <td className="px-4 py-3 text-app whitespace-nowrap">
-                        {formatDate(a.created_at)}
-                        <span className="ml-2 text-gray-400">({timeAgo(a.created_at)})</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-app">
-                          {a.action}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-app">
-                          {displayType(a.entity)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-app">
-                        {a.actor_name || a.actor_user_id || "System"}
-                      </td>
-                      <td className="px-4 py-3 text-app">{a.description}</td>
-                      <td className="px-4 py-3 text-right text-app">
-                        {a.amount != null && a.currency
-                          ? formatMoney(a.amount, a.currency)
-                          : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <Card.Root className="border border-default-200 shadow-sm">
+          <Card.Content className="flex flex-wrap items-end gap-4 pb-6">
+            <TextField name="dateFrom" type="date" value={dateFrom} onChange={setDateFrom} className="min-w-[160px]">
+              <Label className="text-xs text-default-500">From</Label>
+              <Input className="text-sm" />
+            </TextField>
+            <TextField name="dateTo" type="date" value={dateTo} onChange={setDateTo} className="min-w-[160px]">
+              <Label className="text-xs text-default-500">To</Label>
+              <Input className="text-sm" />
+            </TextField>
+            <div className="flex min-w-[180px] flex-col gap-1">
+              <Label className="text-xs text-default-500">Type</Label>
+              <select
+                value={entityFilter}
+                onChange={(e) => setEntityFilter(e.target.value as ActivityEntity | "")}
+                className="rounded-lg border border-default-200 bg-content1 px-3 py-2 text-sm outline-none focus:border-danger"
+              >
+                {ENTITY_OPTIONS.map((o) => (
+                  <option key={o.value || "all"} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
-        </div>
+          </Card.Content>
+        </Card.Root>
+
+        <Card.Root className="border border-default-200 shadow-sm overflow-hidden">
+          <Card.Content className="p-0">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-12">
+                <Spinner size="md" color="danger" />
+                <span className="text-sm text-default-500">Loading activity…</span>
+              </div>
+            ) : rows.length === 0 ? (
+              <div className="p-6 text-sm text-default-500">No activity in this range.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-default-200 bg-default-50 text-[11px] uppercase tracking-wide text-default-500">
+                    <tr>
+                      <th className="px-4 py-3">Time</th>
+                      <th className="px-4 py-3">Action</th>
+                      <th className="px-4 py-3">Type</th>
+                      <th className="px-4 py-3">User</th>
+                      <th className="px-4 py-3">Description</th>
+                      <th className="px-4 py-3 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((a) => (
+                      <tr key={a.id} className="border-b border-default-100 last:border-b-0 hover:bg-default-50/80">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {formatDate(a.created_at)}
+                          <span className="ml-2 text-default-400">({timeAgo(a.created_at)})</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Chip size="sm" variant="soft">
+                            {a.action}
+                          </Chip>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Chip size="sm" variant="secondary">
+                            {displayType(a.entity)}
+                          </Chip>
+                        </td>
+                        <td className="px-4 py-3">
+                          {a.actor_name || a.actor_user_id || "System"}
+                        </td>
+                        <td className="px-4 py-3">{a.description}</td>
+                        <td className="px-4 py-3 text-right">
+                          {a.amount != null && a.currency
+                            ? formatMoney(a.amount, a.currency)
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card.Content>
+        </Card.Root>
       </div>
     </div>
   );

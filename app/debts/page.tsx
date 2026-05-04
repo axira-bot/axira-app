@@ -40,6 +40,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Alert, Button, Spinner } from "@heroui/react";
 import type { Car } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
@@ -668,33 +669,34 @@ export default function DebtsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-app text-app">
+    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Debts</h1>
-          <p className="text-sm font-medium text-[var(--color-accent)]">Receivables & Payables</p>
+          <p className="text-sm font-medium text-danger">Receivables & Payables</p>
         </header>
 
         <div className="flex flex-wrap gap-2">
           {(["receivables", "payables"] as const).map((tab) => (
-            <button
+            <Button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
-              className={
-                activeTab === tab
-                  ? "rounded-full border border-[var(--color-accent)] bg-[var(--color-accent)]/15 px-4 py-1.5 text-sm font-semibold text-white"
-                  : "rounded-full border border-app surface px-4 py-1.5 text-sm font-semibold text-app hover:border-[var(--color-accent)]/70"
-              }
+              size="sm"
+              variant={activeTab === tab ? "primary" : "outline"}
+              onPress={() => setActiveTab(tab)}
             >
               {tab === "receivables" ? "Receivables" : "Payables"}
-            </button>
+            </Button>
           ))}
         </div>
 
-        {error && (
-          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>
-        )}
+        {error ? (
+          <Alert.Root status="danger">
+            <Alert.Content>
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
 
         {activeTab === "receivables" && (
           <>
@@ -714,17 +716,16 @@ export default function DebtsPage() {
             </div>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-app">Receivables</h2>
-              <button
-                type="button"
-                onClick={openAdd}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-              >
+              <Button type="button" variant="primary" size="sm" onPress={openAdd}>
                 Add Receivable
-              </button>
+              </Button>
             </div>
             <div className="rounded-lg border border-app surface overflow-hidden">
               {isLoading ? (
-                <div className="p-8 text-center text-muted">Loading...</div>
+                <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
+                  <Spinner size="md" color="danger" />
+                  <span className="text-sm">Loading…</span>
+                </div>
               ) : listReceivables.length === 0 ? (
                 <div className="p-8 text-center text-gray-400">No receivables yet.</div>
               ) : (
@@ -829,17 +830,16 @@ export default function DebtsPage() {
             </div>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-app">Payables</h2>
-              <button
-                type="button"
-                onClick={openAdd}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-              >
+              <Button type="button" variant="primary" size="sm" onPress={openAdd}>
                 Add Payable
-              </button>
+              </Button>
             </div>
             <div className="rounded-lg border border-app surface overflow-hidden">
               {isLoading ? (
-                <div className="p-8 text-center text-muted">Loading...</div>
+                <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
+                  <Spinner size="md" color="danger" />
+                  <span className="text-sm">Loading…</span>
+                </div>
               ) : listPayables.length === 0 ? (
                 <div className="p-8 text-center text-gray-400">No payables yet.</div>
               ) : (
