@@ -8,9 +8,11 @@ function toNum(v: string) {
 export default function PricingBlock({
   form,
   setField,
+  readOnly = false,
 }: {
   form: PreorderForm;
   setField: <K extends keyof PreorderForm>(key: K, value: PreorderForm[K]) => void;
+  readOnly?: boolean;
 }) {
   const saleDzd = toNum(form.saleDzd);
   const sourceCost = toNum(form.sourceCost);
@@ -31,7 +33,9 @@ export default function PricingBlock({
           type="number"
           value={form.saleDzd}
           onChange={(e) => setField("saleDzd", e.target.value)}
-          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+          readOnly={readOnly}
+          title={readOnly ? "List price is set by owner. Manager can adjust from Deals if needed." : undefined}
+          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app read-only:bg-muted/30"
         />
       </label>
       <label className="space-y-1 text-xs text-app">
@@ -40,7 +44,9 @@ export default function PricingBlock({
           type="number"
           value={form.sourceCost}
           onChange={(e) => setField("sourceCost", e.target.value)}
-          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+          readOnly={readOnly}
+          title={readOnly ? "Cost snapshot from list — contact a manager to override." : undefined}
+          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app read-only:bg-muted/30"
         />
       </label>
       <label className="space-y-1 text-xs text-app">
@@ -48,7 +54,8 @@ export default function PricingBlock({
         <select
           value={form.sourceCurrency}
           onChange={(e) => setField("sourceCurrency", e.target.value as "USD" | "AED")}
-          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+          disabled={readOnly}
+          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app disabled:opacity-70"
         >
           <option value="USD">USD</option>
           <option value="AED">AED</option>
@@ -60,7 +67,8 @@ export default function PricingBlock({
           type="number"
           value={form.sourceRateToDzd}
           onChange={(e) => setField("sourceRateToDzd", e.target.value)}
-          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+          readOnly={readOnly}
+          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app read-only:bg-muted/30"
         />
       </label>
       <label className="space-y-1 text-xs text-app">
@@ -69,7 +77,8 @@ export default function PricingBlock({
           type="number"
           value={form.sourceRateToAed}
           onChange={(e) => setField("sourceRateToAed", e.target.value)}
-          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+          readOnly={readOnly}
+          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app read-only:bg-muted/30"
         />
       </label>
 

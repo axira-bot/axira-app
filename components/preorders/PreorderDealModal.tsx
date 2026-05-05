@@ -26,10 +26,16 @@ export default function PreorderDealModal({
   open,
   onClose,
   onCreated,
+  formSeed = null,
+  lockedListPricing = false,
+  lockSourceToCustom = false,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
+  formSeed?: Partial<PreorderForm> | null;
+  lockedListPricing?: boolean;
+  lockSourceToCustom?: boolean;
 }) {
   const [form, setForm] = useState<PreorderForm>(emptyPreorderForm());
   const [saving, setSaving] = useState(false);
@@ -43,9 +49,9 @@ export default function PreorderDealModal({
 
   useEffect(() => {
     if (!open) return;
-    setForm(emptyPreorderForm());
     setError(null);
-  }, [open]);
+    setForm(formSeed ? { ...emptyPreorderForm(), ...formSeed } : emptyPreorderForm());
+  }, [open, formSeed]);
 
   useEffect(() => {
     if (!open) return;
@@ -150,6 +156,8 @@ export default function PreorderDealModal({
                 supplier_confirmation_required: form.requireSupplierConfirmation,
               }
             : undefined,
+        inventory_car_id: form.inventoryCarId?.trim() || undefined,
+        sales_catalog_entry_id: form.salesCatalogEntryId?.trim() || undefined,
         deposit:
           Number(form.depositDzd) > 0
             ? {
@@ -202,7 +210,11 @@ export default function PreorderDealModal({
 
           <div className="rounded-md border border-app surface p-3">
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">Car Source</div>
-            <CarSourceToggle source={form.source} onChange={(v) => setField("source", v)} />
+            {lockSourceToCustom ? (
+              <p className="text-xs text-muted">Pre-order from sales list (custom specification).</p>
+            ) : (
+              <CarSourceToggle source={form.source} onChange={(v) => setField("source", v)} />
+            )}
 
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-xs text-app">
@@ -291,7 +303,7 @@ export default function PreorderDealModal({
 
           <div className="rounded-md border border-app surface p-3">
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">Pricing</div>
-            <PricingBlock form={form} setField={setField} />
+            <PricingBlock form={form} setField={setField} readOnly={lockedListPricing} />
           </div>
 
           <div className="rounded-md border border-app surface p-3">

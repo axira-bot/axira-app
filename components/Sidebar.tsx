@@ -40,6 +40,18 @@ const icons: Record<string, React.ReactNode> = {
       <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
     </svg>
   ),
+  "/sales-list": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+      <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+    </svg>
+  ),
+  "/catalog": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      <line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/>
+    </svg>
+  ),
   "/containers": (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
@@ -117,6 +129,8 @@ const navItems = [
   { href: "/activity",    label: "Activity" },
   { href: "/inventory",   label: "Inventory" },
   { href: "/deals",       label: "Deals" },
+  { href: "/sales-list",  label: "Sales list" },
+  { href: "/catalog",     label: "Sales catalog" },
   { href: "/containers",  label: "Containers" },
   { href: "/movements",   label: "Movements" },
   { href: "/transfers",   label: "Transfers" },
@@ -134,7 +148,7 @@ const navItems = [
 /* Groups with subtle dividers */
 const groups = [
   ["/dashboard", "/audit", "/activity"],
-  ["/inventory", "/deals", "/containers", "/movements", "/transfers", "/debts"],
+  ["/inventory", "/deals", "/sales-list", "/catalog", "/containers", "/movements", "/transfers", "/debts"],
   ["/employees", "/payroll", "/investors", "/reports", "/clients", "/inquiries", "/suppliers", "/purchase-orders"],
 ];
 
@@ -149,6 +163,8 @@ const ROUTE_FEATURE_MAP: Record<string, FeatureKey> = {
   "/activity": "activity",
   "/inventory": "inventory",
   "/deals": "deals",
+  "/sales-list": "sales_list",
+  "/catalog": "sales_catalog_admin",
   "/containers": "containers",
   "/movements": "movements",
   "/transfers": "transfers",

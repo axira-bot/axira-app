@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 import dynamic from "next/dynamic";
 import PreorderDealModal from "@/components/preorders/PreorderDealModal";
+import type { PreorderForm } from "@/components/preorders/types";
 import { useAuth } from "@/lib/context/AuthContext";
 import { getRates, type AppRates } from "@/lib/rates";
 import {
@@ -217,6 +218,10 @@ export default function DealsPage() {
   const { user, role, isStaff, canDelete, isInvestorReadOnly } = useAuth();
   /** Cleared when URL no longer has `addDeal=1`, so the same car can be deep-linked again after `router.replace`. */
   const prefillCarIdProcessedRef = useRef<string>("");
+  const preorderPrefillProcessedRef = useRef<string>("");
+  const [preorderLockedPricing, setPreorderLockedPricing] = useState(false);
+  const [preorderLockSourceCustom, setPreorderLockSourceCustom] = useState(false);
+  const [preorderFormSeed, setPreorderFormSeed] = useState<Partial<PreorderForm> | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -299,7 +304,7 @@ export default function DealsPage() {
       supabase
         .from("cars")
         .select(
-          "id, brand, model, year, purchase_price, purchase_currency, purchase_rate, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name, inventory_lifecycle_status, purchase_order_id, purchase_order_item_id"
+          "id, brand, model, year, purchase_price, purchase_currency, purchase_rate, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name, supplier_id, inventory_lifecycle_status, purchase_order_id, purchase_order_item_id, linked_deal_id, sale_price_dzd, sales_lead_time_days, sales_deposit_dzd, sales_internal_note, sales_cost_estimate_dzd"
         )
         .order("created_at", { ascending: false }),
       supabase.from("deals").select("*").order("date", { ascending: false }),
@@ -649,6 +654,124 @@ export default function DealsPage() {
     setIsModalOpen(true);
     setError(null);
   }, [isLoading, cars, searchParams, router, usedCarIds, poDealEligibility]);
+
+  useEffect(() => {
+    if (searchParams.get("preorder") !== "1") {
+      preorderPrefillProcessedRef.current = "";
+    }
+  }, [searchParams]);
+
+  // Sales list → Deals: ?preorder=1&inventoryCarId=uuid | ?preorder=1&salesCatalogId=uuid
+  useEffect(() => {
+    const pre = searchParams.get("preorder");
+    const invId = searchParams.get("inventoryCarId")?.trim();
+    const catId = searchParams.get("salesCatalogId")?.trim();
+    if (pre !== "1" || (!invId && !catId)) return;
+    if (isLoading) return;
+
+    const key = invId ? `inv:${invId}` : `cat:${catId}`;
+    if (preorderPrefillProcessedRef.current === key) return;
+
+    preorderPrefillProcessedRef.current = key;
+    router.replace("/deals", { scroll: false });
+
+    void (async () => {
+      try {
+        const rt = rates.DZD > 0 ? rates : await getRates();
+        const fx = displayFxFromAppRates(rt);
+        const dzdPerAed = Math.max(rt.DZD || 0, 1);
+
+        if (invId) {
+          const car = cars.find((c) => c.id === invId);
+          if (!car) {
+            setError("Car not found for pre-order.");
+            return;
+          }
+          const cost = carPurchaseToCostFact(car, rt);
+          let sourceRateToDzd = "1";
+          if (cost.currency === "USD" && fx.aedPerDzd > 0 && fx.aedPerUsd > 0) {
+            sourceRateToDzd = String(Math.max(fx.aedPerUsd / fx.aedPerDzd, 0.01));
+          } else if (cost.currency === "DZD") {
+            sourceRateToDzd = String(Math.max(1 / Math.max(cost.rateToAed, 1e-6), 0.01));
+          } else if (cost.currency === "AED") {
+            sourceRateToDzd = String(dzdPerAed);
+          }
+
+          const seed: Partial<PreorderForm> = {
+            source: "PRE_ORDER_CUSTOM",
+            supplierId: (car as { supplier_id?: string | null }).supplier_id || "",
+            supplierTbd: !(car as { supplier_id?: string | null }).supplier_id,
+            brand: car.brand || "",
+            model: car.model || "",
+            year: car.year ? String(car.year) : "",
+            color: car.color || "",
+            trim: "",
+            options: "",
+            saleDzd: car.sale_price_dzd != null ? String(car.sale_price_dzd) : "",
+            depositDzd: car.sales_deposit_dzd != null ? String(car.sales_deposit_dzd) : "",
+            leadTimeDays: car.sales_lead_time_days != null ? String(car.sales_lead_time_days) : "",
+            sourceCost: String(cost.amount ?? 0),
+            sourceCurrency: cost.currency === "AED" ? "AED" : "USD",
+            sourceRateToDzd,
+            sourceRateToAed: cost.currency === "AED" ? "1" : String(dzdPerAed),
+            inventoryCarId: invId,
+            salesCatalogEntryId: "",
+            requireSupplierConfirmation: false,
+          };
+          if (cost.currency === "AED") {
+            seed.sourceCurrency = "AED";
+            seed.sourceRateToDzd = String(dzdPerAed);
+            seed.sourceRateToAed = "1";
+          }
+          setPreorderFormSeed(seed);
+          setPreorderLockedPricing(isStaff);
+          setPreorderLockSourceCustom(true);
+          setIsPreorderModalOpen(true);
+          setError(null);
+          return;
+        }
+
+        if (catId) {
+          const res = await fetch(`/api/sales-list/catalog/${encodeURIComponent(catId)}`, { cache: "no-store" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setError(data.error || "Catalog entry not found.");
+            return;
+          }
+          const row = data.row as Record<string, unknown>;
+          const est = Number(row.cost_estimate_dzd ?? 0);
+          const seed: Partial<PreorderForm> = {
+            source: "PRE_ORDER_CUSTOM",
+            supplierId: String(row.supplier_id || ""),
+            supplierTbd: !row.supplier_id,
+            brand: String(row.brand || ""),
+            model: String(row.model || ""),
+            year: row.year != null ? String(row.year) : "",
+            color: Array.isArray(row.color_options) && row.color_options.length ? String(row.color_options[0]) : "",
+            trim: String(row.trim || ""),
+            options: String(row.buyer_responsibilities_note || ""),
+            saleDzd: String(row.sale_price_dzd ?? ""),
+            depositDzd: String(row.deposit_amount_dzd ?? ""),
+            leadTimeDays: String(row.lead_time_days ?? ""),
+            sourceCost: String(est),
+            sourceCurrency: "AED",
+            sourceRateToDzd: String(dzdPerAed),
+            sourceRateToAed: String(dzdPerAed),
+            inventoryCarId: "",
+            salesCatalogEntryId: catId,
+            requireSupplierConfirmation: false,
+          };
+          setPreorderFormSeed(seed);
+          setPreorderLockedPricing(isStaff);
+          setPreorderLockSourceCustom(true);
+          setIsPreorderModalOpen(true);
+          setError(null);
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to open pre-order");
+      }
+    })();
+  }, [isLoading, cars, searchParams, router, rates, isStaff]);
 
   const availableCars = useMemo(() => {
     return cars.filter((c) => {
@@ -1784,7 +1907,17 @@ export default function DealsPage() {
             <p className="text-sm text-default-500">You have view-only access to deals.</p>
           ) : (
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" size="sm" onPress={() => setIsPreorderModalOpen(true)}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onPress={() => {
+                setPreorderFormSeed(null);
+                setPreorderLockedPricing(false);
+                setPreorderLockSourceCustom(false);
+                setIsPreorderModalOpen(true);
+              }}
+            >
               Add Pre-Order
             </Button>
             <Button
@@ -2892,7 +3025,15 @@ export default function DealsPage() {
 
       <PreorderDealModal
         open={isPreorderModalOpen}
-        onClose={() => setIsPreorderModalOpen(false)}
+        formSeed={preorderFormSeed}
+        lockedListPricing={preorderLockedPricing}
+        lockSourceToCustom={preorderLockSourceCustom}
+        onClose={() => {
+          setIsPreorderModalOpen(false);
+          setPreorderFormSeed(null);
+          setPreorderLockedPricing(false);
+          setPreorderLockSourceCustom(false);
+        }}
         onCreated={fetchAll}
       />
 

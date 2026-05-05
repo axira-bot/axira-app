@@ -28,6 +28,10 @@ export type PreorderForm = {
   leadTimeDays: string;
   supplierTbd: boolean;
   requireSupplierConfirmation: boolean;
+  /** When set, POST /api/deals/preorders includes inventory_car_id (sales list coming-soon car). */
+  inventoryCarId: string;
+  /** When set, POST includes sales_catalog_entry_id (order-on-demand catalog). */
+  salesCatalogEntryId: string;
 };
 
 export function emptyPreorderForm(): PreorderForm {
@@ -59,5 +63,7 @@ export function emptyPreorderForm(): PreorderForm {
     leadTimeDays: "",
     supplierTbd: false,
     requireSupplierConfirmation: true,
+    inventoryCarId: "",
+    salesCatalogEntryId: "",
   };
 }
