@@ -60,16 +60,20 @@ export async function GET(request: NextRequest) {
   try {
     const admin = createAdminClient();
     const q = (request.nextUrl.searchParams.get("q") || "").trim();
-    let query = admin.from("deals").select("*").order("date", { ascending: false });
+    const page = Math.max(1, Number(request.nextUrl.searchParams.get("page") || "1"));
+    const pageSize = Math.min(100, Math.max(1, Number(request.nextUrl.searchParams.get("pageSize") || "10")));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    let query = admin.from("deals").select("*", { count: "exact" }).order("date", { ascending: false });
     if (auth.role === "staff") {
       query = query.eq("created_by", auth.user.id);
     }
     if (q) {
       query = query.or(`client_name.ilike.%${q}%,car_label.ilike.%${q}%`);
     }
-    const { data: deals, error } = await query;
+    const { data: deals, error, count } = await query.range(from, to);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    return NextResponse.json({ rows: deals ?? [] });
+    return NextResponse.json({ rows: deals ?? [], page, pageSize, total: count ?? 0 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error";
     return NextResponse.json({ error: message }, { status: 500 });

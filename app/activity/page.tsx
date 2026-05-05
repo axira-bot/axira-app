@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Card, Chip, Input, Label, Spinner, TextField } from "@heroui/react";
 import { supabase } from "@/lib/supabase";
 import type { ActivityEntity } from "@/lib/activity";
+import { PaginatedTable } from "@/components/ui/paginated-table";
 
 type ActivityLogRow = {
   id: string;
@@ -174,47 +175,50 @@ export default function ActivityPage() {
               <div className="p-6 text-sm text-default-500">No activity in this range.</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="border-b border-default-200 bg-default-50 text-[11px] uppercase tracking-wide text-default-500">
-                    <tr>
-                      <th className="px-4 py-3">Time</th>
-                      <th className="px-4 py-3">Action</th>
-                      <th className="px-4 py-3">Type</th>
-                      <th className="px-4 py-3">User</th>
-                      <th className="px-4 py-3">Description</th>
-                      <th className="px-4 py-3 text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((a) => (
-                      <tr key={a.id} className="border-b border-default-100 last:border-b-0 hover:bg-default-50/80">
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {formatDate(a.created_at)}
-                          <span className="ml-2 text-default-400">({timeAgo(a.created_at)})</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Chip size="sm" variant="soft">
-                            {a.action}
-                          </Chip>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Chip size="sm" variant="secondary">
-                            {displayType(a.entity)}
-                          </Chip>
-                        </td>
-                        <td className="px-4 py-3">
-                          {a.actor_name || a.actor_user_id || "System"}
-                        </td>
-                        <td className="px-4 py-3">{a.description}</td>
-                        <td className="px-4 py-3 text-right">
-                          {a.amount != null && a.currency
-                            ? formatMoney(a.amount, a.currency)
-                            : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <PaginatedTable
+                  rows={rows}
+                  rowKey={(row) => row.id}
+                  pageSize={12}
+                  emptyContent="No activity in this range."
+                  columns={[
+                    {
+                      key: "time",
+                      label: "Time",
+                      render: (row) => (
+                        <span className="whitespace-nowrap">
+                          {formatDate(row.created_at)}
+                          <span className="ml-2 text-default-400">({timeAgo(row.created_at)})</span>
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "action",
+                      label: "Action",
+                      render: (row) => (
+                        <Chip size="sm" variant="soft">
+                          {row.action}
+                        </Chip>
+                      ),
+                    },
+                    {
+                      key: "type",
+                      label: "Type",
+                      render: (row) => (
+                        <Chip size="sm" variant="secondary">
+                          {displayType(row.entity)}
+                        </Chip>
+                      ),
+                    },
+                    { key: "user", label: "User", render: (row) => row.actor_name || row.actor_user_id || "System" },
+                    { key: "description", label: "Description", render: (row) => row.description },
+                    {
+                      key: "amount",
+                      label: "Amount",
+                      align: "end",
+                      render: (row) => (row.amount != null && row.currency ? formatMoney(row.amount, row.currency) : "—"),
+                    },
+                  ]}
+                />
               </div>
             )}
           </Card.Content>

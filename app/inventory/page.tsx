@@ -7,6 +7,7 @@ import type { Car } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 import { useAuth } from "@/lib/context/AuthContext";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 type PaidPocket =
   | "Dubai Cash"
@@ -183,6 +184,8 @@ export default function InventoryPage() {
   const [availabilityFilter, setAvailabilityFilter] = useState<"available_only" | "all">(
     "available_only"
   );
+  const [carsPage, setCarsPage] = useState(1);
+  const [carsPageSize, setCarsPageSize] = useState(10);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCarId, setEditingCarId] = useState<string | null>(null);
@@ -310,6 +313,21 @@ export default function InventoryPage() {
     }
     return base;
   }, [activeTab, availabilityFilter, conditionTab, stockTypeTab, cars, debouncedSearch]);
+
+  const pagedCars = useMemo(() => {
+    const start = (carsPage - 1) * carsPageSize;
+    return filteredCars.slice(start, start + carsPageSize);
+  }, [filteredCars, carsPage]);
+
+  const carsPages = Math.max(1, Math.ceil(filteredCars.length / carsPageSize));
+
+  useEffect(() => {
+    if (carsPage > carsPages) setCarsPage(carsPages);
+  }, [carsPage, carsPages]);
+
+  useEffect(() => {
+    setCarsPage(1);
+  }, [activeTab, availabilityFilter, conditionTab, stockTypeTab, debouncedSearch, carsPageSize]);
 
   const axiraCount = useMemo(() => cars.filter((c) => (c.stock_type || "axira") === "axira").length, [cars]);
   const supplierCount = useMemo(() => cars.filter((c) => c.stock_type === "supplier").length, [cars]);
@@ -880,6 +898,7 @@ export default function InventoryPage() {
           ) : filteredCars.length === 0 ? (
             <div className="p-4 text-sm text-muted">No cars found.</div>
           ) : (
+            <>
             <div className="w-full overflow-x-auto">
               <table className="min-w-[780px] w-full text-left text-xs rtl:text-right">
                 <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
@@ -894,7 +913,7 @@ export default function InventoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCars.map((car) => {
+                  {pagedCars.map((car) => {
                     const carTitle = `${car.brand || ""} ${car.model || ""} ${car.year || ""}`.trim();
                     const effectiveStatus = getEffectiveStatus(car).toLowerCase();
                     const isSupplierCar = car.stock_type === "supplier";
@@ -942,7 +961,7 @@ export default function InventoryPage() {
                           {isInvestorReadOnly ? (
                             <span className="text-[11px] text-muted">View only</span>
                           ) : (
-                          <div className="flex flex-wrap items-center gap-1.5">
+                          <RowActionsMenu label="Inventory actions">
                             <button
                               type="button"
                               onClick={() => openEditModal(car)}
@@ -1024,7 +1043,7 @@ export default function InventoryPage() {
                               {isDeletingId === car.id ? "Deleting..." : "Delete"}
                             </button>
                             ) : null}
-                          </div>
+                          </RowActionsMenu>
                           )}
                         </td>
                       </tr>
@@ -1033,6 +1052,37 @@ export default function InventoryPage() {
                 </tbody>
               </table>
             </div>
+            {filteredCars.length > 0 && (
+              <div className="flex flex-col gap-2 border-t border-app px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-xs text-muted">
+                  <span>Rows per page</span>
+                  <select
+                    value={carsPageSize}
+                    onChange={(e) => setCarsPageSize(Number(e.target.value))}
+                    className="rounded-md border border-[#222222] bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  >
+                    {[10, 25, 50, 100].map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                  <span>
+                    {(carsPage - 1) * carsPageSize + 1}-{Math.min(carsPage * carsPageSize, filteredCars.length)} of {filteredCars.length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                <span className="text-xs text-muted">Page {carsPage} / {carsPages}</span>
+                <Button type="button" size="sm" variant="outline" isDisabled={carsPage <= 1} onPress={() => setCarsPage((p) => Math.max(1, p - 1))}>
+                  Previous
+                </Button>
+                <Button type="button" size="sm" variant="outline" isDisabled={carsPage >= carsPages} onPress={() => setCarsPage((p) => Math.min(carsPages, p + 1))}>
+                  Next
+                </Button>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>

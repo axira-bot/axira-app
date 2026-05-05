@@ -72,7 +72,7 @@ export default function Header() {
 
   return (
     <header
-      className="hidden md:flex h-16 shrink-0 items-center justify-between px-6"
+      className="hidden h-16 shrink-0 items-center justify-between px-6 md:flex"
       style={{
         background: "var(--color-surface)",
         borderBottom: "1px solid var(--color-border)",
@@ -95,11 +95,11 @@ export default function Header() {
       <div className="flex items-center gap-3">
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           isIconOnly
           size="sm"
           aria-label="Notifications"
-          className="text-default-500"
+          className="text-default-500 hover:text-danger"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />

@@ -14,6 +14,8 @@ import {
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 import { useAuth } from "@/lib/context/AuthContext";
+import { PaginatedTable } from "@/components/ui/paginated-table";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 type Client = {
   id: string;
@@ -367,95 +369,52 @@ export default function ClientsPage() {
             <div className="p-4 text-sm text-default-500">No clients found.</div>
           ) : (
             <div className="w-full overflow-x-auto">
-              <table className="min-w-[640px] w-full text-left text-xs">
-                <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
-                  <tr>
-                    <th className="px-4 py-3">Name</th>
-                    <th className="px-4 py-3">Phone</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Email</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Type</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Looking For</th>
-                    <th className="px-4 py-3 w-10">Drive</th>
-                    <th className="px-4 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredClients.map((client) => {
-                    const type = (client.type || "Client") as "Client" | "Prospect";
-                    const typeClass =
-                      type === "Client"
-                        ? "border-emerald-500/50 bg-emerald-900/40 text-emerald-200"
-                        : "border-sky-500/50 bg-sky-900/40 text-sky-200";
-                    return (
-                      <tr
-                        key={client.id}
-                        className="border-b border-app last:border-b-0"
-                      >
-                        <td className="px-4 py-3 font-semibold text-app">
-                          {client.name || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-app">
-                          {client.phone || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-app hidden sm:table-cell">
-                          {client.email || "-"}
-                        </td>
-                        <td className="px-4 py-3 hidden sm:table-cell">
-                          <span
-                            className={[
-                              "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                              typeClass,
-                            ].join(" ")}
+              <PaginatedTable
+                rows={filteredClients}
+                rowKey={(row) => row.id}
+                pageSize={10}
+                emptyContent="No clients found."
+                columns={[
+                  { key: "name", label: "Name", render: (row) => <span className="font-semibold text-app">{row.name || "-"}</span> },
+                  { key: "phone", label: "Phone", render: (row) => row.phone || "-" },
+                  { key: "email", label: "Email", render: (row) => row.email || "-" },
+                  { key: "type", label: "Type", render: (row) => <span className="text-xs font-semibold">{(row.type || "Client") as string}</span> },
+                  { key: "lookingFor", label: "Looking For", render: (row) => row.looking_for || "-" },
+                  { key: "drive", label: "Drive", render: (row) => <DriveLinkIcon href={row.drive_link ?? ""} /> },
+                  {
+                    key: "actions",
+                    label: "Actions",
+                    render: (row) => (
+                      <RowActionsMenu label="Client actions">
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/deals?clientId=${encodeURIComponent(row.id)}&clientName=${encodeURIComponent(row.name || "")}`)}
+                          disabled={!clientDealCounts[row.id] && !clientDealCounts[(row.name || "").trim()]}
+                          className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100 disabled:opacity-40"
+                        >
+                          View Deals
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(row)}
+                          className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
+                        >
+                          Edit
+                        </button>
+                        {canDelete ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(row)}
+                            className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10"
                           >
-                            {type}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-app hidden sm:table-cell truncate max-w-[150px]">
-                          {client.looking_for || "-"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <DriveLinkIcon href={client.drive_link ?? ""} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                router.push(
-                                  `/deals?clientId=${encodeURIComponent(client.id)}&clientName=${encodeURIComponent(client.name || "")}`
-                                )
-                              }
-                              disabled={
-                                !clientDealCounts[client.id] &&
-                                !clientDealCounts[(client.name || "").trim()]
-                              }
-                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-                            >
-                              View Deals
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(client)}
-                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
-                            >
-                              Edit
-                            </button>
-                            {canDelete ? (
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(client)}
-                              className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300"
-                            >
-                              Delete
-                            </button>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            Delete
+                          </button>
+                        ) : null}
+                      </RowActionsMenu>
+                    ),
+                  },
+                ]}
+              />
             </div>
           )}
           </Card.Content>

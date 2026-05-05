@@ -64,17 +64,19 @@ async function ensureOwner() {
   return { user };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const auth = await ensureOwner();
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
   try {
+    const page = Math.max(1, Number(request.nextUrl.searchParams.get("page") || "1"));
+    const pageSize = Math.min(100, Math.max(1, Number(request.nextUrl.searchParams.get("pageSize") || "10")));
     const admin = createAdminClient();
     const {
       data: { users },
       error: listError,
-    } = await admin.auth.admin.listUsers({ perPage: 500 });
+    } = await admin.auth.admin.listUsers({ page, perPage: pageSize });
     if (listError) {
       return NextResponse.json({ error: listError.message }, { status: 500 });
     }
@@ -120,7 +122,16 @@ export async function GET() {
       permissions: permissionMap.get(u.id) || {},
       created_at: profileMap.get(u.id)?.created_at ?? u.created_at,
     }));
-    return NextResponse.json(list);
+    const { count: profileCount } = await admin
+      .from("user_profiles")
+      .select("id", { count: "exact", head: true });
+    const total = profileCount ?? list.length;
+    return NextResponse.json({
+      rows: list,
+      page,
+      pageSize,
+      total,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error";
     return NextResponse.json({ error: message }, { status: 500 });

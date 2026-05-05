@@ -6,6 +6,7 @@ import type { Car } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 import { useAuth } from "@/lib/context/AuthContext";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 type Container = {
   id: string;
@@ -1012,7 +1013,7 @@ export default function ContainersPage() {
                           <DriveLinkIcon href={container.drive_link ?? ""} />
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
+                          <RowActionsMenu label="Container actions">
                             <button
                               type="button"
                               onClick={() =>
@@ -1060,7 +1061,7 @@ export default function ContainersPage() {
                               Delete
                             </button>
                             ) : null}
-                          </div>
+                          </RowActionsMenu>
                         </td>
                       </tr>
                     );

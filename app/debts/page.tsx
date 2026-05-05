@@ -45,6 +45,7 @@ import type { Car } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 type Debt = {
   id: string;
@@ -768,39 +769,41 @@ export default function DebtsPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <button
-                              type="button"
-                              onClick={() => openView(d)}
-                              className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
-                            >
-                              View
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openEdit(d)}
-                              className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
-                            >
-                              Edit
-                            </button>
-                            {(d.amount_remaining ?? 0) > 0 && (
+                            <RowActionsMenu label="Receivable actions">
                               <button
                                 type="button"
-                                onClick={() => handleMarkSettled(d)}
-                                className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:border-emerald-600"
+                                onClick={() => openView(d)}
+                                className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                               >
-                                Mark settled
+                                View
                               </button>
-                            )}
-                            {canDelete ? (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteDebt(d)}
-                              disabled={deletingId === d.id}
-                              className="rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
-                            >
-                              {deletingId === d.id ? "Deleting..." : "Delete"}
-                            </button>
-                            ) : null}
+                              <button
+                                type="button"
+                                onClick={() => openEdit(d)}
+                                className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
+                              >
+                                Edit
+                              </button>
+                              {(d.amount_remaining ?? 0) > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMarkSettled(d)}
+                                  className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-emerald-600 hover:bg-emerald-100"
+                                >
+                                  Mark settled
+                                </button>
+                              )}
+                              {canDelete ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteDebt(d)}
+                                  disabled={deletingId === d.id}
+                                  className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
+                                >
+                                  {deletingId === d.id ? "Deleting..." : "Delete"}
+                                </button>
+                              ) : null}
+                            </RowActionsMenu>
                           </td>
                         </tr>
                       ))}
@@ -878,18 +881,18 @@ export default function DebtsPage() {
                             </td>
                             <td className="px-4 py-3">
                               {!isSupplier && (
-                                <>
+                                <RowActionsMenu label="Payable actions">
                                   <button
                                     type="button"
                                     onClick={() => openView(d)}
-                                    className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                                    className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                                   >
                                     View
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => openEdit(d)}
-                                    className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
+                                    className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                                   >
                                     Edit
                                   </button>
@@ -897,22 +900,22 @@ export default function DebtsPage() {
                                     <button
                                       type="button"
                                       onClick={() => handleMarkSettled(d)}
-                                      className="mr-2 rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:border-emerald-600"
+                                      className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-emerald-600 hover:bg-emerald-100"
                                     >
                                       Mark settled
                                     </button>
                                   )}
                                   {canDelete ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteDebt(d)}
-                                    disabled={deletingId === d.id}
-                                    className="rounded-md border border-app bg-white px-2 py-1 text-[11px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
-                                  >
-                                    {deletingId === d.id ? "Deleting..." : "Delete"}
-                                  </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteDebt(d)}
+                                      disabled={deletingId === d.id}
+                                      className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
+                                    >
+                                      {deletingId === d.id ? "Deleting..." : "Delete"}
+                                    </button>
                                   ) : null}
-                                </>
+                                </RowActionsMenu>
                               )}
                               {isSupplier && (
                                 <span className="text-gray-400 text-[11px]">From inventory</span>

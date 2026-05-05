@@ -93,6 +93,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   padding: 0.5rem 0.75rem;
   transition: border-color 0.15s, box-shadow 0.15s;
   width: 100%;
+  min-height: 2.5rem;
 }
 .input::placeholder { color: var(--color-text-muted); }
 .input:focus {
@@ -101,15 +102,55 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   box-shadow: 0 0 0 3px rgba(196, 18, 48, 0.1);
 }
 
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="email"],
+input[type="password"],
+select,
+textarea {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  min-height: 2.5rem;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(196, 18, 48, 0.1);
+}
+
 /* ── Select ─────────────────────────────────────────────────── */
 select.input {
   cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #8A8A8A 50%), linear-gradient(135deg, #8A8A8A 50%, transparent 50%);
+  background-position: calc(100% - 16px) calc(1.1em + 2px), calc(100% - 11px) calc(1.1em + 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 2.25rem;
 }
 
 /* ── Table ──────────────────────────────────────────────────── */
 table {
   width: 100%;
   border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-surface);
 }
 table thead {
   background: var(--color-bg);

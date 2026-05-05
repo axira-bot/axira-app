@@ -12,6 +12,8 @@ import {
 } from "@heroui/react";
 import { supabase } from "@/lib/supabase/client";
 import { FEATURE_KEYS, type FeatureKey } from "@/lib/auth/featureKeys";
+import { PaginatedTable } from "@/components/ui/paginated-table";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 type UserRow = {
   id: string;
@@ -76,21 +78,25 @@ export default function AdminUsersPage() {
   const [accessPermissions, setAccessPermissions] = useState<Partial<Record<FeatureKey, boolean>>>(
     {}
   );
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await fetch("/api/admin/users");
+    const res = await fetch(`/api/admin/users?page=${page}&pageSize=${pageSize}`);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error ?? "Failed to load users");
       setUsers([]);
     } else {
       setError(null);
-      setUsers(Array.isArray(data) ? data : []);
+      setUsers(Array.isArray(data.rows) ? data.rows : []);
+      setTotal(Number(data.total || 0));
     }
     setLoading(false);
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     const run = async () => {
@@ -405,76 +411,80 @@ export default function AdminUsersPage() {
             <div className="p-6 text-sm text-gray-400">No users yet.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-app text-xs uppercase text-muted">
-                  <tr>
-                    <th className="px-4 py-3">Email</th>
-                    <th className="px-4 py-3">Name</th>
-                    <th className="px-4 py-3">Role</th>
-                    <th className="px-4 py-3">Links</th>
-                    <th className="px-4 py-3 w-20"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr
-                      key={u.id}
-                      className="border-b border-app last:border-b-0"
-                    >
-                      <td className="px-4 py-3 text-app">{u.email}</td>
-                      <td className="px-4 py-3 text-app">
-                        {u.name ?? "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-app">
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted">
-                        {u.employee_id ? `EMP: ${u.employee_id.slice(0, 8)}…` : ""}
-                        {u.employee_id && u.investor_id ? " | " : ""}
-                        {u.investor_id ? `INV: ${u.investor_id.slice(0, 8)}…` : ""}
-                        {!u.employee_id && !u.investor_id ? "—" : ""}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="min-h-7 text-xs text-primary"
-                            onPress={() => {
-                              setResetUser(u);
-                              setResetPassword("");
-                            }}
-                          >
-                            Reset Password
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="min-h-7 text-xs text-danger"
-                            onPress={() => handleOpenAccess(u)}
-                          >
-                            Edit Access
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="min-h-7 text-xs text-danger"
-                            isDisabled={deletingId === u.id}
-                            onPress={() => handleDelete(u.id)}
-                          >
-                            {deletingId === u.id ? "Removing…" : "Remove"}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <PaginatedTable
+                rows={users}
+                rowKey={(row) => row.id}
+                pageSize={pageSize}
+                page={page}
+                total={total}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                emptyContent="No users yet."
+                columns={[
+                  { key: "email", label: "Email", render: (row) => row.email },
+                  { key: "name", label: "Name", render: (row) => row.name ?? "—" },
+                  {
+                    key: "role",
+                    label: "Role",
+                    render: (row) => (
+                      <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-app">
+                        {row.role}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "links",
+                    label: "Links",
+                    render: (row) => (
+                      <span className="text-xs text-muted">
+                        {row.employee_id ? `EMP: ${row.employee_id.slice(0, 8)}…` : ""}
+                        {row.employee_id && row.investor_id ? " | " : ""}
+                        {row.investor_id ? `INV: ${row.investor_id.slice(0, 8)}…` : ""}
+                        {!row.employee_id && !row.investor_id ? "—" : ""}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "actions",
+                    label: "Actions",
+                    render: (row) => (
+                      <RowActionsMenu label="User actions">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="min-h-7 justify-start text-xs text-primary"
+                          onPress={() => {
+                            setResetUser(row);
+                            setResetPassword("");
+                          }}
+                        >
+                          Reset Password
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="min-h-7 justify-start text-xs text-danger"
+                          onPress={() => handleOpenAccess(row)}
+                        >
+                          Edit Access
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="min-h-7 justify-start text-xs text-danger"
+                          isDisabled={deletingId === row.id}
+                          onPress={() => handleDelete(row.id)}
+                        >
+                          {deletingId === row.id ? "Removing…" : "Remove"}
+                        </Button>
+                      </RowActionsMenu>
+                    ),
+                  },
+                ]}
+              />
             </div>
           )}
         </Card.Root>
