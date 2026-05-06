@@ -54,6 +54,11 @@ type CarFormState = {
   supplierName: string;
   isPublished: boolean;
   statusOverride: string;
+  /** Algeria sales list */
+  salesLeadTimeDays: string;
+  salesDepositDzd: string;
+  salesInternalNote: string;
+  salesCostEstimateDzd: string;
 };
 
 const BRANDS = [
@@ -102,6 +107,10 @@ const emptyForm = (): CarFormState => ({
   supplierName: "",
   isPublished: false,
   statusOverride: "",
+  salesLeadTimeDays: "",
+  salesDepositDzd: "",
+  salesInternalNote: "",
+  salesCostEstimateDzd: "",
 });
 
 function formatNumber(value: number): string {
@@ -168,7 +177,8 @@ const inputCls = "w-full rounded-md border border-app bg-white px-3 py-2 text-sm
 const labelCls = "space-y-1 text-xs text-app";
 
 export default function InventoryPage() {
-  const { canDelete, isInvestorReadOnly } = useAuth();
+  const { canDelete, isInvestorReadOnly, isOwnerLike, isManager } = useAuth();
+  const canEditSalesListMeta = isOwnerLike || isManager;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cars, setCars] = useState<Car[]>([]);
@@ -393,6 +403,10 @@ export default function InventoryPage() {
       supplierName: car.supplier_name || "",
       isPublished: car.is_published ?? false,
       statusOverride: car.status_override || "",
+      salesLeadTimeDays: car.sales_lead_time_days != null ? String(car.sales_lead_time_days) : "",
+      salesDepositDzd: car.sales_deposit_dzd != null ? String(car.sales_deposit_dzd) : "",
+      salesInternalNote: car.sales_internal_note || "",
+      salesCostEstimateDzd: car.sales_cost_estimate_dzd != null ? String(car.sales_cost_estimate_dzd) : "",
     });
     setIsModalOpen(true);
     setError(null);
@@ -515,6 +529,10 @@ export default function InventoryPage() {
       features: featuresArr.length > 0 ? featuresArr : null,
       // Listing price
       sale_price_dzd: form.salePriceDzd ? Number(form.salePriceDzd) : null,
+      sales_lead_time_days: form.salesLeadTimeDays.trim() ? Number(form.salesLeadTimeDays) : null,
+      sales_deposit_dzd: form.salesDepositDzd.trim() ? Number(form.salesDepositDzd) : null,
+      sales_internal_note: form.salesInternalNote.trim() || null,
+      sales_cost_estimate_dzd: form.salesCostEstimateDzd.trim() ? Number(form.salesCostEstimateDzd) : null,
       // Stock & publishing
       stock_type: form.stockType,
       supplier_name: form.stockType === "supplier" ? form.supplierName : null,
@@ -1406,6 +1424,55 @@ export default function InventoryPage() {
                   className={inputCls}
                 />
               </label>
+
+              {canEditSalesListMeta ? (
+                <>
+                  {sectionHeader("Algeria sales list")}
+                  <label className={labelCls}>
+                    <span className="font-semibold">Lead time (days)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.salesLeadTimeDays}
+                      onChange={(e) => updateField("salesLeadTimeDays", e.target.value)}
+                      placeholder="e.g. 14"
+                      className={inputCls}
+                    />
+                  </label>
+                  <label className={labelCls}>
+                    <span className="font-semibold">Deposit (DZD)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.salesDepositDzd}
+                      onChange={(e) => updateField("salesDepositDzd", e.target.value)}
+                      placeholder="e.g. 500000"
+                      className={inputCls}
+                    />
+                  </label>
+                  <label className={`${labelCls} sm:col-span-2`}>
+                    <span className="font-semibold">Cost estimate (DZD)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.salesCostEstimateDzd}
+                      onChange={(e) => updateField("salesCostEstimateDzd", e.target.value)}
+                      placeholder="Optional — for margin hints on sales list"
+                      className={inputCls}
+                    />
+                  </label>
+                  <label className={`${labelCls} sm:col-span-2`}>
+                    <span className="font-semibold">Internal note (sales list)</span>
+                    <textarea
+                      value={form.salesInternalNote}
+                      onChange={(e) => updateField("salesInternalNote", e.target.value)}
+                      placeholder="Margin / sourcing notes — not shown to staff on sales list"
+                      rows={2}
+                      className="w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
+                </>
+              ) : null}
 
               {/* ── PUBLISHING & STATUS ── */}
               {sectionHeader("Publishing & Status")}

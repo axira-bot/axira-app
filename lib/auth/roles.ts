@@ -15,3 +15,10 @@ export function isManagerLikeRole(role: string | null | undefined): boolean {
 export function isPreorderPrivilegedRole(role: string | null | undefined): boolean {
   return isOwnerLikeRole(role) || isManagerLikeRole(role);
 }
+
+/** Who may POST /api/deals/preorders (includes sales staff creating pre-orders from the sales list). */
+export function canCreatePreorderDeal(role: string | null | undefined): boolean {
+  const r = normalizeRole(role);
+  if (r === "staff") return true;
+  return isPreorderPrivilegedRole(role);
+}

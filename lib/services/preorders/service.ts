@@ -1,7 +1,7 @@
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { toAed } from "@/lib/finance/dealMoney";
-import { isPreorderPrivilegedRole } from "@/lib/auth/roles";
+import { canCreatePreorderDeal, isPreorderPrivilegedRole } from "@/lib/auth/roles";
 import type { DealLifecycleStatus } from "./types";
 import { LIFECYCLE_TRANSITIONS } from "./types";
 
@@ -36,6 +36,31 @@ async function resolveAuth(): Promise<AuthContext> {
 
 export async function requirePreorderAccess() {
   return resolveAuth();
+}
+
+async function resolvePreorderCreateAuth(): Promise<AuthContext> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, status: 401, error: "Unauthorized" };
+
+  const { data: profile } = await supabase.from("user_profiles").select("role").eq("id", user.id).maybeSingle();
+  const profileRole = (profile as { role?: string } | null)?.role ?? null;
+  const metadataRole =
+    (user.user_metadata as { role?: string } | null)?.role ??
+    (user.app_metadata as { role?: string } | null)?.role ??
+    null;
+  const role = (profileRole || metadataRole || "").toLowerCase();
+
+  if (!canCreatePreorderDeal(role)) {
+    return { ok: false, status: 403, error: "Forbidden" };
+  }
+  return { ok: true, userId: user.id, role };
+}
+
+export async function requirePreorderCreateAccess() {
+  return resolvePreorderCreateAuth();
 }
 
 export async function ensureClient(
@@ -98,7 +123,72 @@ export async function createPreorderDeal(payload: Record<string, unknown>) {
 
   const source = payload.source as string;
   const catalog = payload.catalog as Record<string, unknown> | undefined;
-  const customSpec = payload.custom_spec as Record<string, unknown> | undefined;
+  let customSpec = payload.custom_spec as Record<string, unknown> | undefined;
+  const inventoryCarId = (payload.inventory_car_id as string | undefined)?.trim() || undefined;
+  const salesCatalogEntryId = (payload.sales_catalog_entry_id as string | undefined)?.trim() || undefined;
+
+  if (source === "PRE_ORDER_CUSTOM" && inventoryCarId && !customSpec) {
+    const { data: car, error } = await admin
+      .from("cars")
+      .select("brand, model, year, color, supplier_id, purchase_price, purchase_currency")
+      .eq("id", inventoryCarId)
+      .maybeSingle();
+    if (error || !car) throw new Error("Inventory car not found for pre-order.");
+    const row = car as {
+      brand?: string;
+      model?: string;
+      year?: number | null;
+      color?: string | null;
+      supplier_id?: string | null;
+      purchase_price?: number | null;
+      purchase_currency?: string | null;
+    };
+    const cur = String(row.purchase_currency || "USD").toUpperCase() === "AED" ? "AED" : "USD";
+    customSpec = {
+      supplier_id: row.supplier_id ?? null,
+      supplier_tbd: !row.supplier_id,
+      brand: row.brand || "Vehicle",
+      model: row.model || "",
+      year: row.year ?? null,
+      color: row.color ?? null,
+      trim: null,
+      options: null,
+      estimated_cost: Number(row.purchase_price || 0),
+      estimated_currency: cur,
+      supplier_confirmation_required: false,
+    };
+  }
+
+  if (source === "PRE_ORDER_CUSTOM" && salesCatalogEntryId && !customSpec) {
+    const { data: entry, error } = await admin.from("sales_catalog_entries").select("*").eq("id", salesCatalogEntryId).maybeSingle();
+    if (error || !entry) throw new Error("Sales catalog entry not found.");
+    const row = entry as {
+      active?: boolean;
+      brand?: string;
+      model?: string;
+      year?: number | null;
+      color_options?: string[] | null;
+      trim?: string | null;
+      supplier_id?: string | null;
+      cost_estimate_dzd?: number | null;
+      buyer_responsibilities_note?: string | null;
+    };
+    if (row.active === false) throw new Error("Sales catalog entry is inactive.");
+    const colors = row.color_options || [];
+    customSpec = {
+      supplier_id: row.supplier_id ?? null,
+      supplier_tbd: !row.supplier_id,
+      brand: row.brand || "Vehicle",
+      model: row.model || "",
+      year: row.year ?? null,
+      color: colors[0] ?? null,
+      trim: row.trim ?? null,
+      options: row.buyer_responsibilities_note ?? null,
+      estimated_cost: Number(row.cost_estimate_dzd ?? 0),
+      estimated_currency: "AED",
+      supplier_confirmation_required: false,
+    };
+  }
 
   const brand =
     (catalog?.brand as string | undefined) ||
@@ -157,6 +247,8 @@ export async function createPreorderDeal(payload: Record<string, unknown>) {
       source_rate_to_dzd: payload.source_rate_to_dzd,
       source_rate_to_aed: payload.source_rate_to_aed,
       custom_spec_signature: customSpecSignature,
+      inventory_car_id: inventoryCarId ?? null,
+      sales_catalog_entry_id: salesCatalogEntryId ?? null,
     })
     .select("id")
     .single();

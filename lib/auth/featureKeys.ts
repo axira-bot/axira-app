@@ -17,6 +17,8 @@ export const FEATURE_KEYS = [
   "suppliers",
   "audit_log",
   "admin_users",
+  "sales_list",
+  "sales_catalog_admin",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];

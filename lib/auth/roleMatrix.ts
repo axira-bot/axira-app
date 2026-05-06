@@ -19,6 +19,8 @@ export const ROUTE_PREFIX_TO_FEATURE: Array<{ prefix: string; feature: FeatureKe
   { prefix: "/inquiries", feature: "inquiries" },
   { prefix: "/purchase-orders", feature: "purchase_orders" },
   { prefix: "/suppliers", feature: "suppliers" },
+  { prefix: "/sales-list", feature: "sales_list" },
+  { prefix: "/catalog", feature: "sales_catalog_admin" },
 ];
 
 export function emptyFeaturePermissions(): FeaturePermissions {
@@ -56,6 +58,7 @@ export function roleFallbackPermissions(role: string | null | undefined): Featur
         "reports",
         "clients",
         "inquiries",
+        "sales_list",
       ] as const
     ).forEach((k) => {
       p[k] = true;
@@ -64,7 +67,7 @@ export function roleFallbackPermissions(role: string | null | undefined): Featur
   }
 
   if (r === "staff") {
-    (["deals", "inventory", "clients", "inquiries"] as const).forEach((k) => {
+    (["deals", "inventory", "clients", "inquiries", "sales_list"] as const).forEach((k) => {
       p[k] = true;
     });
     return p;
@@ -84,6 +87,7 @@ export function roleFallbackPermissions(role: string | null | undefined): Featur
         "reports",
         "investors",
         "purchase_orders",
+        "sales_list",
       ] as const
     ).forEach((k) => {
       p[k] = true;

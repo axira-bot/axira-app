@@ -63,7 +63,21 @@ export const preOrderCreateSchema = z.object({
       notes: z.string().optional().nullable(),
     })
     .optional(),
-});
+  inventory_car_id: uuid.optional(),
+  sales_catalog_entry_id: uuid.optional(),
+})
+  .superRefine((data, ctx) => {
+    if (data.source === "PRE_ORDER_CUSTOM") {
+      const ok = Boolean(data.custom_spec || data.inventory_car_id || data.sales_catalog_entry_id);
+      if (!ok) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Provide custom_spec, inventory_car_id, or sales_catalog_entry_id",
+          path: ["custom_spec"],
+        });
+      }
+    }
+  });
 
 export const supplierConfirmationSchema = z.object({
   confirmed: z.boolean(),

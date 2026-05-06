@@ -55,6 +55,11 @@ export interface Car {
   status_override?: string | null;  // null = auto | 'available' | 'in_transit' | 'sold'
   sold_at?: string | null;
   sale_price_dzd?: number | null;   // Public listing price in DZD
+  /** Algeria sales list (owner/manager). */
+  sales_lead_time_days?: number | null;
+  sales_deposit_dzd?: number | null;
+  sales_internal_note?: string | null;
+  sales_cost_estimate_dzd?: number | null;
   inventory_lifecycle_status?: string | null;
   linked_deal_id?: string | null;
   supplier_id?: string | null;
@@ -139,6 +144,7 @@ export interface Deal {
   cancellation_note?: string | null;
   agreed_delivery_date?: string | null;
   inventory_car_id?: string | null;
+  sales_catalog_entry_id?: string | null;
   source_cost?: number | null;
   source_currency?: "USD" | "AED" | null;
   source_rate_to_dzd?: number | null;

@@ -49,6 +49,8 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   suppliers: "Suppliers",
   audit_log: "Audit log",
   admin_users: "Admin Users",
+  sales_list: "Sales list",
+  sales_catalog_admin: "Sales catalog (owner)",
 };
 
 export default function AdminUsersPage() {

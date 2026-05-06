@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { preOrderCreateSchema } from "@/lib/services/preorders/schemas";
-import { createPreorderDeal, requirePreorderAccess } from "@/lib/services/preorders/service";
+import { createPreorderDeal, requirePreorderCreateAccess } from "@/lib/services/preorders/service";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const auth = await requirePreorderAccess();
+  const auth = await requirePreorderCreateAccess();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -26,9 +26,14 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (parsed.data.source === "PRE_ORDER_CUSTOM" && !parsed.data.custom_spec) {
+    if (
+      parsed.data.source === "PRE_ORDER_CUSTOM" &&
+      !parsed.data.custom_spec &&
+      !parsed.data.inventory_car_id &&
+      !parsed.data.sales_catalog_entry_id
+    ) {
       return NextResponse.json(
-        { error: "Custom source requires custom specification" },
+        { error: "Custom source requires custom specification, inventory car, or sales catalog entry" },
         { status: 400 }
       );
     }
