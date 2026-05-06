@@ -8,6 +8,7 @@ import type { ReceiptPDFData } from "@/lib/pdf/pdfTypes";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 const ReceiptDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.ReceiptDownloadButton),
@@ -204,6 +205,8 @@ export default function MovementsPage() {
   const [rentError, setRentError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<FilterTab>("All");
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMovement, setEditingMovement] = useState<Movement | null>(null);
@@ -297,6 +300,20 @@ export default function MovementsPage() {
     else list = movements.filter((m) => (m.pocket || "") === activeTab);
     return sortMovementsByDateDesc(list);
   }, [activeTab, movements]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMovements.length / rowsPerPage));
+  const paginatedMovements = useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    return filteredMovements.slice(start, start + rowsPerPage);
+  }, [filteredMovements, page, rowsPerPage]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, rowsPerPage]);
 
   const updateField = <K extends keyof MovementFormState>(key: K, value: MovementFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -1212,6 +1229,7 @@ export default function MovementsPage() {
           ) : filteredMovements.length === 0 ? (
             <div className="p-4 text-sm text-muted">No movements found.</div>
           ) : (
+            <>
             <div className="w-full overflow-x-auto">
               <table className="min-w-[640px] w-full text-left text-xs">
                 <thead className="border-b border-[#222222] text-[11px] uppercase tracking-wide text-muted">
@@ -1227,7 +1245,7 @@ export default function MovementsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMovements.map((m) => {
+                  {paginatedMovements.map((m) => {
                     const isIn = (m.type || "").toLowerCase() === "in";
                     return (
                       <tr
@@ -1266,7 +1284,7 @@ export default function MovementsPage() {
                         </td>
                         <td className="px-4 py-3">
                           {canEditDeleteMovement(m.category) ? (
-                            <>
+                            <RowActionsMenu label="Movement actions">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1299,21 +1317,21 @@ export default function MovementsPage() {
                                   setIsModalOpen(true);
                                   setError(null);
                                 }}
-                                className="mr-2 rounded-md border border-[#222222] bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
+                                className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                               >
                                 Edit
                               </button>
                               {canDelete ? (
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(m)}
-                                disabled={isDeletingId === m.id}
-                                className="rounded-md border border-[#222222] bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
-                              >
-                                {isDeletingId === m.id ? "Deleting..." : "Delete"}
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(m)}
+                                  disabled={isDeletingId === m.id}
+                                  className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
+                                >
+                                  {isDeletingId === m.id ? "Deleting..." : "Delete"}
+                                </button>
                               ) : null}
-                            </>
+                            </RowActionsMenu>
                           ) : (
                             <span className="text-gray-400 text-[11px]">—</span>
                           )}
@@ -1324,6 +1342,51 @@ export default function MovementsPage() {
                 </tbody>
               </table>
             </div>
+            <div className="flex flex-col gap-2 border-t border-[#222222] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-xs text-muted">
+                <span>Rows per page</span>
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                  className="rounded-md border border-[#222222] bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                >
+                  {[10, 25, 50, 100].map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+                <span>
+                  {(page - 1) * rowsPerPage + 1}
+                  {"-"}
+                  {Math.min(page * rowsPerPage, filteredMovements.length)} of {filteredMovements.length}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted">
+                  Page {page} / {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  isDisabled={page <= 1}
+                  onPress={() => setPage((prev) => Math.max(1, prev - 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  isDisabled={page >= totalPages}
+                  onPress={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+            </>
           )}
         </div>
       </div>

@@ -255,7 +255,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         onMouseEnter={(e) => {
           router.prefetch(href);
           if (!isActive) {
-            (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
+            (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)";
             (e.currentTarget as HTMLElement).style.color = "#FFFFFF";
           }
         }}
@@ -412,7 +412,7 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
   return (
     <div className="fixed inset-0 z-50 md:hidden">
       <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.55)" }} onClick={onClose} />
-      <aside className="absolute left-0 top-0 h-full w-[280px] flex flex-col">
+      <aside className="absolute left-0 top-0 flex h-full w-[280px] flex-col shadow-2xl">
         <SidebarContent onClose={onClose} />
       </aside>
     </div>

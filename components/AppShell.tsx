@@ -89,13 +89,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
-      <div className="flex flex-1 flex-col min-w-0 md:ml-[240px]">
+      <div className="flex min-w-0 flex-1 flex-col md:ml-[240px]">
 
         <div
-          className="flex items-center gap-3 px-4 py-3 md:hidden"
+          className="card flex items-center gap-3 rounded-none border-x-0 border-t-0 px-4 py-3 md:hidden"
           style={{
             background: "var(--color-sidebar)",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
           }}
         >
           <MobileMenuButton onPress={() => setMobileOpen(true)} />

@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import PreorderDealModal from "@/components/preorders/PreorderDealModal";
 import type { PreorderForm } from "@/components/preorders/types";
 import { useAuth } from "@/lib/context/AuthContext";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import { getRates, type AppRates } from "@/lib/rates";
 import {
   aedToCurrency,
@@ -244,6 +245,8 @@ export default function DealsPage() {
   const [quickAddSaving, setQuickAddSaving] = useState(false);
 
   const [activeTab, setActiveTab] = useState<FilterTab>("All");
+  const [dealsPage, setDealsPage] = useState(1);
+  const [dealsPageSize, setDealsPageSize] = useState(10);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPreorderModalOpen, setIsPreorderModalOpen] = useState(false);
@@ -577,6 +580,21 @@ export default function DealsPage() {
     }
     return base;
   }, [activeTab, dealsWithDerived, searchParams, role, user?.id, customerSearchDebounced, clients]);
+
+  const pagedDeals = useMemo(() => {
+    const start = (dealsPage - 1) * dealsPageSize;
+    return filteredDeals.slice(start, start + dealsPageSize);
+  }, [filteredDeals, dealsPage]);
+
+  const dealsPages = Math.max(1, Math.ceil(filteredDeals.length / dealsPageSize));
+
+  useEffect(() => {
+    if (dealsPage > dealsPages) setDealsPage(dealsPages);
+  }, [dealsPage, dealsPages]);
+
+  useEffect(() => {
+    setDealsPage(1);
+  }, [activeTab, customerSearchDebounced, dealsPageSize]);
 
   const pendingCompletionCount = useMemo(
     () =>
@@ -1998,6 +2016,7 @@ export default function DealsPage() {
           ) : filteredDeals.length === 0 ? (
             <div className="p-4 text-sm text-muted">No deals found.</div>
           ) : (
+            <>
             <div className="w-full overflow-x-auto">
               <table className="min-w-[680px] w-full text-left text-xs">
                 <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
@@ -2019,7 +2038,7 @@ export default function DealsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDeals.map((d) => {
+                  {pagedDeals.map((d) => {
                     const status = (d.status || "pending").toLowerCase();
                     const derived = d.derived;
                     const total = derived.costAed + derived.expensesAedTotal;
@@ -2094,7 +2113,7 @@ export default function DealsPage() {
                           <DriveLinkIcon href={(d as Deal & { drive_link?: string | null }).drive_link ?? ""} />
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex flex-wrap items-center gap-2">
+                          <RowActionsMenu label="Deal actions">
                             <button
                               type="button"
                               onClick={() => openEditModal(d)}
@@ -2182,7 +2201,7 @@ export default function DealsPage() {
                                 </>
                               );
                             })()}
-                          </div>
+                          </RowActionsMenu>
                         </td>
                       </tr>
                     );
@@ -2190,6 +2209,37 @@ export default function DealsPage() {
                 </tbody>
               </table>
             </div>
+            {filteredDeals.length > 0 && (
+              <div className="flex flex-col gap-2 border-t border-app px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-xs text-muted">
+                  <span>Rows per page</span>
+                  <select
+                    value={dealsPageSize}
+                    onChange={(e) => setDealsPageSize(Number(e.target.value))}
+                    className="rounded-md border border-[#222222] bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+                  >
+                    {[10, 25, 50, 100].map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                  <span>
+                    {(dealsPage - 1) * dealsPageSize + 1}-{Math.min(dealsPage * dealsPageSize, filteredDeals.length)} of {filteredDeals.length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                <span className="text-xs text-muted">Page {dealsPage} / {dealsPages}</span>
+                <Button type="button" size="sm" variant="outline" isDisabled={dealsPage <= 1} onPress={() => setDealsPage((p) => Math.max(1, p - 1))}>
+                  Previous
+                </Button>
+                <Button type="button" size="sm" variant="outline" isDisabled={dealsPage >= dealsPages} onPress={() => setDealsPage((p) => Math.min(dealsPages, p + 1))}>
+                  Next
+                </Button>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>

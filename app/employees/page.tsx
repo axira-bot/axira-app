@@ -5,6 +5,7 @@ import { Alert, Button, Spinner } from "@heroui/react";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 const ROLES = ["Sales Staff", "Manager", "Accountant", "Operations"] as const;
 const STATUSES = ["Active", "Inactive"] as const;
@@ -646,30 +647,32 @@ export default function EmployeesPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={() => openEdit(e)}
-                              className="text-[var(--color-accent)] hover:underline"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setViewEmployee(e)}
-                              className="text-app hover:underline"
-                            >
-                              View
-                            </button>
-                            {canDelete ? (
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(e)}
-                              disabled={deletingId === e.id}
-                              className="text-red-400 hover:underline disabled:opacity-50"
-                            >
-                              {deletingId === e.id ? "Deleting..." : "Delete"}
-                            </button>
-                            ) : null}
+                            <RowActionsMenu label="Employee actions">
+                              <button
+                                type="button"
+                                onClick={() => openEdit(e)}
+                                className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setViewEmployee(e)}
+                                className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
+                              >
+                                View
+                              </button>
+                              {canDelete ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(e)}
+                                  disabled={deletingId === e.id}
+                                  className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
+                                >
+                                  {deletingId === e.id ? "Deleting..." : "Delete"}
+                                </button>
+                              ) : null}
+                            </RowActionsMenu>
                             {(e.status || "").toLowerCase() === "active" && (
                               <span className="text-[11px] text-muted">Use Payroll page for payouts</span>
                             )}

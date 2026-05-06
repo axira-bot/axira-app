@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
 import { normalizeRole } from "@/lib/auth/roles";
 import { cashPocketOptionsForCurrency, validatePocketForCurrency } from "@/lib/finance/cashPockets";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 type Supplier = { id: string; name: string | null };
 type PurchaseOrder = {
@@ -78,6 +79,9 @@ export default function PurchaseOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [supplierFilter, setSupplierFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
   const [eligibility, setEligibility] = useState<"in_transit_or_arrived" | "arrived_only">("in_transit_or_arrived");
   const [savingEligibility, setSavingEligibility] = useState(false);
   const [form, setForm] = useState({
@@ -128,10 +132,10 @@ export default function PurchaseOrdersPage() {
     setError(null);
     const [poRes, suppliersRes, settingRes, catalogRes] = await Promise.all([
       fetch(
-        `/api/purchase-orders?supplier_id=${encodeURIComponent(supplierFilter)}&status=${encodeURIComponent(statusFilter)}`,
+        `/api/purchase-orders?supplier_id=${encodeURIComponent(supplierFilter)}&status=${encodeURIComponent(statusFilter)}&page=${page}&pageSize=${pageSize}`,
         { cache: "no-store" }
       ),
-      fetch("/api/suppliers", { cache: "no-store" }),
+      fetch("/api/suppliers?page=1&pageSize=200", { cache: "no-store" }),
       fetch("/api/purchase-orders/settings", { cache: "no-store" }),
       supabase.from("supplier_catalog").select("id, brand, model, year").eq("active", true).order("brand", { ascending: true }),
     ]);
@@ -142,6 +146,7 @@ export default function PurchaseOrdersPage() {
       setRows([]);
     } else {
       setRows((poData.rows as PurchaseOrder[] | undefined) || []);
+      setTotal(Number(poData.total || 0));
     }
     if (!suppliersRes.ok) {
       setSuppliers([]);
@@ -164,6 +169,10 @@ export default function PurchaseOrdersPage() {
   useEffect(() => {
     fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supplierFilter, statusFilter, page]);
+
+  useEffect(() => {
+    setPage(1);
   }, [supplierFilter, statusFilter]);
 
   const createPo = async (e: React.FormEvent) => {
@@ -771,9 +780,11 @@ export default function PurchaseOrdersPage() {
                   <td className="px-3 py-2">{row.created_at ? new Date(row.created_at).toLocaleDateString() : "-"}</td>
                   {isOwner && (
                     <td className="px-3 py-2">
-                      <Button type="button" variant="danger-soft" size="sm" onPress={() => removePo(row.id)}>
-                        Remove
-                      </Button>
+                      <RowActionsMenu label="Purchase order actions">
+                        <Button type="button" variant="ghost" size="sm" className="justify-start text-xs text-danger" onPress={() => removePo(row.id)}>
+                          Remove
+                        </Button>
+                      </RowActionsMenu>
                     </td>
                   )}
                 </tr>
@@ -781,6 +792,42 @@ export default function PurchaseOrdersPage() {
             )}
           </tbody>
         </table>
+        {rows.length > 0 && (
+          <div className="flex flex-col gap-2 border-t border-app/50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-xs text-muted">
+              <span>Rows per page</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="rounded-md border border-[#222222] bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
+              >
+                {[10, 25, 50, 100].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+              <span>
+                {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} of {total}
+              </span>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+            <span className="text-xs text-muted">Page {page} / {Math.max(1, Math.ceil(total / pageSize))}</span>
+            <Button type="button" size="sm" variant="outline" isDisabled={page <= 1} onPress={() => setPage((p) => Math.max(1, p - 1))}>
+              Previous
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              isDisabled={page >= Math.max(1, Math.ceil(total / pageSize))}
+              onPress={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / pageSize)), p + 1))}
+            >
+              Next
+            </Button>
+            </div>
+          </div>
+        )}
       </section>
     </main>
   );

@@ -55,10 +55,17 @@ export async function GET(request: NextRequest) {
     const admin = createAdminClient();
     const supplierId = (request.nextUrl.searchParams.get("supplier_id") || "").trim();
     const status = (request.nextUrl.searchParams.get("status") || "").trim();
-    let q = admin.from("purchase_orders").select("*").order("created_at", { ascending: false });
+    const page = Math.max(1, Number(request.nextUrl.searchParams.get("page") || "1"));
+    const pageSize = Math.min(100, Math.max(1, Number(request.nextUrl.searchParams.get("pageSize") || "10")));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    let q = admin
+      .from("purchase_orders")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false });
     if (supplierId) q = q.eq("supplier_id", supplierId);
     if (status) q = q.eq("status", status);
-    const { data, error } = await q;
+    const { data, error, count } = await q.range(from, to);
     if (error) {
       const msg = error.message || "Query failed";
       if (msg.includes("purchase_orders") && msg.includes("schema cache")) {
@@ -72,7 +79,7 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.json({ error: msg }, { status: 400 });
     }
-    return NextResponse.json({ rows: data ?? [] });
+    return NextResponse.json({ rows: data ?? [], page, pageSize, total: count ?? 0 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error";
     return NextResponse.json({ error: message }, { status: 500 });

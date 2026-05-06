@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolvePermissions } from "@/lib/auth/permissions";
@@ -7,7 +7,7 @@ import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient();
     const {
@@ -33,13 +33,18 @@ export async function GET() {
     }
 
     const admin = createAdminClient();
+    const page = Math.max(1, Number(request.nextUrl.searchParams.get("page") || "1"));
+    const pageSize = Math.min(100, Math.max(1, Number(request.nextUrl.searchParams.get("pageSize") || "10")));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
     const [
       { data: investors, error: investorsError },
       { data: returns, error: returnsError },
       { data: deals, error: dealsError },
       { data: settings, error: settingsError },
     ] = await Promise.all([
-      admin.from("investors").select("*").order("name", { ascending: true }),
+      admin.from("investors").select("*").order("name", { ascending: true }).range(from, to),
       admin.from("investor_returns").select("*").order("month", { ascending: false }),
       admin
         .from("deals")
@@ -85,8 +90,15 @@ export async function GET() {
       profit: d.profit_aed,
     }));
 
+    const { count: investorsTotal } = await admin
+      .from("investors")
+      .select("id", { count: "exact", head: true });
+
     return NextResponse.json({
       investors: investors ?? [],
+      investorsTotal: investorsTotal ?? 0,
+      page,
+      pageSize,
       returns: returns ?? [],
       deals: dealsForClient,
       settings: settingsError ? [] : settings ?? [],

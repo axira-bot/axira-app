@@ -7,6 +7,7 @@ import CustomerBlock from "./CustomerBlock";
 import PricingBlock from "./PricingBlock";
 import PaymentBlock from "./PaymentBlock";
 import { emptyPreorderForm, type PreorderForm } from "./types";
+import { AppInputField, AppSelectField } from "@/components/ui/form-fields";
 
 type Supplier = { id: string; name: string; country: string | null };
 type CatalogItem = {
@@ -217,37 +218,28 @@ export default function PreorderDealModal({
             )}
 
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Supplier</span>
-                <select
-                  value={form.supplierId}
-                  onChange={(e) => setField("supplierId", e.target.value)}
-                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-                >
-                  <option value="">Select supplier</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <AppSelectField
+                label="Supplier"
+                value={form.supplierId}
+                onChange={(value) => setField("supplierId", value)}
+                options={[
+                  { value: "", label: "Select supplier" },
+                  ...suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name })),
+                ]}
+              />
               {form.source === "PRE_ORDER_CATALOG" ? (
-                <label className="space-y-1 text-xs text-app">
-                  <span className="font-semibold">Catalog model</span>
-                  <select
-                    value={form.supplierCatalogId}
-                    onChange={(e) => setField("supplierCatalogId", e.target.value)}
-                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-                  >
-                    <option value="">Select model</option>
-                    {catalogItems.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.brand} {c.model} {c.year ? `(${c.year})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <AppSelectField
+                  label="Catalog model"
+                  value={form.supplierCatalogId}
+                  onChange={(value) => setField("supplierCatalogId", value)}
+                  options={[
+                    { value: "", label: "Select model" },
+                    ...catalogItems.map((catalogItem) => ({
+                      value: catalogItem.id,
+                      label: `${catalogItem.brand} ${catalogItem.model} ${catalogItem.year ? `(${catalogItem.year})` : ""}`,
+                    })),
+                  ]}
+                />
               ) : (
                 <label className="flex items-center gap-2 text-xs text-app">
                   <input
@@ -258,36 +250,20 @@ export default function PreorderDealModal({
                   <span>Supplier TBD</span>
                 </label>
               )}
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Brand</span>
-                <input value={form.brand} onChange={(e) => setField("brand", e.target.value)} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              </label>
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Model</span>
-                <input value={form.model} onChange={(e) => setField("model", e.target.value)} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              </label>
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Year</span>
-                <input value={form.year} onChange={(e) => setField("year", e.target.value)} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              </label>
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Color</span>
-                <input value={form.color} onChange={(e) => setField("color", e.target.value)} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              </label>
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Trim</span>
-                <input value={form.trim} onChange={(e) => setField("trim", e.target.value)} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              </label>
-              <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Lead time (days)</span>
-                <input value={form.leadTimeDays} onChange={(e) => setField("leadTimeDays", e.target.value)} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              </label>
+              <AppInputField label="Brand" value={form.brand} onChange={(value) => setField("brand", value)} />
+              <AppInputField label="Model" value={form.model} onChange={(value) => setField("model", value)} />
+              <AppInputField label="Year" value={form.year} onChange={(value) => setField("year", value)} />
+              <AppInputField label="Color" value={form.color} onChange={(value) => setField("color", value)} />
+              <AppInputField label="Trim" value={form.trim} onChange={(value) => setField("trim", value)} />
+              <AppInputField label="Lead time (days)" value={form.leadTimeDays} onChange={(value) => setField("leadTimeDays", value)} />
               {form.source === "PRE_ORDER_CUSTOM" && (
                 <>
-                  <label className="space-y-1 text-xs text-app sm:col-span-2">
-                    <span className="font-semibold">Options / spec details</span>
-                    <input value={form.options} onChange={(e) => setField("options", e.target.value)} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-                  </label>
+                  <AppInputField
+                    label="Options / spec details"
+                    value={form.options}
+                    onChange={(value) => setField("options", value)}
+                    className="sm:col-span-2"
+                  />
                   <label className="flex items-center gap-2 text-xs text-amber-300 sm:col-span-2">
                     <input
                       type="checkbox"
@@ -312,18 +288,14 @@ export default function PreorderDealModal({
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-xs text-app">
-              <span className="font-semibold">Deal date</span>
-              <input type="date" value={form.date} onChange={(e) => setField("date", e.target.value)} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-            </label>
-            <label className="space-y-1 text-xs text-app">
-              <span className="font-semibold">Agreed delivery date</span>
-              <input type="date" value={form.agreed_delivery_date} onChange={(e) => setField("agreed_delivery_date", e.target.value)} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-            </label>
-            <label className="space-y-1 text-xs text-app sm:col-span-2">
-              <span className="font-semibold">Notes</span>
-              <input value={form.notes} onChange={(e) => setField("notes", e.target.value)} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-            </label>
+            <AppInputField label="Deal date" type="date" value={form.date} onChange={(value) => setField("date", value)} />
+            <AppInputField
+              label="Agreed delivery date"
+              type="date"
+              value={form.agreed_delivery_date}
+              onChange={(value) => setField("agreed_delivery_date", value)}
+            />
+            <AppInputField label="Notes" value={form.notes} onChange={(value) => setField("notes", value)} className="sm:col-span-2" />
           </div>
 
           {error ? (

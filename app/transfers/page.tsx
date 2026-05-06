@@ -8,6 +8,7 @@ import type { ReceiptPDFData } from "@/lib/pdf/pdfTypes";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 const ReceiptDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.ReceiptDownloadButton),
@@ -838,27 +839,27 @@ export default function TransfersPage() {
                                 PENDING
                               </span>
                             </td>
-                            <td className="px-4 py-3 flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openApprovalModal(movement, meta)
-                                }
-                                disabled={approvingRef === ref}
-                                className="rounded-md border border-app bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-white hover:opacity-90 disabled:opacity-50"
-                              >
-                                Approve
-                              </button>
-                              {canDelete ? (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteConversion(ref)}
-                                disabled={deletingRef === ref}
-                                className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
-                              >
-                                {deletingRef === ref ? "Deleting..." : "Delete"}
-                              </button>
-                              ) : null}
+                            <td className="px-4 py-3">
+                              <RowActionsMenu label="Pending conversion actions">
+                                <button
+                                  type="button"
+                                  onClick={() => openApprovalModal(movement, meta)}
+                                  disabled={approvingRef === ref}
+                                  className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100 disabled:opacity-50"
+                                >
+                                  Approve
+                                </button>
+                                {canDelete ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteConversion(ref)}
+                                    disabled={deletingRef === ref}
+                                    className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
+                                  >
+                                    {deletingRef === ref ? "Deleting..." : "Delete"}
+                                  </button>
+                                ) : null}
+                              </RowActionsMenu>
                             </td>
                           </tr>
                         ))}
@@ -939,14 +940,16 @@ export default function TransfersPage() {
                             </td>
                             <td className="px-4 py-3">
                               {canDelete ? (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteConversion(ref)}
-                                disabled={deletingRef === ref}
-                                className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
-                              >
-                                {deletingRef === ref ? "Deleting..." : "Delete"}
-                              </button>
+                                <RowActionsMenu label="Approved conversion actions">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteConversion(ref)}
+                                    disabled={deletingRef === ref}
+                                    className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
+                                  >
+                                    {deletingRef === ref ? "Deleting..." : "Delete"}
+                                  </button>
+                                </RowActionsMenu>
                               ) : null}
                             </td>
                           </tr>
@@ -1050,16 +1053,16 @@ export default function TransfersPage() {
                             </td>
                             <td className="px-4 py-3">
                               {canDelete ? (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteExchange(ex.ref)}
-                                disabled={deletingRef === ex.ref}
-                                className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
-                              >
-                                {deletingRef === ex.ref
-                                  ? "Deleting..."
-                                  : "Delete"}
-                              </button>
+                                <RowActionsMenu label="Exchange actions">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteExchange(ex.ref)}
+                                    disabled={deletingRef === ex.ref}
+                                    className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
+                                  >
+                                    {deletingRef === ex.ref ? "Deleting..." : "Delete"}
+                                  </button>
+                                </RowActionsMenu>
                               ) : null}
                             </td>
                           </tr>

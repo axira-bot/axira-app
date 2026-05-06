@@ -1,4 +1,5 @@
 import type { PreorderForm } from "./types";
+import { AppInputField } from "@/components/ui/form-fields";
 
 export default function CustomerBlock({
   form,
@@ -9,38 +10,15 @@ export default function CustomerBlock({
 }) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <label className="space-y-1 text-xs text-app">
-        <span className="font-semibold">Customer name</span>
-        <input
-          value={form.clientName}
-          onChange={(e) => setField("clientName", e.target.value)}
-          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-        />
-      </label>
-      <label className="space-y-1 text-xs text-app">
-        <span className="font-semibold">Phone</span>
-        <input
-          value={form.clientPhone}
-          onChange={(e) => setField("clientPhone", e.target.value)}
-          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-        />
-      </label>
-      <label className="space-y-1 text-xs text-app">
-        <span className="font-semibold">Passport number</span>
-        <input
-          value={form.clientPassport}
-          onChange={(e) => setField("clientPassport", e.target.value)}
-          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-        />
-      </label>
-      <label className="space-y-1 text-xs text-app sm:col-span-2">
-        <span className="font-semibold">Algeria address</span>
-        <input
-          value={form.clientAddress}
-          onChange={(e) => setField("clientAddress", e.target.value)}
-          className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-        />
-      </label>
+      <AppInputField label="Customer name" value={form.clientName} onChange={(value) => setField("clientName", value)} />
+      <AppInputField label="Phone" value={form.clientPhone} onChange={(value) => setField("clientPhone", value)} />
+      <AppInputField label="Passport number" value={form.clientPassport} onChange={(value) => setField("clientPassport", value)} />
+      <AppInputField
+        label="Algeria address"
+        value={form.clientAddress}
+        onChange={(value) => setField("clientAddress", value)}
+        className="sm:col-span-2"
+      />
     </div>
   );
 }

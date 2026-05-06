@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { getRates, type AppRates } from "@/lib/rates";
 import { eurPerAedFromAppEurSetting, usdPerAedFromAppUsdSetting } from "@/lib/finance/dealMoney";
 import { useAuth } from "@/lib/context/AuthContext";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 const CURRENCIES = ["AED", "DZD", "EUR", "USD"] as const;
 const AED_POCKETS = ["Dubai Cash", "Dubai Bank", "Qatar"] as const;
@@ -143,7 +144,7 @@ export default function InvestorsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/investors", { cache: "no-store" });
+      const response = await fetch("/api/investors?page=1&pageSize=500", { cache: "no-store" });
       const payload = (await response.json().catch(() => ({}))) as {
         error?: string;
         investors?: Investor[];
@@ -664,34 +665,34 @@ export default function InvestorsPage() {
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
                               {!isInvestorReadOnly ? (
-                              <>
-                              <button type="button" onClick={() => openEdit(i)} className="text-[var(--color-accent)] hover:underline">
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setBonusInvestorId(i.id);
-                                  setBonusAmount("");
-                                  setBonusReason("");
-                                  setBonusDate(new Date().toISOString().slice(0, 10));
-                                  setBonusPocket(AED_POCKETS[0]);
-                                }}
-                                className="text-amber-300 hover:underline"
-                              >
-                                Add Bonus
-                              </button>
-                              {canDelete ? (
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(i)}
-                                disabled={deletingId === i.id}
-                                className="text-red-400 hover:underline disabled:opacity-50"
-                              >
-                                {deletingId === i.id ? "Deleting..." : "Delete"}
-                              </button>
-                              ) : null}
-                              </>
+                                <RowActionsMenu label="Investor actions">
+                                  <button type="button" onClick={() => openEdit(i)} className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100">
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setBonusInvestorId(i.id);
+                                      setBonusAmount("");
+                                      setBonusReason("");
+                                      setBonusDate(new Date().toISOString().slice(0, 10));
+                                      setBonusPocket(AED_POCKETS[0]);
+                                    }}
+                                    className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-amber-600 hover:bg-amber-100"
+                                  >
+                                    Add Bonus
+                                  </button>
+                                  {canDelete ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDelete(i)}
+                                      disabled={deletingId === i.id}
+                                      className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
+                                    >
+                                      {deletingId === i.id ? "Deleting..." : "Delete"}
+                                    </button>
+                                  ) : null}
+                                </RowActionsMenu>
                               ) : (
                                 <span className="text-[11px] text-muted">View only</span>
                               )}

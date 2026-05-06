@@ -14,6 +14,8 @@ import {
 } from "@heroui/react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { normalizeRole } from "@/lib/auth/roles";
+import { PaginatedTable } from "@/components/ui/paginated-table";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 type Supplier = {
   id: string;
@@ -40,6 +42,9 @@ export default function SuppliersPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
   const [form, setForm] = useState({
     name: "",
     country: "",
@@ -52,7 +57,7 @@ export default function SuppliersPage() {
     if (!canAccess) return;
     setLoading(true);
     setError(null);
-    const res = await fetch("/api/suppliers", { cache: "no-store" });
+    const res = await fetch(`/api/suppliers?page=${page}&pageSize=${pageSize}`, { cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     setLoading(false);
     if (!res.ok) {
@@ -61,7 +66,8 @@ export default function SuppliersPage() {
       return;
     }
     setRows((data.rows as Supplier[]) ?? []);
-  }, [canAccess]);
+    setTotal(Number(data.total || 0));
+  }, [canAccess, page]);
 
   useEffect(() => {
     load();
@@ -225,53 +231,41 @@ export default function SuppliersPage() {
 
       <Card.Root className="overflow-hidden border border-default-200 shadow-sm">
         <Card.Content className="p-0">
-          <table className="min-w-full text-sm">
-          <thead className="bg-default-50 text-xs uppercase text-default-500">
-            <tr>
-              <th className="px-3 py-2 text-left">Name</th>
-              <th className="px-3 py-2 text-left">Country</th>
-              <th className="px-3 py-2 text-left">Currency</th>
-              <th className="px-3 py-2 text-left">Contact</th>
-              <th className="px-3 py-2 text-left">Active</th>
-              <th className="px-3 py-2 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td className="px-3 py-8" colSpan={6}>
-                  <div className="flex flex-col items-center justify-center gap-2 text-default-500">
-                    <Spinner size="md" color="danger" />
-                    <span className="text-sm">Loading…</span>
-                  </div>
-                </td>
-              </tr>
-            ) : rows.length === 0 ? (
-              <tr>
-                <td className="px-3 py-4 text-muted" colSpan={6}>
-                  No suppliers yet. Add one above.
-                </td>
-              </tr>
-            ) : (
-              rows.map((r) => (
-                <tr key={r.id} className="border-t border-app/50">
-                  <td className="px-3 py-2 font-medium">{r.name}</td>
-                  <td className="px-3 py-2">{r.country || "—"}</td>
-                  <td className="px-3 py-2">{r.default_currency || "—"}</td>
-                  <td className="px-3 py-2 text-xs">
-                    {[r.contact_name, r.contact_phone].filter(Boolean).join(" · ") || "—"}
-                  </td>
-                  <td className="px-3 py-2">{r.active ? "Yes" : "No"}</td>
-                  <td className="px-3 py-2">
-                    <Button type="button" variant="outline" size="sm" onPress={() => toggleActive(r)}>
-                      {r.active ? "Deactivate" : "Activate"}
-                    </Button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-default-500">
+              <Spinner size="md" color="danger" />
+              <span className="text-sm">Loading…</span>
+            </div>
+          ) : (
+            <PaginatedTable
+              rows={rows}
+              rowKey={(row) => row.id}
+              pageSize={pageSize}
+              page={page}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              emptyContent="No suppliers yet. Add one above."
+              columns={[
+                { key: "name", label: "Name", render: (row) => <span className="font-medium">{row.name}</span> },
+                { key: "country", label: "Country", render: (row) => row.country || "—" },
+                { key: "currency", label: "Currency", render: (row) => row.default_currency || "—" },
+                { key: "contact", label: "Contact", render: (row) => [row.contact_name, row.contact_phone].filter(Boolean).join(" · ") || "—" },
+                { key: "active", label: "Active", render: (row) => (row.active ? "Yes" : "No") },
+                {
+                  key: "actions",
+                  label: "Actions",
+                  render: (row) => (
+                    <RowActionsMenu label="Supplier actions">
+                      <Button type="button" variant="ghost" size="sm" className="justify-start text-xs" onPress={() => toggleActive(row)}>
+                        {row.active ? "Deactivate" : "Activate"}
+                      </Button>
+                    </RowActionsMenu>
+                  ),
+                },
+              ]}
+            />
+          )}
         </Card.Content>
       </Card.Root>
     </main>

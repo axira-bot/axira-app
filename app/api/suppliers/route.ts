@@ -15,17 +15,27 @@ type SupplierRow = {
   created_at: string | null;
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const auth = await requirePoAccess({ write: true });
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
+    const page = Math.max(1, Number(request.nextUrl.searchParams.get("page") || "1"));
+    const pageSize = Math.min(100, Math.max(1, Number(request.nextUrl.searchParams.get("pageSize") || "10")));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
     const admin = createAdminClient();
-    const { data, error } = await admin
+    const { data, error, count } = await admin
       .from("suppliers")
-      .select("id, name, country, contact_name, contact_phone, default_currency, active, created_at")
-      .order("name", { ascending: true });
+      .select("id, name, country, contact_name, contact_phone, default_currency, active, created_at", { count: "exact" })
+      .order("name", { ascending: true })
+      .range(from, to);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    return NextResponse.json({ rows: (data as SupplierRow[]) ?? [] });
+    return NextResponse.json({
+      rows: (data as SupplierRow[]) ?? [],
+      page,
+      pageSize,
+      total: count ?? 0,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Server error";
     return NextResponse.json({ error: message }, { status: 500 });
