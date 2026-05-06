@@ -46,6 +46,7 @@ import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
+import { PageContainer } from "@/components/ui/page-container";
 
 type Debt = {
   id: string;
@@ -671,7 +672,7 @@ export default function DebtsPage() {
 
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
+      <PageContainer size="xl">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Debts</h1>
           <p className="text-sm font-medium text-danger">Receivables & Payables</p>
@@ -730,8 +731,8 @@ export default function DebtsPage() {
               ) : listReceivables.length === 0 ? (
                 <div className="p-8 text-center text-gray-400">No receivables yet.</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-[640px] w-full text-left text-xs">
+                <div className="responsive-table-wrap">
+                  <table className="min-w-[620px] w-full text-left text-xs">
                     <thead className="border-b border-app text-muted">
                       <tr>
                         <th className="px-4 py-3">Name</th>
@@ -846,8 +847,8 @@ export default function DebtsPage() {
               ) : listPayables.length === 0 ? (
                 <div className="p-8 text-center text-gray-400">No payables yet.</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-[640px] w-full text-left text-xs">
+                <div className="responsive-table-wrap">
+                  <table className="min-w-[620px] w-full text-left text-xs">
                     <thead className="border-b border-app text-muted">
                       <tr>
                         <th className="px-4 py-3">Name</th>
@@ -1189,7 +1190,7 @@ export default function DebtsPage() {
             </div>
           </div>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }

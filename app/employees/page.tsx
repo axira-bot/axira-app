@@ -608,8 +608,8 @@ export default function EmployeesPage() {
                 <span className="text-sm text-default-500">Loading…</span>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-app surface">
-                <table className="min-w-[640px] w-full text-left text-sm">
+              <div className="responsive-table-wrap rounded-lg border border-app surface">
+                <table className="min-w-[620px] w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-app text-muted">
                       <th className="px-4 py-3 font-semibold">Name</th>
@@ -739,8 +739,8 @@ export default function EmployeesPage() {
               )}
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-app surface">
-              <table className="min-w-[640px] w-full text-left text-sm">
+            <div className="responsive-table-wrap rounded-lg border border-app surface">
+              <table className="min-w-[620px] w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-app text-muted">
                     <th className="px-4 py-3 font-semibold">Employee</th>

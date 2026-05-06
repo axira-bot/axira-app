@@ -52,8 +52,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     "/payroll",
   ] as const;
 
-  useEffect(() => { setMobileOpen(false); }, [pathname]);
-
   useEffect(() => {
     if (loading) return;
     if (!user && !isLogin) {
@@ -84,15 +82,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (isLogin) return <>{children}</>;
 
   return (
-    <div className="flex min-h-screen" style={{ background: "var(--color-bg)" }}>
+    <div className="flex min-h-screen w-full" style={{ background: "var(--color-bg)" }}>
       <Sidebar />
 
       <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
-      <div className="flex min-w-0 flex-1 flex-col md:ml-[240px]">
+      <div className="flex min-w-0 flex-1 flex-col md:ml-[240px] xl:ml-[252px]">
 
         <div
-          className="card flex items-center gap-3 rounded-none border-x-0 border-t-0 px-4 py-3 md:hidden"
+          className="card sticky top-0 z-30 flex items-center gap-3 rounded-none border-x-0 border-t-0 px-3 py-3 md:hidden"
           style={{
             background: "var(--color-sidebar)",
             borderBottom: "1px solid rgba(255,255,255,0.08)",
@@ -121,7 +119,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         <Header />
 
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">
           {children}
         </main>
       </div>

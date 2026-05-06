@@ -732,7 +732,7 @@ export default function PurchaseOrdersPage() {
         </section>
       )}
 
-      <section className="overflow-x-auto rounded-xl border border-app bg-panel">
+      <section className="responsive-table-wrap rounded-xl border border-app bg-panel">
         <table className="min-w-full text-sm">
           <thead className="bg-black/5 text-xs uppercase text-muted">
             <tr>

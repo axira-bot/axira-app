@@ -388,7 +388,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 /* ── Desktop Sidebar ───────────────────────────────────────── */
 export default function Sidebar() {
   return (
-    <aside className="fixed left-0 top-0 z-30 hidden md:flex h-full w-[240px] flex-col">
+    <aside className="fixed left-0 top-0 z-30 hidden h-full w-[240px] flex-col md:flex xl:w-[252px]">
       <SidebarContent />
     </aside>
   );
@@ -412,7 +412,7 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
   return (
     <div className="fixed inset-0 z-50 md:hidden">
       <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.55)" }} onClick={onClose} />
-      <aside className="absolute left-0 top-0 flex h-full w-[280px] flex-col shadow-2xl">
+      <aside className="absolute left-0 top-0 flex h-full w-[min(84vw,300px)] flex-col shadow-2xl">
         <SidebarContent onClose={onClose} />
       </aside>
     </div>

@@ -10,13 +10,29 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Card, Spinner } from "@heroui/react";
 import type { Car, Deal, Movement, Rent } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
 import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
 import { dealListSaleDzd } from "@/app/deals/dealFinanceHelpers";
+import { PageContainer } from "@/components/ui/page-container";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 type CashPosition = {
   id: string;
@@ -403,6 +419,49 @@ export default function DashboardPage() {
 
   const recentDeals = deals.slice(0, 5);
 
+  const monthlyProfitData = useMemo(() => {
+    const now = new Date();
+    const monthKeys = Array.from({ length: 6 }, (_, idx) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
+      return {
+        key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
+        label: date.toLocaleDateString("en-US", { month: "short" }),
+      };
+    });
+    const base = monthKeys.map((m) => ({ month: m.label, revenue: 0, profit: 0 }));
+
+    for (const deal of deals) {
+      if (!deal.date) continue;
+      const d = new Date(deal.date);
+      if (Number.isNaN(d.getTime())) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const idx = monthKeys.findIndex((m) => m.key === key);
+      if (idx === -1) continue;
+      base[idx].revenue += dealListSaleDzd(deal) || deal.sale_amount || 0;
+      base[idx].profit += deal.profit_aed || 0;
+    }
+    return base;
+  }, [deals]);
+
+  const cashByCurrencyData = useMemo(() => {
+    const grouped = cashPositions.reduce<Record<string, number>>((acc, pocket) => {
+      const currency = (pocket.currency || "").toUpperCase() || "OTHER";
+      acc[currency] = (acc[currency] || 0) + (pocket.amount || 0);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([name, value]) => ({ name, value }));
+  }, [cashPositions]);
+
+  const inventoryLocationData = useMemo(
+    () => [
+      { name: "Dubai", value: carsInDubai },
+      { name: "Algeria", value: carsInAlgeria },
+      { name: "In Transit", value: carsInTransit },
+    ],
+    [carsInDubai, carsInAlgeria, carsInTransit]
+  );
+
   const handleStartEditRate = (key: RateKey) => {
     setEditingRateKey(key);
     setEditingRateValue(
@@ -525,7 +584,7 @@ export default function DashboardPage() {
       className="min-h-screen text-[var(--color-text)]"
       style={{ background: "var(--color-bg)" }}
     >
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-6 md:px-8">
+      <PageContainer size="xl" className="gap-8">
         {/* Currency Rates */}
         <StaffBlurGate show={isStaff}>
           <section className="space-y-3">
@@ -769,6 +828,80 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 </div>
+              </section>
+            </StaffBlurGate>
+
+            <StaffBlurGate show={isStaff}>
+              <section className="space-y-3">
+                <h2
+                  className="text-sm font-semibold uppercase tracking-wide"
+                  style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
+                >
+                  Trends & Distribution
+                </h2>
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                  <Card.Root className="border border-default-200 shadow-sm xl:col-span-2">
+                    <Card.Content className="p-4">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <h3 className="text-sm font-semibold">Revenue & Profit (6 months)</h3>
+                        <span className="text-xs text-default-500">DZD revenue / AED profit</span>
+                      </div>
+                      <div className="h-[280px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={monthlyProfitData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(34,34,34,0.08)" />
+                            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                            <YAxis tick={{ fontSize: 12 }} />
+                            <Tooltip />
+                            <Legend />
+                            <Line type="monotone" dataKey="revenue" stroke="#c41230" strokeWidth={2.5} dot={false} name="Revenue (DZD)" />
+                            <Line type="monotone" dataKey="profit" stroke="#222222" strokeWidth={2.5} dot={false} name="Profit (AED)" />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card.Content>
+                  </Card.Root>
+
+                  <Card.Root className="border border-default-200 shadow-sm">
+                    <Card.Content className="p-4">
+                      <h3 className="mb-3 text-sm font-semibold">Inventory by Location</h3>
+                      <div className="h-[280px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={inventoryLocationData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(34,34,34,0.08)" />
+                            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                            <Tooltip />
+                            <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                              {inventoryLocationData.map((entry, idx) => (
+                                <Cell key={`${entry.name}-${idx}`} fill={idx === 0 ? "#c41230" : idx === 1 ? "#222222" : "#8a8a8a"} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card.Content>
+                  </Card.Root>
+                </div>
+
+                <Card.Root className="border border-default-200 shadow-sm">
+                  <Card.Content className="p-4">
+                    <h3 className="mb-3 text-sm font-semibold">Cash Distribution by Currency</h3>
+                    <div className="h-[280px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={cashByCurrencyData} dataKey="value" nameKey="name" innerRadius={64} outerRadius={100} paddingAngle={3}>
+                            {cashByCurrencyData.map((entry, idx) => (
+                              <Cell key={`${entry.name}-${idx}`} fill={idx % 2 === 0 ? "#c41230" : "#222222"} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </Card.Content>
+                </Card.Root>
               </section>
             </StaffBlurGate>
 
@@ -1184,7 +1317,7 @@ export default function DashboardPage() {
             </section>
           </>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }

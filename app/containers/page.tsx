@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 import { useAuth } from "@/lib/context/AuthContext";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
+import { PageContainer } from "@/components/ui/page-container";
 
 type Container = {
   id: string;
@@ -908,7 +909,7 @@ export default function ContainersPage() {
 
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
+      <PageContainer size="xl">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
@@ -959,8 +960,8 @@ export default function ContainersPage() {
           ) : containers.length === 0 ? (
             <div className="p-4 text-sm text-muted">No containers yet.</div>
           ) : (
-            <div className="w-full overflow-x-auto">
-              <table className="min-w-[640px] w-full text-left text-xs">
+            <div className="responsive-table-wrap">
+              <table className="min-w-[620px] w-full text-left text-xs">
                 <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3">Ref</th>
@@ -1415,7 +1416,7 @@ export default function ContainersPage() {
             </div>
           </div>
         )}
-      </div>
+      </PageContainer>
 
       {/* New Container Modal */}
       {isNewModalOpen && (
