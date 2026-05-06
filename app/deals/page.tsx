@@ -56,6 +56,17 @@ type DealPayment = {
   created_at?: string | null;
 };
 
+type GeneratedDocumentRow = {
+  id: string;
+  deal_id: string;
+  payment_id: string | null;
+  document_type: "agreement" | "receipt";
+  file_url: string;
+  generated_at: string;
+  generated_by: string;
+  generated_by_name?: string;
+};
+
 function paymentAmountDzd(p: DealPayment): number {
   const cur = (p.currency || "DZD").toUpperCase();
   const raw = p.amount ?? p.dzd ?? 0;
@@ -269,6 +280,12 @@ export default function DealsPage() {
   const [isAddingPayment, setIsAddingPayment] = useState(false);
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
+  const [generatedDocuments, setGeneratedDocuments] = useState<GeneratedDocumentRow[]>([]);
+  const [generatedDocsLoading, setGeneratedDocsLoading] = useState(false);
+  const [selectedReceiptPaymentId, setSelectedReceiptPaymentId] = useState<string>("");
+  const [isGeneratingAgreement, setIsGeneratingAgreement] = useState(false);
+  const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
+  const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
   const [lifecycleSaving, setLifecycleSaving] = useState(false);
   const [isDummyDocsOpen, setIsDummyDocsOpen] = useState(false);
   const [dummyDocs, setDummyDocs] = useState<DummyDocRow[]>([]);
@@ -1592,7 +1609,25 @@ export default function DealsPage() {
       );
       setPayments([]);
     } else {
-      setPayments((data as DealPayment[]) ?? []);
+      const paymentRows = (data as DealPayment[]) ?? [];
+      setPayments(paymentRows);
+      setSelectedReceiptPaymentId(paymentRows[0]?.id ?? "");
+    }
+    setGeneratedDocsLoading(true);
+    try {
+      const docsRes = await fetch(`/api/contracts/generated?deal_id=${encodeURIComponent(deal.id)}`, {
+        cache: "no-store",
+      });
+      const docsJson = await docsRes.json().catch(() => ({ rows: [] }));
+      if (docsRes.ok) {
+        setGeneratedDocuments((docsJson.rows as GeneratedDocumentRow[] | undefined) ?? []);
+      } else {
+        setGeneratedDocuments([]);
+      }
+    } catch {
+      setGeneratedDocuments([]);
+    } finally {
+      setGeneratedDocsLoading(false);
     }
     setPaymentsLoading(false);
   };
@@ -1600,9 +1635,106 @@ export default function DealsPage() {
   const closeView = () => {
     setViewDeal(null);
     setPayments([]);
+    setGeneratedDocuments([]);
+    setSelectedReceiptPaymentId("");
     setPaymentsError(null);
     setNewPaymentAmount("");
     setNewPaymentNote("");
+  };
+
+  const refetchGeneratedDocuments = async (dealId: string) => {
+    setGeneratedDocsLoading(true);
+    try {
+      const res = await fetch(`/api/contracts/generated?deal_id=${encodeURIComponent(dealId)}`, {
+        cache: "no-store",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setGeneratedDocuments((json.rows as GeneratedDocumentRow[] | undefined) ?? []);
+      }
+    } finally {
+      setGeneratedDocsLoading(false);
+    }
+  };
+
+  const downloadBlobResponse = async (res: Response) => {
+    const blob = await res.blob();
+    const cd = res.headers.get("content-disposition") || "";
+    const m = /filename="([^"]+)"/i.exec(cd);
+    const fileName = m?.[1] || "document.docx";
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleGenerateAgreement = async () => {
+    if (!viewDeal) return;
+    setIsGeneratingAgreement(true);
+    setPaymentsError(null);
+    try {
+      const res = await fetch("/api/contracts/generate-agreement", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deal_id: viewDeal.id }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error || "Failed to generate agreement");
+      }
+      await downloadBlobResponse(res);
+      await refetchGeneratedDocuments(viewDeal.id);
+    } catch (e) {
+      setPaymentsError(e instanceof Error ? e.message : "Failed to generate agreement");
+    } finally {
+      setIsGeneratingAgreement(false);
+    }
+  };
+
+  const handleGenerateReceipt = async () => {
+    if (!viewDeal || !selectedReceiptPaymentId) return;
+    setIsGeneratingReceipt(true);
+    setPaymentsError(null);
+    try {
+      const res = await fetch("/api/contracts/generate-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deal_id: viewDeal.id, payment_id: selectedReceiptPaymentId }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error || "Failed to generate receipt");
+      }
+      await downloadBlobResponse(res);
+      await refetchGeneratedDocuments(viewDeal.id);
+    } catch (e) {
+      setPaymentsError(e instanceof Error ? e.message : "Failed to generate receipt");
+    } finally {
+      setIsGeneratingReceipt(false);
+    }
+  };
+
+  const handleDownloadGenerated = async (id: string) => {
+    setDownloadingDocId(id);
+    setPaymentsError(null);
+    try {
+      const res = await fetch("/api/contracts/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ generated_document_id: id }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.url) throw new Error(j?.error || "Failed to get download URL");
+      window.open(j.url as string, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setPaymentsError(e instanceof Error ? e.message : "Failed to download document");
+    } finally {
+      setDownloadingDocId(null);
+    }
   };
 
   const handleAddPayment = async () => {
@@ -2848,6 +2980,76 @@ export default function DealsPage() {
               )}
 
               <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
+                {!isStaff ? (
+                  <div className="mb-3 rounded-md border border-app bg-[#fafafa] p-2">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Contract documents</div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleGenerateAgreement}
+                        disabled={isGeneratingAgreement}
+                        className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
+                      >
+                        {isGeneratingAgreement ? "Generating..." : "Generate Contract"}
+                      </button>
+                      <select
+                        value={selectedReceiptPaymentId}
+                        onChange={(e) => setSelectedReceiptPaymentId(e.target.value)}
+                        className="rounded-md border border-app bg-white px-2 py-1 text-[11px] text-app"
+                        disabled={payments.length === 0}
+                        title={payments.length === 0 ? "Cannot generate receipt before payment is recorded." : "Choose payment for receipt"}
+                      >
+                        {payments.length === 0 ? (
+                          <option value="">No payments</option>
+                        ) : (
+                          payments.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {formatDate(p.date ?? p.created_at)} - {formatMoney(paymentAmountDzd(p), "DZD")}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleGenerateReceipt}
+                        disabled={payments.length === 0 || !selectedReceiptPaymentId || isGeneratingReceipt}
+                        title={payments.length === 0 ? "Cannot generate receipt before payment is recorded." : ""}
+                        className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
+                      >
+                        {isGeneratingReceipt ? "Generating..." : "Generate Receipt"}
+                      </button>
+                    </div>
+
+                    <div className="mt-3">
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Generated Documents</div>
+                      {generatedDocsLoading ? (
+                        <div className="mt-1 text-[11px] text-muted">Loading generated documents...</div>
+                      ) : generatedDocuments.length === 0 ? (
+                        <div className="mt-1 text-[11px] text-muted">No generated documents yet.</div>
+                      ) : (
+                        <div className="mt-2 space-y-2">
+                          {generatedDocuments.map((doc) => (
+                            <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-app pb-2 text-[11px] last:border-b-0 last:pb-0">
+                              <div className="text-app">
+                                <span className="font-semibold">{doc.document_type}</span>{" "}
+                                <span className="text-muted">- {formatDate(doc.generated_at)}</span>{" "}
+                                <span className="text-muted">by {doc.generated_by_name || "Unknown"}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadGenerated(doc.id)}
+                                disabled={downloadingDocId === doc.id}
+                                className="rounded border border-app bg-white px-2 py-0.5 text-[10px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
+                              >
+                                {downloadingDocId === doc.id ? "Preparing..." : "Download Again"}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted">
                     Payment history

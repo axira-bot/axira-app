@@ -52,7 +52,7 @@ All placeholders use the format `{{placeholder_name}}`.
 | `{{total_contract_dzd}}` | Total contract amount in DZD | `deals.sale_amount` | currency |
 | `{{remaining_balance_dzd}}` | Outstanding balance | `deals.pending_dzd` | currency |
 
-## Conditional placeholders and section flags
+## Conditional placeholders and section flags (Docxtemplater syntax)
 
 | Name | Represents | Data source (Axira DB) | Type |
 |---|---|---|---|
@@ -60,7 +60,7 @@ All placeholders use the format `{{placeholder_name}}`.
 | `{{is_used}}` | Vehicle is used | derived from `cars.condition` | boolean |
 | `{{is_full_payment}}` | Full payment mode | derived from payment plan / `deals.pending_dzd == 0` | boolean |
 | `{{is_deposit}}` | Deposit + balance mode | derived from payment plan / `deals.pending_dzd > 0` | boolean |
-| `[IF BRAND NEW] ... [END IF]` | Include brand-new disclosure clause | generation logic from `{{is_brand_new}}` | conditional |
-| `[IF USED] ... [END IF]` | Include used/disclosed condition clause | generation logic from `{{is_used}}` | conditional |
-| `[IF FULL PAYMENT] ... [END IF]` | Include full-payment terms | generation logic from `{{is_full_payment}}` | conditional |
-| `[IF DEPOSIT] ... [END IF]` | Include deposit/balance terms | generation logic from `{{is_deposit}}` | conditional |
+| `{{#is_brand_new}} ... {{/is_brand_new}}` | Include brand-new disclosure clause | generation logic from `{{is_brand_new}}` | conditional |
+| `{{#is_used}} ... {{/is_used}}` | Include used/disclosed condition clause | generation logic from `{{is_used}}` | conditional |
+| `{{#is_full_payment}} ... {{/is_full_payment}}` | Include full-payment terms | generation logic from `{{is_full_payment}}` | conditional |
+| `{{#is_deposit}} ... {{/is_deposit}}` | Include deposit/balance terms | generation logic from `{{is_deposit}}` | conditional |
