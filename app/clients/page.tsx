@@ -16,6 +16,7 @@ import { logActivity } from "@/lib/activity";
 import { useAuth } from "@/lib/context/AuthContext";
 import { PaginatedTable } from "@/components/ui/paginated-table";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
+import { PageContainer } from "@/components/ui/page-container";
 
 type Client = {
   id: string;
@@ -310,7 +311,7 @@ export default function ClientsPage() {
 
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
+      <PageContainer size="xl">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
@@ -368,7 +369,7 @@ export default function ClientsPage() {
           ) : filteredClients.length === 0 ? (
             <div className="p-4 text-sm text-default-500">No clients found.</div>
           ) : (
-            <div className="w-full overflow-x-auto">
+            <div className="responsive-table-wrap">
               <PaginatedTable
                 rows={filteredClients}
                 rowKey={(row) => row.id}
@@ -419,7 +420,7 @@ export default function ClientsPage() {
           )}
           </Card.Content>
         </Card.Root>
-      </div>
+      </PageContainer>
 
       {/* Add/Edit Client Modal */}
       {isModalOpen && (

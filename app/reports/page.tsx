@@ -9,6 +9,7 @@ import { getRates, type AppRates } from "@/lib/rates";
 import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
 import { dealListSaleDzd } from "@/app/deals/dealFinanceHelpers";
 import { toAed, usdPerAedFromAppUsdSetting } from "@/lib/finance/dealMoney";
+import { PageContainer } from "@/components/ui/page-container";
 
 const ACCENT_RED = "C0392B";
 const WHITE = "FFFFFF";
@@ -925,7 +926,7 @@ export default function ReportsPage() {
 
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
+      <PageContainer size="xl">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Reports
@@ -1019,7 +1020,7 @@ export default function ReportsPage() {
                   <h3 className="border-b border-app px-4 py-3 text-sm font-semibold text-app">
                     Expenses breakdown (AED)
                   </h3>
-                  <div className="overflow-x-auto">
+                  <div className="responsive-table-wrap">
                     <table className="w-full text-left text-xs">
                       <thead className="border-b border-app text-muted">
                         <tr>
@@ -1080,8 +1081,8 @@ export default function ReportsPage() {
                   <h3 className="border-b border-app px-4 py-3 text-sm font-semibold text-app">
                     Deals with profit
                   </h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-[700px] w-full text-left text-xs">
+                  <div className="responsive-table-wrap">
+                    <table className="min-w-[620px] w-full text-left text-xs">
                       <thead className="border-b border-app text-muted">
                         <tr>
                           <th className="px-4 py-3">Client</th>
@@ -1169,8 +1170,8 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <div className="rounded-lg border border-app surface overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-[900px] w-full text-left text-xs">
+                  <div className="responsive-table-wrap">
+                    <table className="min-w-[620px] w-full text-left text-xs">
                       <thead className="border-b border-app text-muted">
                         <tr>
                           <th className="px-4 py-3">Brand</th>
@@ -1283,8 +1284,8 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <div className="rounded-lg border border-app surface overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-[1000px] w-full text-left text-xs">
+                  <div className="responsive-table-wrap">
+                    <table className="min-w-[640px] w-full text-left text-xs">
                       <thead className="border-b border-app text-muted">
                         <tr>
                           <th className="px-4 py-3">Client</th>
@@ -1439,8 +1440,8 @@ export default function ReportsPage() {
                   <h3 className="border-b border-app px-4 py-3 text-sm font-semibold text-app">
                     Movements
                   </h3>
-                  <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                    <table className="min-w-[800px] w-full text-left text-xs">
+                  <div className="responsive-table-wrap max-h-[400px] overflow-y-auto">
+                    <table className="min-w-[620px] w-full text-left text-xs">
                       <thead className="border-b border-app text-muted sticky top-0 surface">
                         <tr>
                           <th className="px-4 py-3">Date</th>
@@ -1484,7 +1485,7 @@ export default function ReportsPage() {
             )}
           </>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }

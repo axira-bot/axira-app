@@ -5,6 +5,7 @@ import { Alert, Button, Spinner } from "@heroui/react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { hasFeature } from "@/lib/auth/permissions";
 import type { FeatureKey, FeaturePermissions } from "@/lib/auth/featureKeys";
+import { PageContainer } from "@/components/ui/page-container";
 
 type CatalogRow = {
   id: string;
@@ -249,7 +250,8 @@ export default function SalesCatalogAdminPage() {
   }
 
   return (
-    <main className="min-h-full space-y-5 p-6" style={{ background: "var(--color-bg)" }}>
+    <main className="min-h-full" style={{ background: "var(--color-bg)" }}>
+      <PageContainer size="lg" className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold">Sales catalog (order on demand)</h1>
@@ -275,8 +277,8 @@ export default function SalesCatalogAdminPage() {
           <Spinner color="danger" />
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-app bg-panel">
-          <table className="w-full min-w-[720px] text-left text-sm">
+        <div className="responsive-table-wrap rounded-xl border border-app bg-panel">
+          <table className="w-full min-w-[620px] text-left text-sm">
             <thead className="border-b border-app bg-black/[0.02] text-xs uppercase text-default-500">
               <tr>
                 <th className="px-3 py-2">Vehicle</th>
@@ -410,6 +412,7 @@ export default function SalesCatalogAdminPage() {
           </div>
         </div>
       ) : null}
+      </PageContainer>
     </main>
   );
 }

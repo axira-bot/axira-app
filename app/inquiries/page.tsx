@@ -12,6 +12,7 @@ import {
   TextField,
 } from "@heroui/react";
 import { supabase } from "@/lib/supabase";
+import { PageContainer } from "@/components/ui/page-container";
 
 type Inquiry = {
   id: string;
@@ -172,7 +173,7 @@ export default function InquiriesPage() {
 
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
-      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 md:px-8">
+      <PageContainer size="md">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Inquiries</h1>
@@ -392,7 +393,7 @@ export default function InquiriesPage() {
             })
           )}
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 }

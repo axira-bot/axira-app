@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, Card, Chip, Input, Label, Spinner, TextField } from "@heroui/react";
 import { supabase } from "@/lib/supabase";
 import type { ActivityEntity } from "@/lib/activity";
 import { PaginatedTable } from "@/components/ui/paginated-table";
+import { PageContainer } from "@/components/ui/page-container";
+import { ResponsiveFilterBar } from "@/components/ui/responsive-filter-bar";
 
 type ActivityLogRow = {
   id: string;
@@ -123,7 +125,7 @@ export default function ActivityPage() {
 
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
-      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 md:px-8">
+      <PageContainer size="md">
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Activity Log</h1>
           <p className="text-sm font-medium text-danger">System activity in chronological order</p>
@@ -138,16 +140,17 @@ export default function ActivityPage() {
         ) : null}
 
         <Card.Root className="border border-default-200 shadow-sm">
-          <Card.Content className="flex flex-wrap items-end gap-4 pb-6">
-            <TextField name="dateFrom" type="date" value={dateFrom} onChange={setDateFrom} className="min-w-[160px]">
+          <Card.Content className="pb-6">
+            <ResponsiveFilterBar>
+            <TextField name="dateFrom" type="date" value={dateFrom} onChange={setDateFrom} className="w-full md:col-span-3">
               <Label className="text-xs text-default-500">From</Label>
               <Input className="text-sm" />
             </TextField>
-            <TextField name="dateTo" type="date" value={dateTo} onChange={setDateTo} className="min-w-[160px]">
+            <TextField name="dateTo" type="date" value={dateTo} onChange={setDateTo} className="w-full md:col-span-3">
               <Label className="text-xs text-default-500">To</Label>
               <Input className="text-sm" />
             </TextField>
-            <div className="flex min-w-[180px] flex-col gap-1">
+            <div className="flex w-full flex-col gap-1 md:col-span-4">
               <Label className="text-xs text-default-500">Type</Label>
               <select
                 value={entityFilter}
@@ -161,6 +164,7 @@ export default function ActivityPage() {
                 ))}
               </select>
             </div>
+            </ResponsiveFilterBar>
           </Card.Content>
         </Card.Root>
 
@@ -174,7 +178,7 @@ export default function ActivityPage() {
             ) : rows.length === 0 ? (
               <div className="p-6 text-sm text-default-500">No activity in this range.</div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="responsive-table-wrap">
                 <PaginatedTable
                   rows={rows}
                   rowKey={(row) => row.id}
@@ -223,7 +227,7 @@ export default function ActivityPage() {
             )}
           </Card.Content>
         </Card.Root>
-      </div>
+      </PageContainer>
     </div>
   );
 }

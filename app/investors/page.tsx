@@ -624,8 +624,8 @@ export default function InvestorsPage() {
                 Loading...
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-app surface">
-                <table className="min-w-[700px] w-full text-left text-sm">
+              <div className="responsive-table-wrap rounded-lg border border-app surface">
+                <table className="min-w-[620px] w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-app text-muted">
                       <th className="px-4 py-3 font-semibold">Name</th>
@@ -731,8 +731,8 @@ export default function InvestorsPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-app surface">
-              <table className="min-w-[680px] w-full text-left text-sm">
+            <div className="responsive-table-wrap rounded-lg border border-app surface">
+              <table className="min-w-[620px] w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-app text-muted">
                     <th className="px-4 py-3 font-semibold">Month</th>

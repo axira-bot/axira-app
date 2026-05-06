@@ -14,6 +14,8 @@ import { supabase } from "@/lib/supabase/client";
 import { FEATURE_KEYS, type FeatureKey } from "@/lib/auth/featureKeys";
 import { PaginatedTable } from "@/components/ui/paginated-table";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
+import { PageContainer } from "@/components/ui/page-container";
+import { ResponsiveFilterBar } from "@/components/ui/responsive-filter-bar";
 
 type UserRow = {
   id: string;
@@ -98,7 +100,7 @@ export default function AdminUsersPage() {
       setTotal(Number(data.total || 0));
     }
     setLoading(false);
-  }, [page]);
+  }, [page, pageSize]);
 
   useEffect(() => {
     const run = async () => {
@@ -276,7 +278,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
-      <div className="mx-auto max-w-4xl px-4 py-6 md:px-8">
+      <PageContainer size="md">
         <header className="mb-6 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
@@ -307,14 +309,15 @@ export default function AdminUsersPage() {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-default-500">
             Add user
           </h2>
-          <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-4">
+          <form onSubmit={handleAdd}>
+            <ResponsiveFilterBar>
             <TextField
               name="addEmail"
               type="email"
               value={addEmail}
               onChange={setAddEmail}
               isRequired
-              className="min-w-[180px]"
+              className="w-full md:col-span-4"
             >
               <Label className="text-xs text-default-500">Email</Label>
               <Input className="text-sm" placeholder="user@company.com" />
@@ -324,12 +327,12 @@ export default function AdminUsersPage() {
               value={addName}
               onChange={setAddName}
               isRequired
-              className="min-w-[180px]"
+              className="w-full md:col-span-4"
             >
               <Label className="text-xs text-default-500">Full name (required)</Label>
               <Input className="text-sm" placeholder="Full name" />
             </TextField>
-            <div className="flex flex-col gap-1">
+            <div className="flex w-full flex-col gap-1 md:col-span-2">
               <Label className="text-xs text-default-500">Role</Label>
               <select
                 value={addRole}
@@ -348,7 +351,7 @@ export default function AdminUsersPage() {
               </select>
             </div>
             {(addRole === "staff" || addRole === "manager") && (
-              <div className="flex min-w-[180px] flex-col gap-1">
+              <div className="flex w-full flex-col gap-1 md:col-span-4">
                 <Label className="text-xs text-default-500">Employee (optional)</Label>
                 <select
                   value={addEmployeeId}
@@ -365,7 +368,7 @@ export default function AdminUsersPage() {
               </div>
             )}
             {addRole === "investor" && (
-              <div className="flex min-w-[180px] flex-col gap-1">
+              <div className="flex w-full flex-col gap-1 md:col-span-4">
                 <Label className="text-xs text-default-500">Investor (optional)</Label>
                 <select
                   value={addInvestorId}
@@ -386,14 +389,15 @@ export default function AdminUsersPage() {
               type="password"
               value={addPassword}
               onChange={setAddPassword}
-              className="min-w-[160px]"
+              className="w-full md:col-span-3"
             >
               <Label className="text-xs text-default-500">Password (optional, min 6)</Label>
               <Input className="text-sm" placeholder="Leave blank for invite" minLength={6} />
             </TextField>
-            <Button type="submit" variant="primary" size="sm" isDisabled={adding}>
+            <Button type="submit" variant="primary" size="sm" isDisabled={adding} className="w-full md:col-span-2 md:w-auto">
               {adding ? "Adding…" : "Add user"}
             </Button>
+            </ResponsiveFilterBar>
           </form>
           {addError ? (
             <Alert.Root status="danger">
@@ -412,7 +416,7 @@ export default function AdminUsersPage() {
           {users.length === 0 ? (
             <div className="p-6 text-sm text-gray-400">No users yet.</div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="responsive-table-wrap">
               <PaginatedTable
                 rows={users}
                 rowKey={(row) => row.id}
@@ -490,7 +494,7 @@ export default function AdminUsersPage() {
             </div>
           )}
         </Card.Root>
-      </div>
+      </PageContainer>
 
       {resetUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

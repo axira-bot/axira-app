@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Card, Spinner } from "@heroui/react";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
+import { PageContainer } from "@/components/ui/page-container";
 
 type Employee = {
   id: string;
@@ -233,7 +234,7 @@ export default function PayrollPage() {
 
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
-      <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
+      <PageContainer size="lg">
         <header className="mb-5">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Payroll</h1>
           <p className="text-sm text-danger">Salary + commissions (DZD)</p>
@@ -333,8 +334,8 @@ export default function PayrollPage() {
           </Card.Root>
         ) : (
           <Card.Root className="overflow-hidden border border-default-200 shadow-sm">
-          <Card.Content className="overflow-x-auto p-0">
-            <table className="min-w-[780px] w-full text-left text-sm">
+          <Card.Content className="responsive-table-wrap p-0">
+            <table className="min-w-[620px] w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-app text-muted">
                   <th className="px-4 py-3 font-semibold">Employee</th>
@@ -379,7 +380,7 @@ export default function PayrollPage() {
           </Card.Content>
           </Card.Root>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }

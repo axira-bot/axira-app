@@ -11,6 +11,7 @@ import PreorderDealModal from "@/components/preorders/PreorderDealModal";
 import type { PreorderForm } from "@/components/preorders/types";
 import { useAuth } from "@/lib/context/AuthContext";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
+import { PageContainer } from "@/components/ui/page-container";
 import { getRates, type AppRates } from "@/lib/rates";
 import {
   aedToCurrency,
@@ -1915,7 +1916,7 @@ export default function DealsPage() {
 
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
+      <PageContainer size="xl">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Deals</h1>
@@ -1979,15 +1980,15 @@ export default function DealsPage() {
         )}
 
         <div className="rounded-lg border border-app surface p-3">
-          <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="grid gap-3 md:grid-cols-12 md:items-center">
             <input
               type="text"
               value={customerSearchInput}
               onChange={(e) => setCustomerSearchInput(e.target.value)}
               placeholder="Search customer name, passport, or phone"
-              className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+              className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app md:col-span-9"
             />
-            <div className="text-xs font-semibold text-muted">
+            <div className="text-xs font-semibold text-muted md:col-span-3 md:text-right">
               Results: <span className="text-app">{filteredDeals.length}</span>
             </div>
           </div>
@@ -2017,8 +2018,8 @@ export default function DealsPage() {
             <div className="p-4 text-sm text-muted">No deals found.</div>
           ) : (
             <>
-            <div className="w-full overflow-x-auto">
-              <table className="min-w-[680px] w-full text-left text-xs">
+            <div className="responsive-table-wrap">
+              <table className="min-w-[620px] w-full text-left text-xs">
                 <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     <th className="px-4 py-3">Client</th>
@@ -2242,7 +2243,7 @@ export default function DealsPage() {
             </>
           )}
         </div>
-      </div>
+      </PageContainer>
 
       {/* Add/Edit Modal */}
       {isModalOpen ? (

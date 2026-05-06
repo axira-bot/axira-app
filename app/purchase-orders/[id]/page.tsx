@@ -365,7 +365,7 @@ export default function PurchaseOrderDetailPage() {
                 <input className={`${inputCls} md:col-span-8`} placeholder="Notes" value={itemForm.notes} onChange={(e) => setItemForm((p) => ({ ...p, notes: e.target.value }))} />
               </form>
             )}
-            <div className="overflow-x-auto">
+            <div className="responsive-table-wrap">
               <table className="min-w-full text-sm">
                 <thead className="bg-black/5 text-xs uppercase text-muted">
                   <tr>
@@ -467,7 +467,7 @@ export default function PurchaseOrderDetailPage() {
                 <input className={`${inputCls} md:col-span-7`} placeholder="Notes" value={paymentForm.notes} onChange={(e) => setPaymentForm((p) => ({ ...p, notes: e.target.value }))} />
               </form>
             )}
-            <div className="overflow-x-auto">
+            <div className="responsive-table-wrap">
               <table className="min-w-full text-sm">
                 <thead className="bg-black/5 text-xs uppercase text-muted">
                   <tr>

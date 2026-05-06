@@ -33,6 +33,11 @@
   --font-brand:          "Orbitron", sans-serif;
   --font-heading:        "Inter", sans-serif;
   --font-body:           "Inter", sans-serif;
+  --layout-content-max:  1280px;
+  --layout-content-pad:  clamp(0.875rem, 2vw, 1.5rem);
+  --layout-content-gap:  clamp(1rem, 2.2vw, 1.5rem);
+  --layout-section-y:    clamp(1rem, 2vw, 1.5rem);
+  --layout-radius:       14px;
 }
 
 @theme inline {
@@ -47,6 +52,7 @@ body {
   color: var(--color-text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 h1, h2, h3, h4, h5, h6, .font-heading {
@@ -180,5 +186,56 @@ table tbody td {
   padding: 0.85rem 1rem;
   font-size: 0.875rem;
   color: var(--color-text);
+}
+
+.app-page {
+  width: 100%;
+  min-width: 0;
+  padding-inline: var(--layout-content-pad);
+  padding-block: var(--layout-section-y);
+}
+
+.app-page-content {
+  width: 100%;
+  /* max-width: var(--layout-content-max); */
+  min-width: 0;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--layout-content-gap);
+}
+
+.app-page-sm { --layout-content-max: 896px; }
+.app-page-md { --layout-content-max: 1024px; }
+.app-page-lg { --layout-content-max: 1152px; }
+.app-page-xl { --layout-content-max: 1280px; }
+
+.responsive-filter-bar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.responsive-filter-bar > * {
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .responsive-filter-bar {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 0.875rem;
+  }
+}
+
+.responsive-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--layout-radius);
+  -webkit-overflow-scrolling: touch;
+}
+
+.responsive-table-wrap table {
+  min-width: min(100%, 640px);
 }
 

@@ -76,7 +76,7 @@ export default function Header() {
 
   return (
     <header
-      className="hidden h-16 shrink-0 items-center justify-between px-6 md:flex"
+      className="sticky top-0 z-20 hidden h-16 shrink-0 items-center justify-between px-4 lg:px-6 md:flex"
       style={{
         background: "var(--color-surface)",
         borderBottom: "1px solid var(--color-border)",
