@@ -583,11 +583,11 @@ export default function PurchaseOrderDetailPage() {
                                     {lifecycle.replace(/_/g, " ")}
                                   </Chip>
                                   {validated ? (
-                                    <Chip size="sm" color="success" variant="flat" className="h-5 text-[9px]">
+                                    <Chip size="sm" color="success" variant="soft" className="h-5 text-[9px]">
                                       VIN ✓
                                     </Chip>
                                   ) : (
-                                    <Chip size="sm" color="warning" variant="flat" className="h-5 text-[9px]">
+                                    <Chip size="sm" color="warning" variant="soft" className="h-5 text-[9px]">
                                       VIN pending
                                     </Chip>
                                   )}
