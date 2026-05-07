@@ -3,6 +3,7 @@ import path from "node:path";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { loadCompanySettingsOrThrow, type CompanySettings } from "@/lib/contracts/companySettings";
 
 type TemplateType = "agreement" | "receipt";
 
@@ -18,6 +19,7 @@ type LoadedData = {
   car: Record<string, unknown> | null;
   customSpec: Record<string, unknown> | null;
   payment: Record<string, unknown> | null;
+  company: CompanySettings;
 };
 
 function pickTemplatePath(type: TemplateType) {
@@ -143,11 +145,12 @@ async function loadData({ admin, dealId, paymentId }: GenerateInput): Promise<Lo
       ? admin.from("payments").select("*").eq("id", paymentId).eq("deal_id", dealId).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
-  return { deal, client, car, customSpec, payment: paymentResult.data };
+  const company = await loadCompanySettingsOrThrow(admin);
+  return { deal, client, car, customSpec, payment: paymentResult.data, company };
 }
 
 function buildContext(type: TemplateType, loaded: LoadedData) {
-  const { deal, client, car, customSpec, payment } = loaded;
+  const { deal, client, car, customSpec, payment, company } = loaded;
   const saleAmount = pickNumber(deal, "sale_amount", 0);
   const totalPaid = pickNumber(deal, "collected_dzd", 0);
   const pending = pickNumber(deal, "pending_dzd", Math.max(saleAmount - totalPaid, 0));
@@ -184,18 +187,22 @@ function buildContext(type: TemplateType, loaded: LoadedData) {
   const receiptReference = `AX-RCP-${String(deal.id).slice(0, 8)}-${seq}`;
 
   return {
-    fze_license_number: nullable(process.env.AXIRA_FZE_LICENSE_NUMBER, fallbackTbc),
-    fze_address: nullable(process.env.AXIRA_FZE_ADDRESS, fallbackFr),
-    auto_license_number: nullable(process.env.AXIRA_AUTO_LICENSE_NUMBER, fallbackTbc),
-    auto_address: nullable(process.env.AXIRA_AUTO_ADDRESS, fallbackFr),
+    fze_license_number: company.fze_license_number,
+    fze_address: company.fze_address,
+    auto_license_number: company.auto_license_number,
+    auto_address: company.auto_address,
     contract_reference: toPaddedDealRef(String(deal.id)),
     contract_date: nullable(deal.date, new Date().toISOString().slice(0, 10)),
     receipt_reference: receiptReference,
     receipt_date: nullable(payment?.date, new Date().toISOString().slice(0, 10)),
-    fze_representative: nullable(process.env.AXIRA_FZE_REPRESENTATIVE, fallbackFr),
-    fze_position: nullable(process.env.AXIRA_FZE_POSITION, fallbackFr),
-    auto_representative: nullable(process.env.AXIRA_AUTO_REPRESENTATIVE, fallbackFr),
-    auto_position: nullable(process.env.AXIRA_AUTO_POSITION, fallbackFr),
+    fze_representative: company.fze_representative,
+    fze_position: company.fze_position,
+    auto_representative: company.auto_representative,
+    auto_position: company.auto_position,
+    fze_phone: company.fze_phone,
+    fze_email: company.fze_email,
+    auto_phone: company.auto_phone,
+    auto_email: company.auto_email,
     client_full_name: nullable(client?.name ?? deal.client_name, fallbackFr),
     client_id_number: nullable(client?.passport_number, fallbackTbc),
     client_id_issue_date: nullable(client?.created_at, fallbackFr),
@@ -208,7 +215,7 @@ function buildContext(type: TemplateType, loaded: LoadedData) {
     vehicle_year: vehicleYear,
     vehicle_trim: vehicleTrim,
     vehicle_exterior_color: vehicleColor,
-    vehicle_interior_color: fallbackFr,
+    vehicle_interior_color: nullable(car?.interior_color, fallbackFr),
     vehicle_mileage: nullable(car?.mileage, fallbackFr),
     vehicle_vin: vin,
     vehicle_engine: nullable(car?.engine, fallbackFr),

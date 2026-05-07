@@ -4,18 +4,22 @@ All placeholders use the format `{{placeholder_name}}`.
 
 | Name | Represents | Data source (Axira DB) | Type |
 |---|---|---|---|
-| `{{fze_license_number}}` | AXIRA TRADING FZE license number | static/company profile (not in current core tables) | string |
-| `{{fze_address}}` | AXIRA TRADING FZE address | static/company profile (not in current core tables) | string |
-| `{{auto_license_number}}` | AXIRA AUTO Algeria license number | static/company profile (not in current core tables) | string |
-| `{{auto_address}}` | AXIRA AUTO Algeria address | static/company profile (not in current core tables) | string |
+| `{{fze_license_number}}` | AXIRA TRADING FZE license number | `company_settings.fze_license_number` | string |
+| `{{fze_address}}` | AXIRA TRADING FZE address | `company_settings.fze_address` | string |
+| `{{auto_license_number}}` | AXIRA AUTO Algeria license number | `company_settings.auto_license_number` | string |
+| `{{auto_address}}` | AXIRA AUTO Algeria address | `company_settings.auto_address` | string |
 | `{{contract_reference}}` | Contract reference number | generated from `deals.id` (or document sequence) | string |
 | `{{contract_date}}` | Contract signature date | `deals.date` | date |
 | `{{receipt_reference}}` | Receipt reference number | generated from payment movement / `deals.id` | string |
 | `{{receipt_date}}` | Receipt issue date | payment movement date (or generation date) | date |
-| `{{fze_representative}}` | FZE authorized signatory name | static/company profile or `users.full_name` | string |
-| `{{fze_position}}` | FZE representative position | static/company profile | string |
-| `{{auto_representative}}` | Axira Auto representative name | static/company profile or local staff table | string |
-| `{{auto_position}}` | Axira Auto representative position | static/company profile | string |
+| `{{fze_representative}}` | FZE authorized signatory name | `company_settings.fze_representative` | string |
+| `{{fze_position}}` | FZE representative position | `company_settings.fze_position` | string |
+| `{{auto_representative}}` | Axira Auto representative name | `company_settings.auto_representative` | string |
+| `{{auto_position}}` | Axira Auto representative position | `company_settings.auto_position` | string |
+| `{{fze_phone}}` | AXIRA TRADING FZE phone in header/footer contacts | `company_settings.fze_phone` | string |
+| `{{fze_email}}` | AXIRA TRADING FZE email in header/footer contacts | `company_settings.fze_email` | string |
+| `{{auto_phone}}` | AXIRA AUTO Algeria phone in header/footer contacts | `company_settings.auto_phone` | string |
+| `{{auto_email}}` | AXIRA AUTO Algeria email in header/footer contacts | `company_settings.auto_email` | string |
 | `{{client_full_name}}` | Client full name | `clients.name` (fallback `deals.client_name`) | string |
 | `{{client_id_number}}` | Client passport/ID number | client KYC field (outside current shared types) | string |
 | `{{client_id_issue_date}}` | ID issuance date | client KYC field | date |
@@ -64,3 +68,8 @@ All placeholders use the format `{{placeholder_name}}`.
 | `{{#is_used}} ... {{/is_used}}` | Include used/disclosed condition clause | generation logic from `{{is_used}}` | conditional |
 | `{{#is_full_payment}} ... {{/is_full_payment}}` | Include full-payment terms | generation logic from `{{is_full_payment}}` | conditional |
 | `{{#is_deposit}} ... {{/is_deposit}}` | Include deposit/balance terms | generation logic from `{{is_deposit}}` | conditional |
+
+## Template font stack
+
+- Latin text: `Helvetica` primary, `Arial` fallback.
+- Arabic text: `Traditional Arabic` (compatible with Word for macOS and Windows), `Sakkal Majalla` acceptable alternative where installed.

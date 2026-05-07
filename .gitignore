@@ -46,3 +46,4 @@ axira-drive-bot/*.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+tmp/

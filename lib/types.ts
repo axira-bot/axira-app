@@ -50,6 +50,7 @@ export interface Car {
   doors?: number | null;
   seats?: number | null;
   grade?: string | null;
+  interior_color?: string | null;
   body_issues?: string | null;
   display_status?: string | null;   // 'available' | 'in_transit' | 'sold' (auto-computed)
   status_override?: string | null;  // null = auto | 'available' | 'in_transit' | 'sold'

@@ -32,6 +32,14 @@ import {
   withDealSaleRateDashboardFallback,
   type DealExpenseRow,
 } from "@/app/deals/dealFinanceHelpers";
+import PreGenerationModal from "@/components/contracts/PreGenerationModal";
+import {
+  DEFAULT_MODAL_VALUES,
+  buildValidationSchema,
+  type DocumentMode,
+  type ModalFormValues,
+  type PrefillMeta,
+} from "@/lib/contracts/modalFields";
 
 const InvoiceDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.InvoiceDownloadButton),
@@ -286,6 +294,13 @@ export default function DealsPage() {
   const [isGeneratingAgreement, setIsGeneratingAgreement] = useState(false);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
+  const [showPreGenModal, setShowPreGenModal] = useState(false);
+  const [preGenMode, setPreGenMode] = useState<DocumentMode>("agreement");
+  const [preGenValues, setPreGenValues] = useState<ModalFormValues>(DEFAULT_MODAL_VALUES);
+  const [preGenMeta, setPreGenMeta] = useState<PrefillMeta>({ dealSource: null, hasCarId: false });
+  const [preGenErrors, setPreGenErrors] = useState<Partial<Record<keyof ModalFormValues, string>>>({});
+  const [preGenLoading, setPreGenLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [lifecycleSaving, setLifecycleSaving] = useState(false);
   const [isDummyDocsOpen, setIsDummyDocsOpen] = useState(false);
   const [dummyDocs, setDummyDocs] = useState<DummyDocRow[]>([]);
@@ -1672,48 +1687,96 @@ export default function DealsPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleGenerateAgreement = async () => {
+  const validatePreGen = (mode: DocumentMode, values: ModalFormValues, meta: PrefillMeta) => {
+    const parsed = buildValidationSchema(mode, meta).safeParse(values);
+    if (parsed.success) {
+      setPreGenErrors({});
+      return true;
+    }
+    const errors = parsed.error.flatten().fieldErrors;
+    setPreGenErrors(
+      Object.fromEntries(
+        Object.entries(errors)
+          .filter(([, v]) => (v || []).length > 0)
+          .map(([k, v]) => [k as keyof ModalFormValues, (v || [])[0] || "Invalid"])
+      )
+    );
+    return false;
+  };
+
+  const openPreGenerationModal = async (mode: DocumentMode) => {
     if (!viewDeal) return;
-    setIsGeneratingAgreement(true);
+    if (mode === "receipt" && !selectedReceiptPaymentId) return;
     setPaymentsError(null);
+    setSuccessMessage(null);
+    setPreGenLoading(true);
     try {
-      const res = await fetch("/api/contracts/generate-agreement", {
+      const res = await fetch("/api/contracts/prefill", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deal_id: viewDeal.id }),
+        body: JSON.stringify({
+          mode,
+          deal_id: viewDeal.id,
+          payment_id: mode === "receipt" ? selectedReceiptPaymentId : undefined,
+        }),
       });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || "Failed to generate agreement");
-      }
-      await downloadBlobResponse(res);
-      await refetchGeneratedDocuments(viewDeal.id);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Failed to load prefill data");
+      setPreGenMode(mode);
+      setPreGenValues({ ...DEFAULT_MODAL_VALUES, ...(json.values || {}) });
+      setPreGenMeta(
+        (json.meta as PrefillMeta | undefined) || { dealSource: String(viewDeal.source || "").toUpperCase() || null, hasCarId: Boolean(viewDeal.car_id) }
+      );
+      setPreGenErrors({});
+      setShowPreGenModal(true);
     } catch (e) {
-      setPaymentsError(e instanceof Error ? e.message : "Failed to generate agreement");
+      setPaymentsError(e instanceof Error ? e.message : "Failed to open pre-generation modal");
     } finally {
-      setIsGeneratingAgreement(false);
+      setPreGenLoading(false);
     }
   };
 
-  const handleGenerateReceipt = async () => {
-    if (!viewDeal || !selectedReceiptPaymentId) return;
-    setIsGeneratingReceipt(true);
+  const handleGenerateFromModal = async () => {
+    if (!viewDeal) return;
+    const ok = validatePreGen(preGenMode, preGenValues, preGenMeta);
+    if (!ok) return;
+    if (preGenMode === "agreement") setIsGeneratingAgreement(true);
+    else setIsGeneratingReceipt(true);
     setPaymentsError(null);
+    setSuccessMessage(null);
     try {
-      const res = await fetch("/api/contracts/generate-receipt", {
+      const res = await fetch("/api/contracts/prepare-and-generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deal_id: viewDeal.id, payment_id: selectedReceiptPaymentId }),
+        body: JSON.stringify({
+          mode: preGenMode,
+          deal_id: viewDeal.id,
+          payment_id: preGenMode === "receipt" ? selectedReceiptPaymentId : undefined,
+          values: preGenValues,
+          meta: preGenMeta,
+        }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || "Failed to generate receipt");
+        if (j?.field_errors) {
+          const serverErrors = Object.fromEntries(
+            Object.entries(j.field_errors as Record<string, string[]>)
+              .filter(([, v]) => (v || []).length > 0)
+              .map(([k, v]) => [k as keyof ModalFormValues, (v || [])[0]])
+          );
+          setPreGenErrors(serverErrors);
+        }
+        throw new Error(j?.error || "Failed to generate document");
       }
       await downloadBlobResponse(res);
       await refetchGeneratedDocuments(viewDeal.id);
+      await fetchAll();
+      setShowPreGenModal(false);
+      setSuccessMessage(preGenMode === "agreement" ? "Contract generated and data saved" : "Receipt generated and data saved");
     } catch (e) {
-      setPaymentsError(e instanceof Error ? e.message : "Failed to generate receipt");
+      setPaymentsError(e instanceof Error ? e.message : "Failed to generate document");
     } finally {
+      setIsGeneratingAgreement(false);
       setIsGeneratingReceipt(false);
     }
   };
@@ -2136,6 +2199,13 @@ export default function DealsPage() {
           <Alert.Root status="danger">
             <Alert.Content>
               <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
+        {successMessage ? (
+          <Alert.Root status="success">
+            <Alert.Content>
+              <Alert.Description>{successMessage}</Alert.Description>
             </Alert.Content>
           </Alert.Root>
         ) : null}
@@ -2986,8 +3056,8 @@ export default function DealsPage() {
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        onClick={handleGenerateAgreement}
-                        disabled={isGeneratingAgreement}
+                        onClick={() => openPreGenerationModal("agreement")}
+                        disabled={isGeneratingAgreement || preGenLoading}
                         className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
                       >
                         {isGeneratingAgreement ? "Generating..." : "Generate Contract"}
@@ -3011,8 +3081,8 @@ export default function DealsPage() {
                       </select>
                       <button
                         type="button"
-                        onClick={handleGenerateReceipt}
-                        disabled={payments.length === 0 || !selectedReceiptPaymentId || isGeneratingReceipt}
+                        onClick={() => openPreGenerationModal("receipt")}
+                        disabled={payments.length === 0 || !selectedReceiptPaymentId || isGeneratingReceipt || preGenLoading}
                         title={payments.length === 0 ? "Cannot generate receipt before payment is recorded." : ""}
                         className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
                       >
@@ -3275,6 +3345,30 @@ export default function DealsPage() {
           </div>
         </div>
       )}
+
+      <PreGenerationModal
+        open={showPreGenModal}
+        mode={preGenMode}
+        meta={preGenMeta}
+        values={preGenValues}
+        errors={preGenErrors}
+        isGenerating={isGeneratingAgreement || isGeneratingReceipt}
+        canGenerate={buildValidationSchema(preGenMode, preGenMeta).safeParse(preGenValues).success}
+        onClose={() => {
+          if (isGeneratingAgreement || isGeneratingReceipt) return;
+          setShowPreGenModal(false);
+        }}
+        onChange={(key, value) => {
+          setPreGenValues((prev) => ({ ...prev, [key]: value }));
+          setPreGenErrors((prev) => {
+            if (!prev[key]) return prev;
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          });
+        }}
+        onGenerate={handleGenerateFromModal}
+      />
 
       <PreorderDealModal
         open={isPreorderModalOpen}

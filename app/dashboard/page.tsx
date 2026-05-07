@@ -133,6 +133,7 @@ function StaffBlurGate({
 export default function DashboardPage() {
   const { role, permissions } = useAuth();
   const isStaff = role === "staff";
+  const isOwner = role === "owner";
   const activityLogHref = permissions.audit_log ? "/audit" : "/activity";
 
   const [isLoading, setIsLoading] = useState(true);
@@ -172,6 +173,7 @@ export default function DashboardPage() {
   const [editingPocketId, setEditingPocketId] = useState<string | null>(null);
   const [editingAmount, setEditingAmount] = useState<string>("");
   const [updatingPocketId, setUpdatingPocketId] = useState<string | null>(null);
+  const [showCompanySettingsBanner, setShowCompanySettingsBanner] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -304,6 +306,22 @@ export default function DashboardPage() {
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!isOwner) return;
+    const checkCompanySettings = async () => {
+      try {
+        const response = await fetch("/api/settings/company", { cache: "no-store" });
+        const json = (await response.json().catch(() => ({}))) as {
+          is_complete?: boolean;
+        };
+        setShowCompanySettingsBanner(!json?.is_complete);
+      } catch {
+        setShowCompanySettingsBanner(false);
+      }
+    };
+    void checkCompanySettings();
+  }, [isOwner]);
 
   const totalAed = cashPositions
     .filter((p) => p.currency === "AED")
@@ -772,6 +790,18 @@ export default function DashboardPage() {
           <Alert.Root status="danger">
             <Alert.Content>
               <Alert.Description>{error}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
+        {isOwner && showCompanySettingsBanner ? (
+          <Alert.Root status="warning">
+            <Alert.Content>
+              <Alert.Description>
+                ⚠️ Complete company settings before generating contracts.{" "}
+                <Link href="/settings/company" className="underline">
+                  Open settings
+                </Link>
+              </Alert.Description>
             </Alert.Content>
           </Alert.Root>
         ) : null}
