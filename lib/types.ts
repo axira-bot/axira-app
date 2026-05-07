@@ -62,6 +62,8 @@ export interface Car {
   sales_internal_note?: string | null;
   sales_cost_estimate_dzd?: number | null;
   inventory_lifecycle_status?: string | null;
+  /** Canonical physical lifecycle (owner/manager; audited). */
+  lifecycle_status?: string | null;
   linked_deal_id?: string | null;
   supplier_id?: string | null;
   supplier_catalog_id?: string | null;

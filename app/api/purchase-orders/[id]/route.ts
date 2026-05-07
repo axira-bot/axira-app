@@ -33,7 +33,12 @@ export async function GET(
         .eq("purchase_order_id", id)
         .order("date", { ascending: false }),
       admin.from("purchase_order_item_cars").select("purchase_order_item_id, car_id").order("created_at", { ascending: true }),
-      admin.from("cars").select("id, purchase_order_item_id, vin, status, inventory_lifecycle_status").eq("purchase_order_id", id),
+      admin
+        .from("cars")
+        .select(
+          "id, purchase_order_item_id, vin, status, inventory_lifecycle_status, lifecycle_status, vin_validated_at, vin_validated_by"
+        )
+        .eq("purchase_order_id", id),
     ]);
     let po = poWithSupplier;
     let poErr = poWithSupplierErr;
@@ -51,7 +56,9 @@ export async function GET(
       if (msg.includes("schema cache")) {
         const fallbackCars = await admin
           .from("cars")
-          .select("id, purchase_order_item_id, vin, status")
+          .select(
+            "id, purchase_order_item_id, vin, status, lifecycle_status, vin_validated_at, vin_validated_by"
+          )
           .eq("purchase_order_id", id);
         if (!fallbackCars.error) {
           linkedCars = ((fallbackCars.data as Array<Record<string, unknown>> | null) ?? []).map((c) => ({

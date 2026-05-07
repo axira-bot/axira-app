@@ -57,24 +57,26 @@ export async function POST(
     }
 
     const vinAssignments = Array.isArray(body.vin_assignments) ? body.vin_assignments : [];
-    for (const assignment of vinAssignments) {
-      if (!assignment?.car_id || !assignment?.vin?.trim()) continue;
-      const { error: vinErr } = await admin
-        .from("cars")
-        .update({
-          vin: assignment.vin.trim(),
-          inventory_lifecycle_status: "READY_TO_SHIP",
-          status: "in_transit",
-        })
-        .eq("id", assignment.car_id)
-        .in("id", carIds);
-      if (vinErr) return NextResponse.json({ error: vinErr.message }, { status: 400 });
+    if (carIds.length) {
+      for (const assignment of vinAssignments) {
+        if (!assignment?.car_id || !assignment?.vin?.trim()) continue;
+        const { error: vinErr } = await admin
+          .from("cars")
+          .update({
+            vin: assignment.vin.trim(),
+            inventory_lifecycle_status: "READY_TO_SHIP",
+            status: "in_transit",
+          })
+          .eq("id", assignment.car_id)
+          .in("id", carIds);
+        if (vinErr) return NextResponse.json({ error: vinErr.message }, { status: 400 });
 
-      await admin
-        .from("deals")
-        .update({ status: "pending" })
-        .eq("car_id", assignment.car_id)
-        .in("status", ["pending", "ordered", "processing"]);
+        await admin
+          .from("deals")
+          .update({ status: "pending" })
+          .eq("car_id", assignment.car_id)
+          .in("status", ["pending", "ordered", "processing"]);
+      }
     }
 
     const [{ data: remainingTransit }, { error: poErr }] = await Promise.all([

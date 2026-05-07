@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Button, Spinner } from "@heroui/react";
+import { Alert, Button, Chip, Spinner } from "@heroui/react";
 import type { Car } from "@/lib/types";
+import {
+  CAR_LIFECYCLE_STATUSES,
+  isCarLifecycleStatus,
+  type CarLifecycleStatus,
+} from "@/lib/cars/carLifecycleStatus";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -134,6 +139,18 @@ type StockTypeTab = "axira" | "supplier";
 type FilterTab = "All" | "Dubai" | "Algeria" | "In Transit" | "Sold";
 type ConditionTab = "brand_new" | "used";
 
+const CAR_AUDIT_PAGE = 20;
+
+type CarAuditLogRowUi = {
+  id: string;
+  field_name: string;
+  old_value: string | null;
+  new_value: string;
+  changed_by: string | null;
+  changed_at: string;
+  reason: string | null;
+};
+
 function normalizeCondition(condition: string | null | undefined): string {
   return (condition || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
@@ -174,12 +191,18 @@ function PublishedBadge({ published }: { published: boolean | null | undefined }
   );
 }
 
+function coerceInventoryLifecycle(s: string | null | undefined): CarLifecycleStatus {
+  const v = String(s ?? "").trim();
+  return isCarLifecycleStatus(v) ? v : "ORDERED";
+}
+
 const inputCls = "w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]";
 const labelCls = "space-y-1 text-xs text-app";
 
 export default function InventoryPage() {
   const { canDelete, isInvestorReadOnly, isOwnerLike, isManager } = useAuth();
   const canEditSalesListMeta = isOwnerLike || isManager;
+  const canEditLifecycle = canEditSalesListMeta;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cars, setCars] = useState<Car[]>([]);
@@ -212,6 +235,15 @@ export default function InventoryPage() {
   const [carPhotos, setCarPhotos] = useState<string[]>([]);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoFolder, setPhotoFolder] = useState<string>("");
+  const [selectedInventoryLifecycleIds, setSelectedInventoryLifecycleIds] = useState<string[]>([]);
+  const [bulkInventoryLifecycle, setBulkInventoryLifecycle] = useState<CarLifecycleStatus>("ORDERED");
+  const [inventoryLifecycleSaving, setInventoryLifecycleSaving] = useState(false);
+  const [lifecycleSuccess, setLifecycleSuccess] = useState<string | null>(null);
+  const [carHistoryOpen, setCarHistoryOpen] = useState(false);
+  const [carHistoryRows, setCarHistoryRows] = useState<CarAuditLogRowUi[]>([]);
+  const [carHistoryLoading, setCarHistoryLoading] = useState(false);
+  const [carHistoryError, setCarHistoryError] = useState<string | null>(null);
+  const [carHistoryHasMore, setCarHistoryHasMore] = useState(false);
 
   const showRate = form.purchaseCurrency === "DZD" || form.purchaseCurrency === "USD" || form.purchaseCurrency === "EUR";
   const showClientName = form.owner === "Client";
@@ -270,6 +302,85 @@ export default function InventoryPage() {
     }, 300);
     return () => clearTimeout(t);
   }, [searchInput]);
+
+  useEffect(() => {
+    if (!lifecycleSuccess) return;
+    const t = window.setTimeout(() => setLifecycleSuccess(null), 5000);
+    return () => window.clearTimeout(t);
+  }, [lifecycleSuccess]);
+
+  const toggleInventoryLifecycleSelection = (carId: string) => {
+    setSelectedInventoryLifecycleIds((prev) =>
+      prev.includes(carId) ? prev.filter((x) => x !== carId) : [...prev, carId]
+    );
+  };
+
+  const updateInventoryLifecycle = async (carIds: string[], lifecycle_status: CarLifecycleStatus) => {
+    if (!carIds.length || !canEditLifecycle) return;
+    const unique = [...new Set(carIds)];
+    setInventoryLifecycleSaving(true);
+    setError(null);
+    setLifecycleSuccess(null);
+    const res = await fetch("/api/cars/lifecycle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ car_ids: unique, lifecycle_status }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setInventoryLifecycleSaving(false);
+    if (!res.ok) {
+      setError((data.error as string) || "Failed to update lifecycle");
+      return;
+    }
+    const n = typeof data.updated_count === "number" ? data.updated_count : unique.length;
+    setLifecycleSuccess(n > 1 ? `Updated physical lifecycle for ${n} cars.` : "Lifecycle updated.");
+    setSelectedInventoryLifecycleIds((prev) => prev.filter((id) => !unique.includes(id)));
+    await fetchCars();
+  };
+
+  const resetCarAuditState = () => {
+    setCarHistoryOpen(false);
+    setCarHistoryRows([]);
+    setCarHistoryError(null);
+    setCarHistoryHasMore(false);
+    setCarHistoryLoading(false);
+  };
+
+  const fetchCarAuditHistory = async ({ offset }: { offset: number }) => {
+    if (!editingCarId || !canEditLifecycle) return;
+    setCarHistoryLoading(true);
+    setCarHistoryError(null);
+    const res = await fetch(
+      `/api/cars/${editingCarId}/audit-log?limit=${CAR_AUDIT_PAGE}&offset=${offset}`,
+      { cache: "no-store" }
+    );
+    const data = await res.json().catch(() => ({}));
+    setCarHistoryLoading(false);
+    if (!res.ok) {
+      setCarHistoryError((data.error as string) || "Failed to load history");
+      return;
+    }
+    const raw = Array.isArray(data.rows) ? data.rows : [];
+    const normalized: CarAuditLogRowUi[] = raw.map((r: Record<string, unknown>) => ({
+      id: String(r.id ?? ""),
+      field_name: String(r.field_name ?? ""),
+      old_value: r.old_value != null ? String(r.old_value) : null,
+      new_value: String(r.new_value ?? ""),
+      changed_by: r.changed_by != null ? String(r.changed_by) : null,
+      changed_at: String(r.changed_at ?? ""),
+      reason: r.reason != null ? String(r.reason) : null,
+    }));
+    setCarHistoryRows((prev) => (offset === 0 ? normalized : [...prev, ...normalized]));
+    setCarHistoryHasMore(Boolean(data.has_more));
+  };
+
+  const toggleCarAuditSection = () => {
+    const next = !carHistoryOpen;
+    setCarHistoryOpen(next);
+    setCarHistoryError(null);
+    if (!next || !editingCarId || !canEditLifecycle) return;
+    void fetchCarAuditHistory({ offset: 0 });
+  };
 
   const isPoCarEligibleForDeal = (car: Car): boolean => {
     if (!car.purchase_order_id) return true;
@@ -340,6 +451,11 @@ export default function InventoryPage() {
     setCarsPage(1);
   }, [activeTab, availabilityFilter, conditionTab, stockTypeTab, debouncedSearch, carsPageSize]);
 
+  useEffect(() => {
+    const valid = new Set(filteredCars.map((c) => c.id));
+    setSelectedInventoryLifecycleIds((prev) => prev.filter((id) => valid.has(id)));
+  }, [filteredCars]);
+
   const axiraCount = useMemo(() => cars.filter((c) => (c.stock_type || "axira") === "axira").length, [cars]);
   const supplierCount = useMemo(() => cars.filter((c) => c.stock_type === "supplier").length, [cars]);
   const stockCountsByCondition = useMemo(() => {
@@ -352,6 +468,7 @@ export default function InventoryPage() {
   }, [cars, stockTypeTab]);
 
   const openAddModal = () => {
+    resetCarAuditState();
     setEditingCarId(null);
     const base = emptyForm();
     base.stockType = stockTypeTab;
@@ -364,6 +481,7 @@ export default function InventoryPage() {
   };
 
   const openEditModal = (car: Car) => {
+    resetCarAuditState();
     setEditingCarId(car.id);
     setCarPhotos((car.photos as string[]) || []);
     setPhotoFolder(car.id);
@@ -415,6 +533,7 @@ export default function InventoryPage() {
 
   const closeModal = () => {
     if (isSaving) return;
+    resetCarAuditState();
     setIsModalOpen(false);
   };
 
@@ -900,6 +1019,48 @@ export default function InventoryPage() {
           </div>
         )}
 
+        {lifecycleSuccess ? (
+          <Alert.Root status="success">
+            <Alert.Content>
+              <Alert.Description>{lifecycleSuccess}</Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
+
+        {canEditLifecycle && !isInvestorReadOnly && filteredCars.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-app/70 bg-black/[0.02] px-3 py-2 text-xs">
+            <span className="font-semibold">{selectedInventoryLifecycleIds.length} selected</span>
+            <label className="flex flex-wrap items-center gap-1">
+              <span className="text-muted">Status:</span>
+              <select
+                className="rounded-md border border-app bg-white px-2 py-1 text-xs outline-none focus:border-[var(--color-accent)]"
+                disabled={inventoryLifecycleSaving}
+                value={bulkInventoryLifecycle}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (isCarLifecycleStatus(v)) setBulkInventoryLifecycle(v);
+                }}
+              >
+                {CAR_LIFECYCLE_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              type="button"
+              size="sm"
+              variant="primary"
+              className="h-8 min-h-8 text-[11px]"
+              isDisabled={inventoryLifecycleSaving || selectedInventoryLifecycleIds.length === 0}
+              onPress={() => updateInventoryLifecycle(selectedInventoryLifecycleIds, bulkInventoryLifecycle)}
+            >
+              Update status for selected
+            </Button>
+          </div>
+        ) : null}
+
         {error ? (
           <Alert.Root status="danger">
             <Alert.Content>
@@ -919,14 +1080,18 @@ export default function InventoryPage() {
           ) : (
             <>
             <div className="responsive-table-wrap">
-              <table className="min-w-[620px] w-full text-left text-xs rtl:text-right">
+              <table className="min-w-[780px] w-full text-left text-xs rtl:text-right">
                 <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
+                    {canEditLifecycle && !isInvestorReadOnly ? (
+                      <th className="w-10 px-2 py-3 text-center" aria-label="Select for bulk lifecycle" />
+                    ) : null}
                     <th className="px-4 py-3">Car</th>
                     <th className="px-4 py-3 hidden sm:table-cell">Specs</th>
                     <th className="px-4 py-3 hidden sm:table-cell">Location</th>
+                    <th className="px-4 py-3">Physical lifecycle</th>
                     <th className="px-4 py-3">Price</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Sales status</th>
                     <th className="px-4 py-3">Published</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
@@ -939,6 +1104,18 @@ export default function InventoryPage() {
                     const hasDealAlready = carIdsWithDeals.has(car.id);
                     return (
                       <tr key={car.id} className={["border-b border-app last:border-b-0", isSupplierCar ? "bg-amber-50/30" : ""].join(" ")}>
+                        {canEditLifecycle && !isInvestorReadOnly ? (
+                          <td className="w-10 px-2 py-3 align-middle text-center">
+                            <input
+                              type="checkbox"
+                              className="align-middle"
+                              aria-label={`Select ${carTitle || "car"} for bulk lifecycle`}
+                              checked={selectedInventoryLifecycleIds.includes(car.id)}
+                              disabled={inventoryLifecycleSaving}
+                              onChange={() => toggleInventoryLifecycleSelection(car.id)}
+                            />
+                          </td>
+                        ) : null}
                         <td className="px-4 py-3">
                           <div className="font-semibold text-app">{carTitle || "Car"}</div>
                           {car.grade && <div className="mt-0.5 text-[11px] text-[var(--color-accent)] font-medium">{car.grade}</div>}
@@ -958,6 +1135,36 @@ export default function InventoryPage() {
                           {car.mileage != null && <div className="text-[11px]">{formatNumber(car.mileage)} km</div>}
                         </td>
                         <td className="px-4 py-3 text-app hidden sm:table-cell">{car.location || "-"}</td>
+                        <td className="px-4 py-3 align-top">
+                          <div className="flex flex-col gap-1">
+                            <Chip size="sm" variant="soft" className="h-5 w-fit max-w-full px-2 text-[10px]">
+                              {coerceInventoryLifecycle(car.lifecycle_status).replace(/_/g, " ")}
+                            </Chip>
+                            {canEditLifecycle && !isInvestorReadOnly ? (
+                              <select
+                                className="w-full min-w-[8rem] max-w-[13rem] rounded-md border border-app bg-white px-2 py-1.5 text-[10px] text-app outline-none focus:border-[var(--color-accent)] disabled:opacity-50"
+                                value={coerceInventoryLifecycle(car.lifecycle_status)}
+                                disabled={inventoryLifecycleSaving}
+                                onChange={(e) => {
+                                  const next = e.target.value;
+                                  if (
+                                    !isCarLifecycleStatus(next) ||
+                                    next === coerceInventoryLifecycle(car.lifecycle_status)
+                                  ) {
+                                    return;
+                                  }
+                                  updateInventoryLifecycle([car.id], next);
+                                }}
+                              >
+                                {CAR_LIFECYCLE_STATUSES.map((s) => (
+                                  <option key={s} value={s}>
+                                    {s.replace(/_/g, " ")}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : null}
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-app">
                           {isSupplierCar ? (
                             <span className="text-muted text-[11px]">Not tracked</span>
@@ -1510,6 +1717,87 @@ export default function InventoryPage() {
                   />
                 </label>
               </div>
+
+              {canEditLifecycle && editingCarId ? (
+                <div className="sm:col-span-2 rounded-md border border-app bg-black/[0.02] px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleCarAuditSection()}
+                    className="flex w-full items-center justify-between text-left text-xs font-semibold text-app hover:bg-black/[0.03]"
+                  >
+                    <span>History (audit)</span>
+                    <span aria-hidden>{carHistoryOpen ? "▼" : "►"}</span>
+                  </button>
+                  {carHistoryOpen ? (
+                    <div className="mt-2 space-y-2 border-t border-app/60 pt-2">
+                      {carHistoryError ? (
+                        <Alert.Root status="danger">
+                          <Alert.Content>
+                            <Alert.Description>{carHistoryError}</Alert.Description>
+                          </Alert.Content>
+                        </Alert.Root>
+                      ) : null}
+                      {carHistoryLoading && carHistoryRows.length === 0 ? (
+                        <div className="flex items-center gap-2 text-[11px] text-muted">
+                          <Spinner size="sm" color="danger" />
+                          Loading…
+                        </div>
+                      ) : carHistoryRows.length === 0 ? (
+                        <p className="text-[11px] text-muted">No audit entries yet.</p>
+                      ) : (
+                        <div className="max-h-[14rem] space-y-1.5 overflow-y-auto text-[11px]">
+                          {carHistoryRows.map((row) => (
+                            <div
+                              key={row.id}
+                              className="rounded border border-app bg-white px-2 py-1.5 text-app"
+                            >
+                              <div className="flex flex-wrap justify-between gap-1 font-medium">
+                                <span className="text-[var(--color-accent)]">{row.field_name}</span>
+                                <span className="text-muted">{new Date(row.changed_at).toLocaleString()}</span>
+                              </div>
+                              <div className="mt-1 text-muted">
+                                {row.old_value != null && row.old_value !== "" ? (
+                                  <>
+                                    <span title={row.old_value} className="line-clamp-2 break-all">
+                                      {row.old_value}
+                                    </span>
+                                    <span className="mx-1 font-semibold text-app">→</span>
+                                  </>
+                                ) : (
+                                  <span className="text-muted italic">∅ · </span>
+                                )}
+                                <span title={row.new_value} className="break-all font-medium text-app">
+                                  {row.new_value}
+                                </span>
+                              </div>
+                              {row.reason ? (
+                                <div className="mt-1 text-[10px] italic text-muted">Reason: {row.reason}</div>
+                              ) : null}
+                              <div className="mt-0.5 font-mono text-[10px] text-muted">
+                                By {(row.changed_by || "?").slice(0, 8)}…
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {carHistoryHasMore ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-1 h-8 w-full text-[11px]"
+                          isDisabled={carHistoryLoading || !editingCarId}
+                          onPress={() =>
+                            editingCarId && void fetchCarAuditHistory({ offset: carHistoryRows.length })
+                          }
+                        >
+                          {carHistoryLoading ? "Loading…" : "Load more"}
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               {/* ── PHOTOS ── */}
               {sectionHeader("Photos")}

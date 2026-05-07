@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { Alert, Button, Spinner } from "@heroui/react";
+import { Alert, Button, Chip, Spinner } from "@heroui/react";
 import { useAuth } from "@/lib/context/AuthContext";
+import { CAR_LIFECYCLE_STATUSES, isCarLifecycleStatus, type CarLifecycleStatus } from "@/lib/cars/carLifecycleStatus";
 import { cashPocketOptionsForCurrency, validatePocketForCurrency } from "@/lib/finance/cashPockets";
+import { isValidIsoVin, normalizeVin } from "@/lib/vin/isoVin";
 
 type PurchaseOrder = {
   id: string;
@@ -62,6 +64,9 @@ type LinkedCar = {
   vin: string | null;
   status: string | null;
   inventory_lifecycle_status: string | null;
+  lifecycle_status?: string | null;
+  vin_validated_at: string | null;
+  vin_validated_by: string | null;
 };
 
 const inputCls =
@@ -71,11 +76,17 @@ function money(v: number, c: string) {
   return `${Number(v || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} ${c}`;
 }
 
+function coerceLifecycle(s: string | null | undefined): CarLifecycleStatus {
+  const v = String(s ?? "").trim();
+  return isCarLifecycleStatus(v) ? v : "ORDERED";
+}
+
 export default function PurchaseOrderDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
-  const { role } = useAuth();
-  const isOwner = ["owner", "admin", "super_admin"].includes((role || "").toLowerCase());
+  const { isOwnerLike: isOwner, isManager } = useAuth();
+  const canValidateVin = isOwner || isManager;
+  const canEditLifecycle = canValidateVin;
   const [row, setRow] = useState<PurchaseOrder | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -89,6 +100,13 @@ export default function PurchaseOrderDetailPage() {
   const [receiveMode, setReceiveMode] = useState<"arrived" | "available">("arrived");
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [vinDraft, setVinDraft] = useState<Record<string, string>>({});
+  const [vinFieldError, setVinFieldError] = useState<Record<string, string>>({});
+  const [validatingVinCarId, setValidatingVinCarId] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [vinOverride, setVinOverride] = useState<{ carId: string; vin: string; reason: string } | null>(null);
+  const [selectedLifecycleCarIds, setSelectedLifecycleCarIds] = useState<string[]>([]);
+  const [bulkLifecycleStatus, setBulkLifecycleStatus] = useState<CarLifecycleStatus>("ORDERED");
+  const [lifecycleSaving, setLifecycleSaving] = useState(false);
   const [itemForm, setItemForm] = useState({
     brand: "",
     model: "",
@@ -144,6 +162,59 @@ export default function PurchaseOrderDetailPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    if (!successMessage) return;
+    const t = window.setTimeout(() => setSuccessMessage(null), 5000);
+    return () => window.clearTimeout(t);
+  }, [successMessage]);
+
+  useEffect(() => {
+    setVinDraft((prev) => {
+      const next = { ...prev };
+      for (const c of cars) {
+        const validated = Boolean(c.vin_validated_at);
+        if (!validated) {
+          if (next[c.id] === undefined) next[c.id] = (c.vin || "").trim();
+        } else {
+          delete next[c.id];
+        }
+      }
+      return next;
+    });
+  }, [cars]);
+
+  useEffect(() => {
+    setSelectedLifecycleCarIds((prev) => prev.filter((carId) => cars.some((c) => c.id === carId)));
+  }, [cars]);
+
+  const toggleLifecycleCarSelection = (carId: string) => {
+    setSelectedLifecycleCarIds((prev) =>
+      prev.includes(carId) ? prev.filter((x) => x !== carId) : [...prev, carId]
+    );
+  };
+
+  const updatePoCarLifecycle = async (carIds: string[], lifecycle_status: CarLifecycleStatus) => {
+    if (!id || !carIds.length || !canEditLifecycle) return;
+    const unique = [...new Set(carIds)];
+    setLifecycleSaving(true);
+    setError(null);
+    const res = await fetch(`/api/purchase-orders/${id}/cars/lifecycle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ car_ids: unique, lifecycle_status }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setLifecycleSaving(false);
+    if (!res.ok) {
+      setError((data.error as string) || "Failed to update lifecycle");
+      return;
+    }
+    const n = typeof data.updated_count === "number" ? data.updated_count : unique.length;
+    setSuccessMessage(n > 1 ? `Updated lifecycle for ${n} cars.` : "Lifecycle updated.");
+    setSelectedLifecycleCarIds((prev) => prev.filter((x) => !unique.includes(x)));
+    await load();
+  };
 
   const addItem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,6 +345,74 @@ export default function PurchaseOrderDetailPage() {
     load();
   };
 
+  const validateVinForCar = async (carId: string) => {
+    if (!id || !canValidateVin) return;
+    const raw = vinDraft[carId] ?? "";
+    const normalized = normalizeVin(raw);
+    if (!isValidIsoVin(normalized)) {
+      setVinFieldError((p) => ({
+        ...p,
+        [carId]: "VIN must be 17 characters (letters A–Z except I, O, Q, and digits).",
+      }));
+      return;
+    }
+    setVinFieldError((p) => {
+      const rest = { ...p };
+      delete rest[carId];
+      return rest;
+    });
+    setError(null);
+    setValidatingVinCarId(carId);
+    const res = await fetch(`/api/cars/validate-vin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        car_id: carId,
+        purchase_order_id: id,
+        vin: normalized,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setValidatingVinCarId(null);
+    if (!res.ok) {
+      setError((data.error as string) || "VIN validation failed");
+      return;
+    }
+    setSuccessMessage("VIN validated and propagated to inventory.");
+    await load();
+  };
+
+  const submitVinOverride = async () => {
+    if (!id || !isOwner || !vinOverride) return;
+    const normalized = normalizeVin(vinOverride.vin);
+    if (!isValidIsoVin(normalized)) {
+      setError("New VIN is invalid.");
+      return;
+    }
+    setError(null);
+    setValidatingVinCarId(vinOverride.carId);
+    const res = await fetch(`/api/cars/validate-vin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        car_id: vinOverride.carId,
+        purchase_order_id: id,
+        vin: normalized,
+        confirm_override: true,
+        override_reason: vinOverride.reason.trim() || null,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setValidatingVinCarId(null);
+    if (!res.ok) {
+      setError((data.error as string) || "Could not update VIN");
+      return;
+    }
+    setVinOverride(null);
+    setSuccessMessage("VIN updated (owner override).");
+    await load();
+  };
+
   const receive = async (mode: "arrived" | "available") => {
     if (!id || !isOwner) return;
     setReceiving(true);
@@ -350,6 +489,39 @@ export default function PurchaseOrderDetailPage() {
 
           <section className="rounded-xl border border-app bg-panel p-4">
             <h2 className="mb-3 text-base font-semibold">Line Items</h2>
+            {canEditLifecycle && cars.length > 0 ? (
+              <div className="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-app/60 bg-black/[0.02] px-3 py-2 text-xs">
+                <span className="font-medium text-foreground">{selectedLifecycleCarIds.length} car(s) selected</span>
+                <label className="flex items-center gap-1">
+                  <span className="text-muted">New status:</span>
+                  <select
+                    className={inputCls}
+                    disabled={lifecycleSaving}
+                    value={bulkLifecycleStatus}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (isCarLifecycleStatus(v)) setBulkLifecycleStatus(v);
+                    }}
+                  >
+                    {CAR_LIFECYCLE_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s.replace(/_/g, " ")}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  className="h-8 min-h-8 text-[11px]"
+                  isDisabled={lifecycleSaving || selectedLifecycleCarIds.length === 0}
+                  onPress={() => updatePoCarLifecycle(selectedLifecycleCarIds, bulkLifecycleStatus)}
+                >
+                  Update status for selected
+                </Button>
+              </div>
+            ) : null}
             {isOwner && (
               <form className="mb-4 grid gap-2 md:grid-cols-8" onSubmit={addItem}>
                 <input className={inputCls} placeholder="Brand" value={itemForm.brand} onChange={(e) => setItemForm((p) => ({ ...p, brand: e.target.value }))} />
@@ -385,17 +557,129 @@ export default function PurchaseOrderDetailPage() {
                         {it.vin ? <div className="text-[11px] text-muted">VIN: {it.vin}</div> : null}
                         {cars
                           .filter((c) => c.purchase_order_item_id === it.id)
-                          .map((c) => (
-                            <div key={c.id} className="mt-1 rounded border border-app/40 px-2 py-1 text-[10px]">
-                              Car {c.id.slice(0, 8)} · {c.inventory_lifecycle_status || c.status || "-"}
-                              <input
-                                className={`${inputCls} mt-1`}
-                                placeholder="Assign VIN on receive (optional)"
-                                value={vinDraft[c.id] || ""}
-                                onChange={(e) => setVinDraft((prev) => ({ ...prev, [c.id]: e.target.value }))}
-                              />
-                            </div>
-                          ))}
+                          .map((c) => {
+                            const validated = Boolean(c.vin_validated_at);
+                            const displayVin = validated ? (c.vin || "").trim() : vinDraft[c.id] ?? "";
+                            const err = vinFieldError[c.id];
+                            const canEditField = canValidateVin && !validated;
+                            const lifecycle = coerceLifecycle(c.lifecycle_status);
+                            return (
+                              <div key={c.id} className="mt-1 space-y-1 rounded border border-app/40 px-2 py-1 text-[10px]">
+                                <div className="flex flex-wrap items-start gap-2">
+                                  {canEditLifecycle ? (
+                                    <input
+                                      type="checkbox"
+                                      className="mt-1.5"
+                                      aria-label={`Select car ${c.id.slice(0, 8)} for bulk lifecycle`}
+                                      checked={selectedLifecycleCarIds.includes(c.id)}
+                                      disabled={lifecycleSaving}
+                                      onChange={() => toggleLifecycleCarSelection(c.id)}
+                                    />
+                                  ) : null}
+                                  <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <span className="font-mono text-[9px] text-muted">{c.id.slice(0, 8)}</span>
+                                  <Chip size="sm" variant="soft" className="h-5 px-2 text-[9px]">
+                                    {lifecycle.replace(/_/g, " ")}
+                                  </Chip>
+                                  {validated ? (
+                                    <Chip size="sm" color="success" variant="flat" className="h-5 text-[9px]">
+                                      VIN ✓
+                                    </Chip>
+                                  ) : (
+                                    <Chip size="sm" color="warning" variant="flat" className="h-5 text-[9px]">
+                                      VIN pending
+                                    </Chip>
+                                  )}
+                                </div>
+                                {(c.inventory_lifecycle_status || c.status) && (
+                                  <div className="text-[9px] text-muted">
+                                    Legacy inventory: {c.inventory_lifecycle_status || "-"} · sales status:{" "}
+                                    {c.status || "-"}
+                                  </div>
+                                )}
+                                {canEditLifecycle ? (
+                                  <div className="flex flex-wrap items-center gap-1">
+                                    <span className="text-[9px] uppercase text-muted">Lifecycle</span>
+                                    <select
+                                      className={`${inputCls} max-w-[14rem] py-1.5 text-[10px]`}
+                                      value={lifecycle}
+                                      disabled={lifecycleSaving}
+                                      onChange={(e) => {
+                                        const next = e.target.value;
+                                        if (!isCarLifecycleStatus(next) || next === lifecycle) return;
+                                        updatePoCarLifecycle([c.id], next);
+                                      }}
+                                    >
+                                      {CAR_LIFECYCLE_STATUSES.map((s) => (
+                                        <option key={s} value={s}>
+                                          {s.replace(/_/g, " ")}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                ) : null}
+                                  </div>
+                                </div>
+                                {validated && c.vin_validated_at ? (
+                                  <div className="text-[9px] text-muted">
+                                    {new Date(c.vin_validated_at).toLocaleString(undefined, {
+                                      dateStyle: "short",
+                                      timeStyle: "short",
+                                    })}
+                                    {c.vin_validated_by ? ` · by ${c.vin_validated_by.slice(0, 8)}…` : null}
+                                  </div>
+                                ) : null}
+                                <input
+                                  className={`${inputCls} mt-0.5 ${err ? "border-red-500" : ""}`}
+                                  readOnly={!canEditField || lifecycleSaving}
+                                  placeholder="Enter 17‑char VIN"
+                                  value={displayVin}
+                                  onChange={(e) => {
+                                    setVinFieldError((p) => {
+                                      const rest = { ...p };
+                                      delete rest[c.id];
+                                      return rest;
+                                    });
+                                    setVinDraft((prev) => ({ ...prev, [c.id]: e.target.value.toUpperCase() }));
+                                  }}
+                                />
+                                {err ? <p className="text-[9px] text-red-600">{err}</p> : null}
+                                {canValidateVin && !validated ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="primary"
+                                    className="mt-0.5 h-7 min-h-7 text-[10px]"
+                                    isDisabled={
+                                      lifecycleSaving ||
+                                      validatingVinCarId === c.id ||
+                                      !isValidIsoVin(normalizeVin(vinDraft[c.id] ?? ""))
+                                    }
+                                    onPress={() => validateVinForCar(c.id)}
+                                  >
+                                    {validatingVinCarId === c.id ? "Validating…" : "Validate VIN"}
+                                  </Button>
+                                ) : null}
+                                {validated && isOwner ? (
+                                  <button
+                                    type="button"
+                                    className="mt-0.5 text-[10px] font-medium text-[var(--color-accent)] underline disabled:opacity-50"
+                                    disabled={lifecycleSaving}
+                                    onClick={() =>
+                                      setVinOverride({
+                                        carId: c.id,
+                                        vin: (c.vin || "").trim(),
+                                        reason: "",
+                                      })
+                                    }
+                                  >
+                                    Change VIN (owner)…
+                                  </button>
+                                ) : null}
+                              </div>
+                            );
+                          })}
                       </td>
                       <td className="px-2 py-2 text-right">{it.quantity}</td>
                       <td className="px-2 py-2 text-right">{money(it.unit_cost, row.currency)}</td>
@@ -530,6 +814,14 @@ export default function PurchaseOrderDetailPage() {
             </div>
           </section>
 
+          {successMessage ? (
+            <Alert.Root status="success">
+              <Alert.Content>
+                <Alert.Description>{successMessage}</Alert.Description>
+              </Alert.Content>
+            </Alert.Root>
+          ) : null}
+
           {isOwner && (
             <section className="rounded-xl border border-app bg-panel p-4">
               <h2 className="mb-3 text-base font-semibold">Receive Workflow</h2>
@@ -590,6 +882,55 @@ export default function PurchaseOrderDetailPage() {
                 <Alert.Description>{error}</Alert.Description>
               </Alert.Content>
             </Alert.Root>
+          ) : null}
+
+          {vinOverride ? (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="vin-override-title"
+            >
+              <div className="w-full max-w-md rounded-lg border border-app bg-panel p-4 shadow-lg">
+                <h2 id="vin-override-title" className="mb-3 text-base font-semibold">
+                  Confirm VIN change
+                </h2>
+                <p className="mb-3 text-xs text-muted">
+                  This car already has a validated VIN. Replacing it is logged for audit.
+                </p>
+                <label className="mb-2 block text-xs font-medium">
+                  New VIN
+                  <input
+                    className={`${inputCls} mt-1`}
+                    value={vinOverride.vin}
+                    onChange={(e) => setVinOverride((p) => (p ? { ...p, vin: e.target.value.toUpperCase() } : p))}
+                  />
+                </label>
+                <label className="mb-3 block text-xs font-medium">
+                  Reason (optional)
+                  <input
+                    className={`${inputCls} mt-1`}
+                    placeholder="Correction, factory re-stamp, …"
+                    value={vinOverride.reason}
+                    onChange={(e) => setVinOverride((p) => (p ? { ...p, reason: e.target.value } : p))}
+                  />
+                </label>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button type="button" variant="outline" size="sm" onPress={() => setVinOverride(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    isDisabled={validatingVinCarId !== null || !isValidIsoVin(normalizeVin(vinOverride.vin))}
+                    onPress={() => submitVinOverride()}
+                  >
+                    Replace VIN
+                  </Button>
+                </div>
+              </div>
+            </div>
           ) : null}
         </>
       )}

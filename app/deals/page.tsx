@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Alert, Button, Spinner } from "@heroui/react";
+import { Alert, Button, Chip, Spinner } from "@heroui/react";
 import type { Car, Deal } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
@@ -40,6 +40,7 @@ import {
   type ModalFormValues,
   type PrefillMeta,
 } from "@/lib/contracts/modalFields";
+import { displayCarLifecycle } from "@/lib/cars/carLifecycleStatus";
 
 const InvoiceDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.InvoiceDownloadButton),
@@ -49,6 +50,18 @@ const AgreementDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.AgreementDownloadButton),
   { ssr: false }
 );
+
+function resolveDealLinkedCar(deal: Deal | null, list: Car[]): Car | undefined {
+  if (!deal) return undefined;
+  if (deal.car_id) {
+    const byCarId = list.find((c) => c.id === deal.car_id);
+    if (byCarId) return byCarId;
+  }
+  if (deal.inventory_car_id) {
+    return list.find((c) => c.id === deal.inventory_car_id);
+  }
+  return undefined;
+}
 
 type DealPayment = {
   id: string;
@@ -340,7 +353,7 @@ export default function DealsPage() {
       supabase
         .from("cars")
         .select(
-          "id, brand, model, year, purchase_price, purchase_currency, purchase_rate, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name, supplier_id, inventory_lifecycle_status, purchase_order_id, purchase_order_item_id, linked_deal_id, sale_price_dzd, sales_lead_time_days, sales_deposit_dzd, sales_internal_note, sales_cost_estimate_dzd"
+          "id, brand, model, year, purchase_price, purchase_currency, purchase_rate, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name, supplier_id, inventory_lifecycle_status, lifecycle_status, purchase_order_id, purchase_order_item_id, linked_deal_id, sale_price_dzd, sales_lead_time_days, sales_deposit_dzd, sales_internal_note, sales_cost_estimate_dzd"
         )
         .order("created_at", { ascending: false }),
       supabase.from("deals").select("*").order("date", { ascending: false }),
@@ -700,8 +713,18 @@ export default function DealsPage() {
       return;
     }
 
+    const poBacked = Boolean(car.purchase_order_id);
+    const listDzd =
+      car.sale_price_dzd != null && car.sale_price_dzd !== undefined
+        ? String(car.sale_price_dzd)
+        : null;
+
     setEditingDealId(null);
-    setForm({ ...emptyForm(), carId: car.id });
+    setForm(
+      poBacked && listDzd
+        ? { ...emptyForm(), carId: car.id, saleDzd: listDzd, amountReceivedDzd: listDzd }
+        : { ...emptyForm(), carId: car.id }
+    );
     setIsModalOpen(true);
     setError(null);
   }, [isLoading, cars, searchParams, router, usedCarIds, poDealEligibility]);
@@ -2260,7 +2283,7 @@ export default function DealsPage() {
                         </td>
                         <td className="px-4 py-3 text-app">
                           {(() => {
-                            const dealCar = cars.find((c) => c.id === d.car_id);
+                            const dealCar = resolveDealLinkedCar(d, cars);
                             const fullVin = (dealCar?.vin || "").trim();
                             const shortVin = formatVinShort(fullVin);
                             if (!fullVin) return <span className="text-muted">VIN: pending</span>;
@@ -2364,7 +2387,7 @@ export default function DealsPage() {
                                 (d.pending_dzd ?? 0) > 0 && dzdToAed > 0 && fxList.aedPerUsd > 0
                                   ? Math.round(((d.pending_dzd ?? 0) * dzdToAed) / fxList.aedPerUsd)
                                   : 0;
-                              const dealCar = cars.find((c) => c.id === d.car_id);
+                              const dealCar = resolveDealLinkedCar(d, cars);
                               const dealDate = d.date ? new Date(d.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase() : "";
                               const invoiceNum = `INV-${d.id.slice(0, 8).toUpperCase()}`;
                               return (
@@ -2881,28 +2904,48 @@ export default function DealsPage() {
                   {viewDeal.client_name || "-"} • {viewDeal.car_label || "-"} •{" "}
                   {formatDate(viewDeal.date ?? viewDeal.created_at)}
                 </div>
-                <div className="mt-2 text-xs text-app">
+                <div className="mt-2 space-y-2 text-xs text-app">
                   {(() => {
-                    const dealCar = cars.find((c) => c.id === viewDeal.car_id);
+                    const dealCar = resolveDealLinkedCar(viewDeal, cars);
                     const fullVin = (dealCar?.vin || "").trim();
-                    if (!fullVin) return <span className="text-muted">VIN: pending</span>;
                     return (
-                      <button
-                        type="button"
-                        title={fullVin}
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(fullVin);
-                            setCopiedVinDealId(viewDeal.id);
-                            setTimeout(() => setCopiedVinDealId((prev) => (prev === viewDeal.id ? null : prev)), 1200);
-                          } catch {
-                            setError("Failed to copy VIN.");
-                          }
-                        }}
-                        className="rounded border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:bg-gray-50"
-                      >
-                        {copiedVinDealId === viewDeal.id ? "Copied" : formatVinShort(fullVin)}
-                      </button>
+                      <>
+                        <div>
+                          {!fullVin ? (
+                            <span className="text-muted">VIN: pending</span>
+                          ) : (
+                            <button
+                              type="button"
+                              title={fullVin}
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(fullVin);
+                                  setCopiedVinDealId(viewDeal.id);
+                                  setTimeout(
+                                    () => setCopiedVinDealId((prev) => (prev === viewDeal.id ? null : prev)),
+                                    1200
+                                  );
+                                } catch {
+                                  setError("Failed to copy VIN.");
+                                }
+                              }}
+                              className="rounded border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:bg-gray-50"
+                            >
+                              {copiedVinDealId === viewDeal.id ? "Copied" : formatVinShort(fullVin)}
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-muted">Physical lifecycle</span>
+                          {dealCar ? (
+                            <Chip size="sm" variant="soft" className="h-6 px-2 text-[10px] uppercase">
+                              {displayCarLifecycle(dealCar.lifecycle_status)}
+                            </Chip>
+                          ) : (
+                            <span className="text-muted italic">No inventory row linked</span>
+                          )}
+                        </div>
+                      </>
                     );
                   })()}
                 </div>
@@ -2996,7 +3039,7 @@ export default function DealsPage() {
                   Cost &amp; expenses
                 </div>
                 {(() => {
-                  const dealCar = cars.find((c) => c.id === viewDeal.car_id);
+                  const dealCar = resolveDealLinkedCar(viewDeal, cars);
                   const srcCurrency = ((dealCar?.purchase_currency || "AED") as string).toUpperCase();
                   const srcAmount = Number(dealCar?.purchase_price || 0);
                   if (!dealCar || !srcAmount || srcCurrency === "AED") return null;
