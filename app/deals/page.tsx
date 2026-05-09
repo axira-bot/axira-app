@@ -353,7 +353,7 @@ export default function DealsPage() {
       supabase
         .from("cars")
         .select(
-          "id, brand, model, year, purchase_price, purchase_currency, purchase_rate, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name, supplier_id, inventory_lifecycle_status, lifecycle_status, purchase_order_id, purchase_order_item_id, linked_deal_id, sale_price_dzd, sales_lead_time_days, sales_deposit_dzd, sales_internal_note, sales_cost_estimate_dzd"
+          "id, brand, model, year, purchase_price, purchase_currency, purchase_rate, status, client_name, color, vin, country_of_origin, notes, stock_type, supplier_name, supplier_id, inventory_lifecycle_status, lifecycle_status, purchase_order_id, purchase_order_item_id, linked_deal_id, sale_price_dzd, sales_lead_time_days, sales_deposit_dzd, sales_internal_note, sales_cost_estimate_dzd, sales_notes, sales_notes_updated_at, sales_notes_updated_by"
         )
         .order("created_at", { ascending: false }),
       supabase.from("deals").select("*").order("date", { ascending: false }),

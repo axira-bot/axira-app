@@ -63,6 +63,7 @@ type LinkedCar = {
   purchase_order_item_id: string | null;
   vin: string | null;
   status: string | null;
+  location?: string | null;
   inventory_lifecycle_status: string | null;
   lifecycle_status?: string | null;
   vin_validated_at: string | null;
@@ -592,6 +593,11 @@ export default function PurchaseOrderDetailPage() {
                                     </Chip>
                                   )}
                                 </div>
+                                {c.location ? (
+                                  <div className="text-[9px] text-muted">
+                                    Location: <span className="font-medium text-app">{c.location}</span>
+                                  </div>
+                                ) : null}
                                 {(c.inventory_lifecycle_status || c.status) && (
                                   <div className="text-[9px] text-muted">
                                     Legacy inventory: {c.inventory_lifecycle_status || "-"} · sales status:{" "}

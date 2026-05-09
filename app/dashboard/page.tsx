@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
 import { dealListSaleDzd } from "@/app/deals/dealFinanceHelpers";
 import { PageContainer } from "@/components/ui/page-container";
+import { CAR_LOCATION } from "@/lib/cars/carLocations";
 import {
   Bar,
   BarChart,
@@ -341,14 +342,14 @@ export default function DashboardPage() {
   );
 
   const carsInDubai = cars.filter(
-    (c) => c.location === "Dubai" && c.status === "available"
+    (c) => c.location === CAR_LOCATION.dubaiShowroom && c.status === "available"
   ).length;
 
   const carsInAlgeria = cars.filter(
-    (c) => c.location === "Algeria" && c.status === "available"
+    (c) => c.location === CAR_LOCATION.axiraDzShowroom && c.status === "available"
   ).length;
 
-  const carsInTransit = cars.filter((c) => c.location === "In Transit").length;
+  const carsInTransit = cars.filter((c) => c.location === CAR_LOCATION.inTransit).length;
 
   const totalAvailableCars = cars.filter(
     (c) => c.status === "available"
@@ -473,9 +474,9 @@ export default function DashboardPage() {
 
   const inventoryLocationData = useMemo(
     () => [
-      { name: "Dubai", value: carsInDubai },
-      { name: "Algeria", value: carsInAlgeria },
-      { name: "In Transit", value: carsInTransit },
+      { name: CAR_LOCATION.dubaiShowroom, value: carsInDubai },
+      { name: CAR_LOCATION.axiraDzShowroom, value: carsInAlgeria },
+      { name: CAR_LOCATION.inTransit, value: carsInTransit },
     ],
     [carsInDubai, carsInAlgeria, carsInTransit]
   );
@@ -1222,7 +1223,7 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
-                    Cars in Dubai
+                    {CAR_LOCATION.dubaiShowroom}
                   </div>
                   <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatNumber(carsInDubai || 0)}
@@ -1230,7 +1231,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
-                    Cars in Algeria
+                    {CAR_LOCATION.axiraDzShowroom}
                   </div>
                   <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatNumber(carsInAlgeria || 0)}
@@ -1238,7 +1239,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
-                    Cars in Transit
+                    {CAR_LOCATION.inTransit}
                   </div>
                   <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatNumber(carsInTransit || 0)}

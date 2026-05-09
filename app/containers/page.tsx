@@ -8,6 +8,7 @@ import { logActivity } from "@/lib/activity";
 import { useAuth } from "@/lib/context/AuthContext";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import { PageContainer } from "@/components/ui/page-container";
+import { CAR_LOCATION } from "@/lib/cars/carLocations";
 
 type Container = {
   id: string;
@@ -554,7 +555,7 @@ export default function ContainersPage() {
     if (carId) {
       const { error: carUpdateError } = await supabase
         .from("cars")
-        .update({ location: "In Transit" })
+        .update({ location: CAR_LOCATION.inTransit })
         .eq("id", carId);
       if (carUpdateError) {
         // eslint-disable-next-line no-console
@@ -562,7 +563,7 @@ export default function ContainersPage() {
       } else {
         setCars((prev) =>
           prev.map((c) =>
-            c.id === carId ? { ...c, location: "In Transit" } : c
+            c.id === carId ? { ...c, location: CAR_LOCATION.inTransit } : c
           )
         );
       }

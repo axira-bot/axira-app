@@ -10,6 +10,7 @@ import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
 import { dealListSaleDzd } from "@/app/deals/dealFinanceHelpers";
 import { toAed, usdPerAedFromAppUsdSetting } from "@/lib/finance/dealMoney";
 import { PageContainer } from "@/components/ui/page-container";
+import { CAR_LOCATIONS } from "@/lib/cars/carLocations";
 
 const ACCENT_RED = "C0392B";
 const WHITE = "FFFFFF";
@@ -1122,9 +1123,11 @@ export default function ReportsPage() {
                     className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                   >
                     <option value="All">All locations</option>
-                    <option value="Dubai Showroom">Dubai Showroom</option>
-                    <option value="Algeria Showroom">Algeria Showroom</option>
-                    <option value="In Transit">In Transit</option>
+                    {CAR_LOCATIONS.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
                   </select>
                   <select
                     value={invStatus}

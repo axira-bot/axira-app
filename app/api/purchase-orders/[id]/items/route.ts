@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePoAccess, recomputePoTotals } from "@/lib/services/purchaseOrders/service";
+import { CAR_LOCATION } from "@/lib/cars/carLocations";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +97,7 @@ export async function POST(
           mileage: 0,
           condition: "brand new",
           stock_type: "axira",
-          location: "In Transit",
+          location: CAR_LOCATION.inTransit,
           owner: "supplier",
           status: carStatus,
           inventory_lifecycle_status: lifecycle,

@@ -8,6 +8,11 @@ export type SalesListAuth =
   | { ok: true; userId: string; role: string; permissions: FeaturePermissions; canSeeInternal: boolean }
   | { ok: false; status: number; error: string };
 
+/** Owner-like + manager may edit sales_notes; staff read-only (matches UI isOwnerLike || isManager). */
+export function canEditSalesNotes(auth: SalesListAuth): auth is SalesListAuth & { ok: true } {
+  return auth.ok && auth.canSeeInternal;
+}
+
 /** Staff + manager + owner-like may read sales list; internal fields for manager + owner-like only. */
 export async function requireSalesListRead(): Promise<SalesListAuth> {
   const supabase = await createServerClient();

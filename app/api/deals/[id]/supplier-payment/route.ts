@@ -7,6 +7,7 @@ import {
   requirePreorderAccess,
 } from "@/lib/services/preorders/service";
 import { toAed } from "@/lib/finance/dealMoney";
+import { CAR_LOCATION } from "@/lib/cars/carLocations";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ export async function POST(
           purchase_price: body.amount,
           purchase_currency: body.currency,
           purchase_rate: body.rate_to_aed,
-          location: "In Transit",
+          location: CAR_LOCATION.inTransit,
           owner: "Axira",
           status: "in_transit",
           display_status: "in_transit",

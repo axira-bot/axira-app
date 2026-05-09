@@ -9,11 +9,13 @@ import {
   isCarLifecycleStatus,
   type CarLifecycleStatus,
 } from "@/lib/cars/carLifecycleStatus";
+import { CAR_LOCATION, CAR_LOCATIONS, isCarLocation, suggestedLocationForLifecycle, type CarLocation } from "@/lib/cars/carLocations";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 import { useAuth } from "@/lib/context/AuthContext";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import { PageContainer } from "@/components/ui/page-container";
+import { SalesNotesField, type SalesNotesSaveResult } from "@/components/cars/SalesNotesField";
 
 type PaidPocket =
   | "Dubai Cash"
@@ -33,7 +35,8 @@ type CarFormState = {
   purchasePrice: string;
   purchaseCurrency: "AED" | "DZD" | "USD" | "EUR";
   purchaseRate: string;
-  location: "Dubai Showroom" | "Algeria Showroom" | "In Transit";
+  /** Empty string = NULL in DB; otherwise one of `CAR_LOCATIONS`. */
+  location: "" | CarLocation;
   owner: "Axira" | "Client";
   clientName: string;
   notes: string;
@@ -65,6 +68,9 @@ type CarFormState = {
   salesDepositDzd: string;
   salesInternalNote: string;
   salesCostEstimateDzd: string;
+  salesNotes: string;
+  salesNotesUpdatedAt: string | null;
+  salesNotesUpdatedByName: string | null;
 };
 
 const BRANDS = [
@@ -89,7 +95,7 @@ const emptyForm = (): CarFormState => ({
   purchasePrice: "",
   purchaseCurrency: "AED",
   purchaseRate: "",
-  location: "Dubai Showroom",
+  location: "",
   owner: "Axira",
   clientName: "",
   notes: "",
@@ -117,6 +123,9 @@ const emptyForm = (): CarFormState => ({
   salesDepositDzd: "",
   salesInternalNote: "",
   salesCostEstimateDzd: "",
+  salesNotes: "",
+  salesNotesUpdatedAt: null,
+  salesNotesUpdatedByName: null,
 });
 
 function formatNumber(value: number): string {
@@ -239,6 +248,14 @@ export default function InventoryPage() {
   const [bulkInventoryLifecycle, setBulkInventoryLifecycle] = useState<CarLifecycleStatus>("ORDERED");
   const [inventoryLifecycleSaving, setInventoryLifecycleSaving] = useState(false);
   const [lifecycleSuccess, setLifecycleSuccess] = useState<string | null>(null);
+  const [pendingLocationSuggestion, setPendingLocationSuggestion] = useState<{
+    newLifecycle: CarLifecycleStatus;
+    suggested: CarLocation;
+    carIds: string[];
+    singleCarLabel: string | null;
+    /** Cars that received the lifecycle update (for banner copy). */
+    lifecycleTargetCount: number;
+  } | null>(null);
   const [carHistoryOpen, setCarHistoryOpen] = useState(false);
   const [carHistoryRows, setCarHistoryRows] = useState<CarAuditLogRowUi[]>([]);
   const [carHistoryLoading, setCarHistoryLoading] = useState(false);
@@ -315,12 +332,27 @@ export default function InventoryPage() {
     );
   };
 
+  const dismissLocationSuggestion = () => setPendingLocationSuggestion(null);
+
+  const applyLocationSuggestion = async () => {
+    if (!pendingLocationSuggestion) return;
+    const { suggested, carIds } = pendingLocationSuggestion;
+    const { error: locErr } = await supabase.from("cars").update({ location: suggested }).in("id", carIds);
+    if (locErr) {
+      setError(locErr.message);
+      return;
+    }
+    dismissLocationSuggestion();
+    await fetchCars();
+  };
+
   const updateInventoryLifecycle = async (carIds: string[], lifecycle_status: CarLifecycleStatus) => {
     if (!carIds.length || !canEditLifecycle) return;
     const unique = [...new Set(carIds)];
     setInventoryLifecycleSaving(true);
     setError(null);
     setLifecycleSuccess(null);
+    setPendingLocationSuggestion(null);
     const res = await fetch("/api/cars/lifecycle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -335,6 +367,34 @@ export default function InventoryPage() {
     const n = typeof data.updated_count === "number" ? data.updated_count : unique.length;
     setLifecycleSuccess(n > 1 ? `Updated physical lifecycle for ${n} cars.` : "Lifecycle updated.");
     setSelectedInventoryLifecycleIds((prev) => prev.filter((id) => !unique.includes(id)));
+
+    const suggested = suggestedLocationForLifecycle(lifecycle_status);
+    if (suggested == null) {
+      await fetchCars();
+      return;
+    }
+
+    const { data: rows, error: rowErr } = await supabase
+      .from("cars")
+      .select("id, location, brand, model, year")
+      .in("id", unique);
+    if (rowErr || !rows?.length) {
+      await fetchCars();
+      return;
+    }
+    const needing = rows.filter((r) => String((r as { location?: string | null }).location ?? "").trim() !== suggested);
+    if (needing.length > 0) {
+      const single = unique.length === 1;
+      const one = needing[0] as { brand?: string; model?: string; year?: number | null };
+      const label = `${one.brand ?? ""} ${one.model ?? ""} ${one.year ?? ""}`.trim() || "car";
+      setPendingLocationSuggestion({
+        newLifecycle: lifecycle_status,
+        suggested,
+        carIds: needing.map((r) => String((r as { id: string }).id)),
+        singleCarLabel: single ? label : null,
+        lifecycleTargetCount: unique.length,
+      });
+    }
     await fetchCars();
   };
 
@@ -410,9 +470,10 @@ export default function InventoryPage() {
 
     let base = byCondition;
     if (activeTab === "Sold") base = base.filter((c) => effectiveStatus(c) === "sold");
-    else if (activeTab === "Dubai") base = base.filter((c) => c.location === "Dubai Showroom");
-    else if (activeTab === "Algeria") base = base.filter((c) => c.location === "Algeria Showroom");
-    else if (activeTab === "In Transit") base = base.filter((c) => effectiveStatus(c) === "in_transit" || c.location === "In Transit");
+    else if (activeTab === "Dubai") base = base.filter((c) => c.location === CAR_LOCATION.dubaiShowroom);
+    else if (activeTab === "Algeria") base = base.filter((c) => c.location === CAR_LOCATION.axiraDzShowroom);
+    else if (activeTab === "In Transit")
+      base = base.filter((c) => effectiveStatus(c) === "in_transit" || c.location === CAR_LOCATION.inTransit);
 
     if (availabilityFilter === "available_only") {
       base = base.filter((c) => effectiveStatus(c) !== "sold");
@@ -498,7 +559,7 @@ export default function InventoryPage() {
       purchasePrice: car.purchase_price != null ? String(car.purchase_price) : "",
       purchaseCurrency: (car.purchase_currency as "AED" | "DZD" | "USD" | "EUR") || "AED",
       purchaseRate: car.purchase_rate != null ? String(car.purchase_rate) : "",
-      location: (car.location as "Dubai Showroom" | "Algeria Showroom" | "In Transit") || "Dubai Showroom",
+      location: isCarLocation(car.location) ? car.location : "",
       owner: (car.owner as "Axira" | "Client") || "Axira",
       clientName: car.client_name || "",
       notes: car.notes || "",
@@ -526,9 +587,23 @@ export default function InventoryPage() {
       salesDepositDzd: car.sales_deposit_dzd != null ? String(car.sales_deposit_dzd) : "",
       salesInternalNote: car.sales_internal_note || "",
       salesCostEstimateDzd: car.sales_cost_estimate_dzd != null ? String(car.sales_cost_estimate_dzd) : "",
+      salesNotes: car.sales_notes || "",
+      salesNotesUpdatedAt: car.sales_notes_updated_at || null,
+      salesNotesUpdatedByName: null,
     });
     setIsModalOpen(true);
     setError(null);
+    void (async () => {
+      const res = await fetch(`/api/sales-list/cars/${encodeURIComponent(car.id)}/detail`, { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+      setForm((prev) => ({
+        ...prev,
+        salesNotesUpdatedAt: (data.car?.sales_notes_updated_at as string | null | undefined) ?? prev.salesNotesUpdatedAt,
+        salesNotesUpdatedByName: (data.sales_notes_updated_by_name as string | null | undefined) ?? null,
+        salesNotes: String(data.car?.sales_notes ?? prev.salesNotes),
+      }));
+    })();
   };
 
   const closeModal = () => {
@@ -626,7 +701,7 @@ export default function InventoryPage() {
       purchase_price: form.purchasePrice.trim() ? Number(form.purchasePrice) : null,
       purchase_currency: form.purchaseCurrency,
       purchase_rate: showRate ? Number(form.purchaseRate) : null,
-      location: form.location,
+      location: form.location.trim() ? form.location : null,
       owner: form.owner,
       client_name: showClientName ? form.clientName : null,
       status: form.status,
@@ -660,6 +735,26 @@ export default function InventoryPage() {
       status_override: form.statusOverride || null,
     };
 
+    const persistSalesNotes = async (carId: string): Promise<SalesNotesSaveResult | null> => {
+      const res = await fetch(`/api/sales-list/cars/${encodeURIComponent(carId)}/notes`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sales_notes: form.salesNotes }),
+      });
+      const data = (await res.json().catch(() => ({}))) as SalesNotesSaveResult & { error?: string };
+      if (!res.ok) {
+        setError(data.error || "Failed to save sales notes.");
+        return null;
+      }
+      setForm((prev) => ({
+        ...prev,
+        salesNotesUpdatedAt: data.sales_notes_updated_at ?? null,
+        salesNotesUpdatedByName: data.sales_notes_updated_by_name ?? null,
+        salesNotes: data.sales_notes ?? prev.salesNotes,
+      }));
+      return data;
+    };
+
     const carLabel = `${form.brand} ${form.model} ${form.year}`.trim();
     if (editingCarId) {
       const { error: updateError } = await supabase.from("cars").update(payload).eq("id", editingCarId);
@@ -677,7 +772,15 @@ export default function InventoryPage() {
         currency: payload.purchase_currency ?? undefined,
       });
     } else {
-      const { data: inserted, error: insertError } = await supabase.from("cars").insert(payload).select("id").single();
+      const insertPayload = {
+        ...payload,
+        sales_notes: form.salesNotes.trim() ? form.salesNotes : null,
+      };
+      const { data: inserted, error: insertError } = await supabase
+        .from("cars")
+        .insert(insertPayload)
+        .select("id")
+        .single();
       if (insertError) {
         setError(["Failed to add car.", insertError.message, insertError.details, insertError.hint].filter(Boolean).join(" "));
         setIsSaving(false);
@@ -748,6 +851,14 @@ export default function InventoryPage() {
             .from("cash_positions")
             .update({ amount: currentAmount - supplierPaidNum })
             .eq("id", (pocketRow as { id: string }).id);
+        }
+      }
+
+      if (newCarId && form.salesNotes.trim() && canEditSalesListMeta) {
+        const sn = await persistSalesNotes(newCarId);
+        if (sn === null) {
+          setIsSaving(false);
+          return;
         }
       }
     }
@@ -883,7 +994,7 @@ export default function InventoryPage() {
   const filterTabLabels: Record<FilterTab, string> = {
     All: "All",
     Dubai: "Dubai",
-    Algeria: "Algeria",
+    Algeria: "DZ Showroom",
     "In Transit": "In Transit",
     Sold: "Sold",
   };
@@ -1027,6 +1138,30 @@ export default function InventoryPage() {
           </Alert.Root>
         ) : null}
 
+        {pendingLocationSuggestion ? (
+          <Alert.Root status="warning">
+            <Alert.Content>
+              <Alert.Description>
+                <div className="space-y-2 text-xs">
+                  <p>
+                    {pendingLocationSuggestion.singleCarLabel
+                      ? `Lifecycle changed to ${pendingLocationSuggestion.newLifecycle.replace(/_/g, " ")} for ${pendingLocationSuggestion.singleCarLabel}. Suggested location: ${pendingLocationSuggestion.suggested}.`
+                      : `Lifecycle changed to ${pendingLocationSuggestion.newLifecycle.replace(/_/g, " ")} for ${pendingLocationSuggestion.lifecycleTargetCount} cars. Suggested location: ${pendingLocationSuggestion.suggested}.`}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="primary" onPress={() => void applyLocationSuggestion()}>
+                      {pendingLocationSuggestion.singleCarLabel ? "Apply" : "Apply to all"}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onPress={dismissLocationSuggestion}>
+                      Keep current
+                    </Button>
+                  </div>
+                </div>
+              </Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        ) : null}
+
         {canEditLifecycle && !isInvestorReadOnly && filteredCars.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-app/70 bg-black/[0.02] px-3 py-2 text-xs">
             <span className="font-semibold">{selectedInventoryLifecycleIds.length} selected</span>
@@ -1134,7 +1269,15 @@ export default function InventoryPage() {
                           {car.drive_type && <div className="text-[11px]">{car.drive_type}</div>}
                           {car.mileage != null && <div className="text-[11px]">{formatNumber(car.mileage)} km</div>}
                         </td>
-                        <td className="px-4 py-3 text-app hidden sm:table-cell">{car.location || "-"}</td>
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">
+                          {car.location ? (
+                            <Chip size="sm" variant="soft" className="h-5 w-fit max-w-full px-2 text-[10px]">
+                              {car.location}
+                            </Chip>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
                         <td className="px-4 py-3 align-top">
                           <div className="flex flex-col gap-1">
                             <Chip size="sm" variant="soft" className="h-5 w-fit max-w-full px-2 text-[10px]">
@@ -1592,12 +1735,20 @@ export default function InventoryPage() {
 
               <label className={labelCls}>
                 <span className="font-semibold">Location</span>
-                <select value={form.location}
-                  onChange={(e) => updateField("location", e.target.value as "Dubai Showroom" | "Algeria Showroom" | "In Transit")}
-                  className={inputCls}>
-                  <option value="Dubai Showroom">Dubai Showroom</option>
-                  <option value="Algeria Showroom">Algeria Showroom</option>
-                  <option value="In Transit">In Transit</option>
+                <select
+                  value={form.location}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    updateField("location", v === "" ? "" : isCarLocation(v) ? v : form.location);
+                  }}
+                  className={inputCls}
+                >
+                  <option value="">— None —</option>
+                  {CAR_LOCATIONS.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc}
+                    </option>
+                  ))}
                 </select>
               </label>
 
@@ -1681,6 +1832,50 @@ export default function InventoryPage() {
                   </label>
                 </>
               ) : null}
+
+              {/* ── SALES NOTES (shared with sales list) ── */}
+              {sectionHeader("Sales notes (Algeria)")}
+              <div className="sm:col-span-2">
+                {editingCarId ? (
+                  <SalesNotesField
+                    value={form.salesNotes}
+                    onChange={(v) => updateField("salesNotes", v)}
+                    readOnly={!canEditSalesListMeta}
+                    lastUpdatedAt={form.salesNotesUpdatedAt}
+                    lastUpdatedByName={form.salesNotesUpdatedByName}
+                    onSave={async (text) => {
+                      const res = await fetch(`/api/sales-list/cars/${encodeURIComponent(editingCarId)}/notes`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ sales_notes: text }),
+                      });
+                      const data = (await res.json().catch(() => ({}))) as SalesNotesSaveResult & { error?: string };
+                      if (!res.ok) throw new Error(data.error || "Failed to save");
+                      setForm((prev) => ({
+                        ...prev,
+                        salesNotesUpdatedAt: data.sales_notes_updated_at ?? null,
+                        salesNotesUpdatedByName: data.sales_notes_updated_by_name ?? null,
+                        salesNotes: data.sales_notes ?? prev.salesNotes,
+                      }));
+                      return data;
+                    }}
+                  />
+                ) : (
+                  <label className={labelCls}>
+                    <span className="font-semibold">Sales notes</span>
+                    <span className="mt-0.5 block text-[11px] text-muted">
+                      Saved with the vehicle. After the first save, use the Save button here to refresh the “last updated” audit.
+                    </span>
+                    <textarea
+                      value={form.salesNotes}
+                      onChange={(e) => updateField("salesNotes", e.target.value)}
+                      placeholder="Notes for the Algeria sales team…"
+                      rows={3}
+                      className="mt-1 w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
+                )}
+              </div>
 
               {/* ── PUBLISHING & STATUS ── */}
               {sectionHeader("Publishing & Status")}

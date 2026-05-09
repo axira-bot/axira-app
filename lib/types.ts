@@ -26,7 +26,8 @@ export interface Car {
   purchase_price: number;
   purchase_currency: string;
   purchase_rate?: number;
-  location: string;
+  /** Physical stock location; nullable. Allowed values enforced in DB after migration. */
+  location?: string | null;
   owner: string;
   client_name?: string;
   status: string;
@@ -61,6 +62,10 @@ export interface Car {
   sales_deposit_dzd?: number | null;
   sales_internal_note?: string | null;
   sales_cost_estimate_dzd?: number | null;
+  /** Shared Algeria sales notes (sales list + inventory); editable by owner-like + manager via API. */
+  sales_notes?: string | null;
+  sales_notes_updated_at?: string | null;
+  sales_notes_updated_by?: string | null;
   inventory_lifecycle_status?: string | null;
   /** Canonical physical lifecycle (owner/manager; audited). */
   lifecycle_status?: string | null;

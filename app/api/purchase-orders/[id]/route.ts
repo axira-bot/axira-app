@@ -36,7 +36,7 @@ export async function GET(
       admin
         .from("cars")
         .select(
-          "id, purchase_order_item_id, vin, status, inventory_lifecycle_status, lifecycle_status, vin_validated_at, vin_validated_by"
+          "id, purchase_order_item_id, vin, status, location, inventory_lifecycle_status, lifecycle_status, vin_validated_at, vin_validated_by"
         )
         .eq("purchase_order_id", id),
     ]);
@@ -57,7 +57,7 @@ export async function GET(
         const fallbackCars = await admin
           .from("cars")
           .select(
-            "id, purchase_order_item_id, vin, status, lifecycle_status, vin_validated_at, vin_validated_by"
+            "id, purchase_order_item_id, vin, status, location, lifecycle_status, vin_validated_at, vin_validated_by"
           )
           .eq("purchase_order_id", id);
         if (!fallbackCars.error) {
