@@ -1,0 +1,24 @@
+---
+description: Supabase/Postgres access and query habits
+globs: lib/**/*.ts
+alwaysApply: false
+---
+
+# Clients
+
+- Use `lib/supabase/server`, `client`, or `admin` helpers as already established — do not create parallel Supabase singletons without reason.
+
+# Queries
+
+- Prefer explicit `.select` columns when responses are large.
+- Handle `{ error }` from Supabase; map to user-safe messages at the API boundary.
+- Use pagination (`.range`) for lists; avoid unbounded `select *` on big tables.
+
+# Security
+
+- Respect RLS: use the server user client for user-scoped reads/writes; use admin client only where the codebase already does for trusted server operations.
+- Never trust raw client input — validate before inserts/updates.
+
+# Types
+
+- Keep shared domain types near `lib/types.ts` or feature modules; avoid `any` on rows.

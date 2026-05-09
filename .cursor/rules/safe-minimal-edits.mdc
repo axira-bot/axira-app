@@ -1,0 +1,18 @@
+---
+description: Small, safe edits — match existing patterns
+alwaysApply: true
+---
+
+# Change discipline
+
+- Touch only what the task requires; if it works, do not rewrite it.
+- Preserve existing public behavior and response shapes unless the task says otherwise.
+- Read the full file (and nearby callers) before editing.
+- One focused fix at a time; avoid drive-by renames or framework churn.
+- Do not invent libraries, env vars, or APIs without evidence in the repo.
+- If uncertain after inspecting the code, ask the user instead of guessing.
+
+# Project fit
+
+- Match naming, folder layout, and patterns already used in `app/` and `lib/`.
+- Do not add new UI kits or state libraries unless the user asks.
