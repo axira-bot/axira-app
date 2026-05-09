@@ -1,0 +1,30 @@
+---
+description: Core clean-code and layering for axira-app (Next.js)
+alwaysApply: true
+---
+
+# Philosophy
+
+- Prefer simple, readable code a junior can follow and debug.
+- Avoid over-engineering, CQRS/DDD, or large abstractions unless explicitly requested.
+- Make the smallest change that solves the task; do not refactor for style only.
+
+# Structure
+
+- Keep functions short; extract helpers when logic repeats.
+- Prefer early returns and guard clauses; avoid deep nesting.
+
+# Stack boundaries (this repo)
+
+- **UI**: React in `app/**` and shared UI under `lib/` (e.g. context, hooks).
+- **HTTP**: Route Handlers in `app/api/**` (`NextRequest` / `NextResponse`).
+- **Data**: Supabase via `lib/supabase/*` and typed queries; keep DB access out of presentational components when practical.
+
+# TypeScript
+
+- Avoid `any`; keep strict typing.
+- Use `?.` and `??` for null/undefined-safe access.
+
+# Comments
+
+- Explain **why**, not what the code obviously does.

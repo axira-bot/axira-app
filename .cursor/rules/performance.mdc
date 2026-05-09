@@ -1,0 +1,19 @@
+---
+description: Performance habits for Next.js and API routes
+alwaysApply: true
+---
+
+# Backend / API
+
+- Paginate list endpoints; avoid loading full tables.
+- Use `Promise.all` for independent async work when it simplifies latency.
+- Avoid unnecessary `force-dynamic` on routes that could be static or cached — follow existing patterns in the file.
+
+# Frontend
+
+- Lazy-load heavy client-only sections where it already matches project style.
+- Minimize payload size: request only fields the UI needs.
+
+# Monitoring mindset
+
+- Prefer clear, bounded error responses over silent failures.

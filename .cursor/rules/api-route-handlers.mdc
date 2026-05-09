@@ -1,0 +1,29 @@
+---
+description: Next.js Route Handlers — auth, validation, errors
+globs: app/api/**/*.ts
+alwaysApply: false
+---
+
+# Responsibilities
+
+- Parse `request` (query, JSON body), authenticate/authorize, call Supabase or domain helpers, return `NextResponse.json`.
+- Keep handlers thin: shared validation and business rules belong in `lib/` (services, finance, contracts, etc.).
+
+# Consistency
+
+- **Follow the response shape used in the same feature area** (e.g. `{ error }`, or `{ rows, page, pageSize, total }`). Do not introduce a new `{ success, data }` envelope unless migrating the whole feature.
+
+# Validation
+
+- Validate inputs with **Zod** (already a dependency) or explicit guards before writes.
+- Return `400` with a clear `error` message for validation failures.
+
+# Errors
+
+- Use `try/catch` at the route boundary; return `500` with a safe message; avoid leaking stack traces in production responses.
+- Log meaningful context server-side when debugging is needed (no secrets).
+
+# Performance
+
+- Paginate list endpoints; cap `pageSize` like existing routes.
+- Use `.select` with only needed columns when queries are large.

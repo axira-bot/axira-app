@@ -1,0 +1,25 @@
+---
+description: Next.js App Router and React patterns for axira-app
+globs: app/**/*.tsx
+alwaysApply: false
+---
+
+# App Router
+
+- Prefer Server Components when there is no need for client-only APIs (`useState`, browser-only APIs).
+- Mark client components with `"use client"` only when required.
+- Colocate feature UI under `app/<feature>/`; reuse shared logic from `lib/`.
+
+# React
+
+- Functional components; keep side effects explicit (`useEffect`) and dependencies correct.
+- Extract hooks for reusable stateful logic (e.g. under `lib/hooks/`).
+- Avoid heavy logic in JSX; compute in the component body or small helpers.
+
+# Styling
+
+- Use Tailwind / Hero UI patterns already in the project; avoid inline styles unless consistent with nearby code.
+
+# Data from the client
+
+- Call `app/api/*` or use Supabase clients through existing helpers — do not bypass auth or role checks that the API layer enforces.
