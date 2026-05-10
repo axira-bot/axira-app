@@ -16,6 +16,18 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import { PageContainer } from "@/components/ui/page-container";
 import { SalesNotesField, type SalesNotesSaveResult } from "@/components/cars/SalesNotesField";
+import {
+  formatDateForLocale,
+  formatNumberForLocale,
+  useI18n,
+  type Locale,
+  type TranslateFn,
+} from "@/lib/context/I18nContext";
+import {
+  carLocationOptionLabel,
+  inventoryLifecycleLabel,
+  pocketDetailLabel,
+} from "@/lib/i18n/enumLabels";
 
 type PaidPocket =
   | "Dubai Cash"
@@ -128,14 +140,10 @@ const emptyForm = (): CarFormState => ({
   salesNotesUpdatedByName: null,
 });
 
-function formatNumber(value: number): string {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function formatMoney(value: number | null | undefined, currency: string | null | undefined) {
+function formatMoneyLocale(locale: Locale, value: number | null | undefined, currency: string | null | undefined) {
   const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
   const c = currency || "";
-  return `${formatNumber(v)}${c ? ` ${c}` : ""}`;
+  return `${formatNumberForLocale(locale, v, { maximumFractionDigits: 0 })}${c ? ` ${c}` : ""}`;
 }
 
 function getEffectiveStatus(car: Car): string {
@@ -169,33 +177,33 @@ function isBrandNewCondition(condition: string | null | undefined): boolean {
   return normalized === "brand new" || normalized === "new";
 }
 
-function DisplayStatusBadge({ status }: { status: string }) {
+function DisplayStatusBadge({ status, t }: { status: string; t: TranslateFn }) {
   if (status === "sold") return (
     <span className="inline-flex rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
-      Sold
+      {t("inventory.soldBadge")}
     </span>
   );
   if (status === "in_transit") return (
     <span className="inline-flex rounded-full border border-blue-400 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
-      In Transit · For Sale
+      {t("inventory.inTransitForSale")}
     </span>
   );
   return (
     <span className="inline-flex rounded-full border border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 px-2 py-0.5 text-[11px] font-semibold text-white">
-      Available
+      {t("inventory.availableBadge")}
     </span>
   );
 }
 
-function PublishedBadge({ published }: { published: boolean | null | undefined }) {
+function PublishedBadge({ published, t }: { published: boolean | null | undefined; t: TranslateFn }) {
   if (published) return (
     <span className="inline-flex rounded-full border border-emerald-400 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-      Live
+      {t("inventory.liveBadge")}
     </span>
   );
   return (
     <span className="inline-flex rounded-full border border-gray-300 bg-gray-50 px-2 py-0.5 text-[11px] font-semibold text-gray-400">
-      Draft
+      {t("inventory.draftBadge")}
     </span>
   );
 }
@@ -209,6 +217,7 @@ const inputCls = "w-full rounded-md border border-app bg-white px-3 py-2 text-sm
 const labelCls = "space-y-1 text-xs text-app";
 
 export default function InventoryPage() {
+  const { t, locale } = useI18n();
   const { canDelete, isInvestorReadOnly, isOwnerLike, isManager } = useAuth();
   const canEditSalesListMeta = isOwnerLike || isManager;
   const canEditLifecycle = canEditSalesListMeta;
@@ -288,7 +297,7 @@ export default function InventoryPage() {
     ]);
 
     if (fetchError || dealsError) {
-      setError("Failed to load cars.");
+      setError(t("inventory.loadFailed"));
       setCars([]);
       setCarIdsWithDeals(new Set());
       setIsLoading(false);
@@ -361,11 +370,11 @@ export default function InventoryPage() {
     const data = await res.json().catch(() => ({}));
     setInventoryLifecycleSaving(false);
     if (!res.ok) {
-      setError((data.error as string) || "Failed to update lifecycle");
+      setError((data.error as string) || t("inventory.lifecycleUpdateFailed"));
       return;
     }
     const n = typeof data.updated_count === "number" ? data.updated_count : unique.length;
-    setLifecycleSuccess(n > 1 ? `Updated physical lifecycle for ${n} cars.` : "Lifecycle updated.");
+    setLifecycleSuccess(n > 1 ? t("inventory.lifecycleSuccessMany", { count: n }) : t("inventory.lifecycleSuccessOne"));
     setSelectedInventoryLifecycleIds((prev) => prev.filter((id) => !unique.includes(id)));
 
     const suggested = suggestedLocationForLifecycle(lifecycle_status);
@@ -386,7 +395,7 @@ export default function InventoryPage() {
     if (needing.length > 0) {
       const single = unique.length === 1;
       const one = needing[0] as { brand?: string; model?: string; year?: number | null };
-      const label = `${one.brand ?? ""} ${one.model ?? ""} ${one.year ?? ""}`.trim() || "car";
+      const label = `${one.brand ?? ""} ${one.model ?? ""} ${one.year ?? ""}`.trim() || t("inventory.carTitleFallback");
       setPendingLocationSuggestion({
         newLifecycle: lifecycle_status,
         suggested,
@@ -417,7 +426,7 @@ export default function InventoryPage() {
     const data = await res.json().catch(() => ({}));
     setCarHistoryLoading(false);
     if (!res.ok) {
-      setCarHistoryError((data.error as string) || "Failed to load history");
+      setCarHistoryError((data.error as string) || t("inventory.historyLoadFailed"));
       return;
     }
     const raw = Array.isArray(data.rows) ? data.rows : [];
@@ -617,25 +626,25 @@ export default function InventoryPage() {
   };
 
   const validate = () => {
-    if (!form.color.trim()) return "Color is required.";
-    if (!form.mileage.trim()) return "Mileage is required.";
+    if (!form.color.trim()) return t("inventory.valColorRequired");
+    if (!form.mileage.trim()) return t("inventory.valMileageRequired");
     const mileage = Number(form.mileage);
-    if (Number.isNaN(mileage) || mileage < 0) return "Mileage must be a valid number.";
-    if (showClientName && !form.clientName.trim()) return "Client Name is required when Owner is Client.";
+    if (Number.isNaN(mileage) || mileage < 0) return t("inventory.valMileageInvalid");
+    if (showClientName && !form.clientName.trim()) return t("inventory.valClientNameRequired");
     if (showRate) {
-      if (!form.purchaseRate.trim()) return "Purchase Rate is required for DZD, USD or EUR purchases.";
+      if (!form.purchaseRate.trim()) return t("inventory.valPurchaseRateRequired");
       const rate = Number(form.purchaseRate);
-      if (Number.isNaN(rate) || rate <= 0) return "Purchase Rate must be a valid number.";
+      if (Number.isNaN(rate) || rate <= 0) return t("inventory.valPurchaseRateInvalid");
     }
     if (form.purchasePrice.trim()) {
       const price = Number(form.purchasePrice);
-      if (Number.isNaN(price) || price < 0) return "Purchase Price must be a valid number.";
+      if (Number.isNaN(price) || price < 0) return t("inventory.valPurchasePriceInvalid");
     }
     if (showPaidFromPocket && !form.paidFromPocket) {
-      return '"Paid From Pocket" is required when supplier is paid.';
+      return t("inventory.valPaidFromPocketRequired");
     }
     if (form.stockType === "supplier" && !form.supplierName.trim()) {
-      return "Supplier name is required for supplier listings.";
+      return t("inventory.valSupplierNameRequired");
     }
     return null;
   };
@@ -743,7 +752,7 @@ export default function InventoryPage() {
       });
       const data = (await res.json().catch(() => ({}))) as SalesNotesSaveResult & { error?: string };
       if (!res.ok) {
-        setError(data.error || "Failed to save sales notes.");
+        setError(data.error || t("inventory.failedSaveSalesNotes"));
         return null;
       }
       setForm((prev) => ({
@@ -759,7 +768,7 @@ export default function InventoryPage() {
     if (editingCarId) {
       const { error: updateError } = await supabase.from("cars").update(payload).eq("id", editingCarId);
       if (updateError) {
-        setError(["Failed to update car.", updateError.message, updateError.details, updateError.hint].filter(Boolean).join(" "));
+        setError([t("inventory.failedUpdateCar"), updateError.message, updateError.details, updateError.hint].filter(Boolean).join(" "));
         setIsSaving(false);
         return;
       }
@@ -782,7 +791,7 @@ export default function InventoryPage() {
         .select("id")
         .single();
       if (insertError) {
-        setError(["Failed to add car.", insertError.message, insertError.details, insertError.hint].filter(Boolean).join(" "));
+        setError([t("inventory.failedAddCar"), insertError.message, insertError.details, insertError.hint].filter(Boolean).join(" "));
         setIsSaving(false);
         return;
       }
@@ -835,7 +844,7 @@ export default function InventoryPage() {
 
         const { error: movementError } = await supabase.from("movements").insert(movementPayload);
         if (movementError) {
-          setError(["Car saved, but failed to create purchase movement.", movementError.message].filter(Boolean).join(" "));
+          setError([t("inventory.carSavedMovementFailed"), movementError.message].filter(Boolean).join(" "));
         }
 
         const { data: pocketRow, error: pocketError } = await supabase
@@ -870,22 +879,22 @@ export default function InventoryPage() {
 
   const handleDelete = async (car: Car) => {
     if (!canDelete) return;
-    const name = `${car.brand || ""} ${car.model || ""}`.trim() || "this car";
-    if (!window.confirm(`Delete ${name}? This cannot be undone.`)) return;
+    const name = `${car.brand || ""} ${car.model || ""}`.trim() || t("inventory.carFallback");
+    if (!window.confirm(t("inventory.deleteConfirm", { name }))) return;
 
     setIsDeletingId(car.id);
     setError(null);
 
     const { data: dealRows } = await supabase.from("deals").select("id").eq("car_id", car.id).limit(1);
     if (dealRows && dealRows.length > 0) {
-      setError("Cannot delete car with an active deal. Delete the deal first.");
+      setError(t("inventory.deleteWithDeal"));
       setIsDeletingId(null);
       return;
     }
 
     const { data: containerCarRows } = await supabase.from("container_cars").select("id").eq("car_id", car.id).limit(1);
     if (containerCarRows && containerCarRows.length > 0) {
-      setError("Cannot delete car inside a container. Remove from container first.");
+      setError(t("inventory.deleteInContainer"));
       setIsDeletingId(null);
       return;
     }
@@ -922,7 +931,7 @@ export default function InventoryPage() {
 
     const { error: deleteError } = await supabase.from("cars").delete().eq("id", car.id);
     if (deleteError) {
-      setError("Failed to delete car.");
+      setError(t("inventory.deleteFailed"));
       setIsDeletingId(null);
       return;
     }
@@ -960,18 +969,21 @@ export default function InventoryPage() {
         .maybeSingle();
       if (activeDeal) {
         setError(
-          `Cannot restore: "${car.brand} ${car.model}" has an active deal` +
-          (activeDeal.client_name ? ` with ${activeDeal.client_name}` : "") +
-          `. Delete the deal first to make this car available again.`
+          t("inventory.restoreBlockedDeal", {
+            car: `${car.brand} ${car.model}`,
+            withClient: activeDeal.client_name
+              ? t("inventory.restoreBlockedWithClient", { name: String(activeDeal.client_name) })
+              : "",
+          })
         );
         return;
       }
-      if (!window.confirm("Mark this car as Available again?")) return;
+      if (!window.confirm(t("inventory.confirmAvailableAgain"))) return;
       setIsMarkingSoldId(car.id);
       await supabase.from("cars").update({ display_status: "available", sold_at: null, status: "available", status_override: null }).eq("id", car.id);
       setCars((prev) => prev.map((c) => c.id === car.id ? { ...c, display_status: "available", sold_at: null, status: "available", status_override: null } : c));
     } else {
-      if (!window.confirm("Mark this car as Sold?")) return;
+      if (!window.confirm(t("inventory.confirmMarkSoldShort"))) return;
       setIsMarkingSoldId(car.id);
       const now = new Date().toISOString();
       await supabase.from("cars").update({ display_status: "sold", sold_at: now, status: "sold" }).eq("id", car.id);
@@ -982,7 +994,14 @@ export default function InventoryPage() {
 
   const handleConvertToAxira = async (car: Car) => {
     if (isInvestorReadOnly) return;
-    if (!window.confirm(`Convert "${car.brand} ${car.model} ${car.year}" from Supplier Listing to AXIRA Stock? This will include it in financial reports.`)) return;
+    if (
+      !window.confirm(
+        t("inventory.confirmConvert", {
+          title: `${car.brand} ${car.model} ${car.year}`,
+        })
+      )
+    )
+      return;
     setIsConvertingId(car.id);
     const { error: err } = await supabase.from("cars").update({ stock_type: "axira", supplier_name: null }).eq("id", car.id);
     if (!err) {
@@ -991,13 +1010,16 @@ export default function InventoryPage() {
     setIsConvertingId(null);
   };
 
-  const filterTabLabels: Record<FilterTab, string> = {
-    All: "All",
-    Dubai: "Dubai",
-    Algeria: "DZ Showroom",
-    "In Transit": "In Transit",
-    Sold: "Sold",
-  };
+  const filterTabLabels: Record<FilterTab, string> = useMemo(
+    () => ({
+      All: t("inventory.filterAll"),
+      Dubai: t("inventory.filterDubai"),
+      Algeria: t("inventory.filterAlgeria"),
+      "In Transit": t("inventory.filterInTransit"),
+      Sold: t("inventory.filterSold"),
+    }),
+    [t]
+  );
 
   const sectionHeader = (title: string, sub?: string) => (
     <div className="sm:col-span-2 mt-2 border-b border-app pb-1">
@@ -1011,15 +1033,17 @@ export default function InventoryPage() {
       <PageContainer size="xl">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Inventory</h1>
-            <p className="text-sm font-medium text-danger">Vehicle Management</p>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("inventory.title")}</h1>
+            <p className="text-sm font-medium text-danger">{t("inventory.vehicleManagement")}</p>
             {isInvestorReadOnly ? (
-              <p className="text-sm text-default-500">View-only access.</p>
+              <p className="text-sm text-default-500">{t("inventory.viewOnlyAccess")}</p>
             ) : null}
           </div>
           {!isInvestorReadOnly ? (
           <Button type="button" variant="primary" size="sm" onPress={openAddModal}>
-            + Add {stockTypeTab === "supplier" ? "Supplier Listing" : "Car"}
+            {t("inventory.addPrefix", {
+              label: stockTypeTab === "supplier" ? t("inventory.addSupplierListing") : t("inventory.addCar"),
+            })}
           </Button>
           ) : null}
         </header>
@@ -1036,7 +1060,7 @@ export default function InventoryPage() {
                 : "text-muted hover:text-app",
             ].join(" ")}
           >
-            AXIRA Stock ({axiraCount})
+            {t("inventory.axiraStock", { count: axiraCount })}
           </button>
           <button
             type="button"
@@ -1048,7 +1072,7 @@ export default function InventoryPage() {
                 : "text-muted hover:text-app",
             ].join(" ")}
           >
-            Supplier Listings ({supplierCount})
+            {t("inventory.supplierListings", { count: supplierCount })}
           </button>
         </div>
 
@@ -1064,7 +1088,7 @@ export default function InventoryPage() {
                 : "text-muted hover:text-app",
             ].join(" ")}
           >
-            Brand New ({stockCountsByCondition.brandNew})
+            {t("inventory.brandNew", { count: stockCountsByCondition.brandNew })}
           </button>
           <button
             type="button"
@@ -1076,13 +1100,13 @@ export default function InventoryPage() {
                 : "text-muted hover:text-app",
             ].join(" ")}
           >
-            Used ({stockCountsByCondition.used})
+            {t("inventory.used", { count: stockCountsByCondition.used })}
           </button>
         </div>
 
         {stockTypeTab === "supplier" && (
           <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            ⚠️ Supplier listings are <strong>not included in financial reports</strong>. To record a sale, first convert the car to AXIRA Stock.
+            ⚠️ {t("inventory.supplierWarningHtml")}
           </div>
         )}
 
@@ -1107,7 +1131,7 @@ export default function InventoryPage() {
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search VIN, brand, model, year, color"
+              placeholder={t("inventory.searchPlaceholder")}
               className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app md:col-span-8"
             />
             <select
@@ -1115,11 +1139,11 @@ export default function InventoryPage() {
               onChange={(e) => setAvailabilityFilter(e.target.value as "available_only" | "all")}
               className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app md:col-span-2"
             >
-              <option value="available_only">Available only</option>
-              <option value="all">All including sold</option>
+              <option value="available_only">{t("inventory.availableOnly")}</option>
+              <option value="all">{t("inventory.allIncludingSold")}</option>
             </select>
             <div className="text-xs font-semibold text-muted md:col-span-2 md:text-right">
-              Results: <span className="text-app">{filteredCars.length}</span>
+              {t("inventory.resultsWithCount", { count: filteredCars.length })}
             </div>
           </div>
         </div>
@@ -1145,15 +1169,23 @@ export default function InventoryPage() {
                 <div className="space-y-2 text-xs">
                   <p>
                     {pendingLocationSuggestion.singleCarLabel
-                      ? `Lifecycle changed to ${pendingLocationSuggestion.newLifecycle.replace(/_/g, " ")} for ${pendingLocationSuggestion.singleCarLabel}. Suggested location: ${pendingLocationSuggestion.suggested}.`
-                      : `Lifecycle changed to ${pendingLocationSuggestion.newLifecycle.replace(/_/g, " ")} for ${pendingLocationSuggestion.lifecycleTargetCount} cars. Suggested location: ${pendingLocationSuggestion.suggested}.`}
+                      ? t("inventory.lifecycleSuggestionOne", {
+                          lifecycle: inventoryLifecycleLabel(t, pendingLocationSuggestion.newLifecycle),
+                          label: pendingLocationSuggestion.singleCarLabel,
+                          suggested: carLocationOptionLabel(t, pendingLocationSuggestion.suggested),
+                        })
+                      : t("inventory.lifecycleSuggestionMany", {
+                          lifecycle: inventoryLifecycleLabel(t, pendingLocationSuggestion.newLifecycle),
+                          count: pendingLocationSuggestion.lifecycleTargetCount,
+                          suggested: carLocationOptionLabel(t, pendingLocationSuggestion.suggested),
+                        })}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" size="sm" variant="primary" onPress={() => void applyLocationSuggestion()}>
-                      {pendingLocationSuggestion.singleCarLabel ? "Apply" : "Apply to all"}
+                      {pendingLocationSuggestion.singleCarLabel ? t("inventory.apply") : t("inventory.applyToAll")}
                     </Button>
                     <Button type="button" size="sm" variant="outline" onPress={dismissLocationSuggestion}>
-                      Keep current
+                      {t("inventory.keepCurrentLocation")}
                     </Button>
                   </div>
                 </div>
@@ -1164,9 +1196,9 @@ export default function InventoryPage() {
 
         {canEditLifecycle && !isInvestorReadOnly && filteredCars.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-app/70 bg-black/[0.02] px-3 py-2 text-xs">
-            <span className="font-semibold">{selectedInventoryLifecycleIds.length} selected</span>
+            <span className="font-semibold">{t("inventory.bulkSelected", { count: selectedInventoryLifecycleIds.length })}</span>
             <label className="flex flex-wrap items-center gap-1">
-              <span className="text-muted">Status:</span>
+              <span className="text-muted">{t("inventory.bulkStatusLabel")}</span>
               <select
                 className="rounded-md border border-app bg-white px-2 py-1 text-xs outline-none focus:border-[var(--color-accent)]"
                 disabled={inventoryLifecycleSaving}
@@ -1178,7 +1210,7 @@ export default function InventoryPage() {
               >
                 {CAR_LIFECYCLE_STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {s.replace(/_/g, " ")}
+                    {inventoryLifecycleLabel(t, s)}
                   </option>
                 ))}
               </select>
@@ -1191,7 +1223,7 @@ export default function InventoryPage() {
               isDisabled={inventoryLifecycleSaving || selectedInventoryLifecycleIds.length === 0}
               onPress={() => updateInventoryLifecycle(selectedInventoryLifecycleIds, bulkInventoryLifecycle)}
             >
-              Update status for selected
+              {t("inventory.updateStatusSelected")}
             </Button>
           </div>
         ) : null}
@@ -1208,10 +1240,10 @@ export default function InventoryPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
               <Spinner size="md" color="danger" />
-              <span className="text-sm">Loading cars…</span>
+              <span className="text-sm">{t("inventory.loadingCars")}</span>
             </div>
           ) : filteredCars.length === 0 ? (
-            <div className="p-4 text-sm text-muted">No cars found.</div>
+            <div className="p-4 text-sm text-muted">{t("inventory.noCarsFound")}</div>
           ) : (
             <>
             <div className="responsive-table-wrap">
@@ -1219,16 +1251,16 @@ export default function InventoryPage() {
                 <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
                     {canEditLifecycle && !isInvestorReadOnly ? (
-                      <th className="w-10 px-2 py-3 text-center" aria-label="Select for bulk lifecycle" />
+                      <th className="w-10 px-2 py-3 text-center" aria-label={t("inventory.selectBulkAria")} />
                     ) : null}
-                    <th className="px-4 py-3">Car</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Specs</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Location</th>
-                    <th className="px-4 py-3">Physical lifecycle</th>
-                    <th className="px-4 py-3">Price</th>
-                    <th className="px-4 py-3">Sales status</th>
-                    <th className="px-4 py-3">Published</th>
-                    <th className="px-4 py-3">Actions</th>
+                    <th className="px-4 py-3">{t("inventory.colCar")}</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">{t("inventory.colSpecs")}</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">{t("inventory.colLocation")}</th>
+                    <th className="px-4 py-3">{t("inventory.colPhysicalLifecycle")}</th>
+                    <th className="px-4 py-3">{t("inventory.colPrice")}</th>
+                    <th className="px-4 py-3">{t("inventory.colSalesStatus")}</th>
+                    <th className="px-4 py-3">{t("inventory.colPublished")}</th>
+                    <th className="px-4 py-3">{t("inventory.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1244,7 +1276,7 @@ export default function InventoryPage() {
                             <input
                               type="checkbox"
                               className="align-middle"
-                              aria-label={`Select ${carTitle || "car"} for bulk lifecycle`}
+                              aria-label={t("inventory.selectBulkAriaWithCar", { title: carTitle || t("inventory.carFallback") })}
                               checked={selectedInventoryLifecycleIds.includes(car.id)}
                               disabled={inventoryLifecycleSaving}
                               onChange={() => toggleInventoryLifecycleSelection(car.id)}
@@ -1252,36 +1284,54 @@ export default function InventoryPage() {
                           </td>
                         ) : null}
                         <td className="px-4 py-3">
-                          <div className="font-semibold text-app">{carTitle || "Car"}</div>
+                          <div className="font-semibold text-app">{carTitle || t("inventory.carFallback")}</div>
                           {car.grade && <div className="mt-0.5 text-[11px] text-[var(--color-accent)] font-medium">{car.grade}</div>}
-                          {car.vin && <div className="mt-0.5 text-[11px] text-muted">VIN: {car.vin}</div>}
+                          {car.vin && (
+                            <div className="mt-0.5 text-[11px] text-muted">{t("inventory.vinPrefix", { vin: car.vin })}</div>
+                          )}
                           {isSupplierCar && car.supplier_name && (
-                            <div className="mt-0.5 text-[11px] font-medium text-amber-600">Supplier: {car.supplier_name}</div>
+                            <div className="mt-0.5 text-[11px] font-medium text-amber-600">
+                              {t("inventory.supplierPrefix", { name: String(car.supplier_name) })}
+                            </div>
                           )}
                           {car.purchase_order_id && (
                             <div className="mt-0.5 text-[11px] font-medium text-blue-700">
-                              PO: {car.purchase_order_id.slice(0, 8)} · {car.inventory_lifecycle_status || "IN_TRANSIT"}
+                              {t("inventory.poShort", {
+                                id: car.purchase_order_id.slice(0, 8),
+                                status: car.inventory_lifecycle_status || "IN_TRANSIT",
+                              })}
                             </div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-muted hidden sm:table-cell">
-                          <div>{car.color || "-"}{car.body_type ? ` · ${car.body_type}` : ""}</div>
+                          <div>
+                            {car.color || t("common.emiDash")}
+                            {car.body_type ? ` · ${car.body_type}` : ""}
+                          </div>
                           {car.drive_type && <div className="text-[11px]">{car.drive_type}</div>}
-                          {car.mileage != null && <div className="text-[11px]">{formatNumber(car.mileage)} km</div>}
+                          {car.mileage != null && (
+                            <div className="text-[11px]">
+                              {t("inventory.km", {
+                                n: formatNumberForLocale(locale, car.mileage, { maximumFractionDigits: 0 }),
+                              })}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-app hidden sm:table-cell">
                           {car.location ? (
                             <Chip size="sm" variant="soft" className="h-5 w-fit max-w-full px-2 text-[10px]">
-                              {car.location}
+                              {isCarLocation(car.location)
+                                ? carLocationOptionLabel(t, car.location)
+                                : car.location}
                             </Chip>
                           ) : (
-                            "—"
+                            t("common.emiDash")
                           )}
                         </td>
                         <td className="px-4 py-3 align-top">
                           <div className="flex flex-col gap-1">
                             <Chip size="sm" variant="soft" className="h-5 w-fit max-w-full px-2 text-[10px]">
-                              {coerceInventoryLifecycle(car.lifecycle_status).replace(/_/g, " ")}
+                              {inventoryLifecycleLabel(t, coerceInventoryLifecycle(car.lifecycle_status))}
                             </Chip>
                             {canEditLifecycle && !isInvestorReadOnly ? (
                               <select
@@ -1301,7 +1351,7 @@ export default function InventoryPage() {
                               >
                                 {CAR_LIFECYCLE_STATUSES.map((s) => (
                                   <option key={s} value={s}>
-                                    {s.replace(/_/g, " ")}
+                                    {inventoryLifecycleLabel(t, s)}
                                   </option>
                                 ))}
                               </select>
@@ -1310,33 +1360,39 @@ export default function InventoryPage() {
                         </td>
                         <td className="px-4 py-3 text-app">
                           {isSupplierCar ? (
-                            <span className="text-muted text-[11px]">Not tracked</span>
+                            <span className="text-muted text-[11px]">{t("inventory.notTracked")}</span>
                           ) : (
                             <>
-                              {formatMoney(car.purchase_price, car.purchase_currency)}
+                              {formatMoneyLocale(locale, car.purchase_price, car.purchase_currency)}
                               {car.purchase_rate != null && (
-                                <div className="mt-0.5 text-[11px] text-muted">Rate: {formatNumber(car.purchase_rate)}</div>
+                                <div className="mt-0.5 text-[11px] text-muted">
+                                  {t("inventory.rateLabel", {
+                                    rate: formatNumberForLocale(locale, car.purchase_rate, {
+                                      maximumFractionDigits: 6,
+                                    }),
+                                  })}
+                                </div>
                               )}
                             </>
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <DisplayStatusBadge status={effectiveStatus} />
+                          <DisplayStatusBadge status={effectiveStatus} t={t} />
                         </td>
                         <td className="px-4 py-3">
-                          <PublishedBadge published={car.is_published} />
+                          <PublishedBadge published={car.is_published} t={t} />
                         </td>
                         <td className="px-4 py-3">
                           {isInvestorReadOnly ? (
-                            <span className="text-[11px] text-muted">View only</span>
+                            <span className="text-[11px] text-muted">{t("inventory.viewOnlyRow")}</span>
                           ) : (
-                          <RowActionsMenu label="Inventory actions">
+                          <RowActionsMenu label={t("inventory.rowActionsLabel")}>
                             <button
                               type="button"
                               onClick={() => openEditModal(car)}
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
-                              Edit
+                              {t("common.edit")}
                             </button>
                             <button
                               type="button"
@@ -1349,7 +1405,11 @@ export default function InventoryPage() {
                                   : "border-emerald-400 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
                               ].join(" ")}
                             >
-                              {isPublishingId === car.id ? "..." : car.is_published ? "Unpublish" : "Publish"}
+                              {isPublishingId === car.id
+                                ? "…"
+                                : car.is_published
+                                  ? t("inventory.unpublish")
+                                  : t("inventory.publish")}
                             </button>
                             <button
                               type="button"
@@ -1362,7 +1422,11 @@ export default function InventoryPage() {
                                   : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50",
                               ].join(" ")}
                             >
-                              {isMarkingSoldId === car.id ? "..." : effectiveStatus === "sold" ? "↩ Restore" : "Mark Sold"}
+                              {isMarkingSoldId === car.id
+                                ? "…"
+                                : effectiveStatus === "sold"
+                                  ? `↩ ${t("inventory.restoreCar")}`
+                                  : t("inventory.markSold")}
                             </button>
                             {isSupplierCar && (
                               <button
@@ -1371,7 +1435,7 @@ export default function InventoryPage() {
                                 disabled={isConvertingId === car.id}
                                 className="rounded-md border border-[var(--color-accent)]/50 bg-[var(--color-accent)]/5 px-3 py-1 text-[11px] font-semibold text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 disabled:opacity-50 transition"
                               >
-                                {isConvertingId === car.id ? "..." : "→ AXIRA Stock"}
+                                {isConvertingId === car.id ? "…" : t("inventory.toAxiraStock")}
                               </button>
                             )}
                             {(!isSupplierCar || Boolean(car.purchase_order_id)) && !hasDealAlready && isPoCarEligibleForDeal(car) ? (
@@ -1379,27 +1443,23 @@ export default function InventoryPage() {
                                 href={`/deals?addDeal=1&carId=${encodeURIComponent(car.id)}`}
                                 className="inline-flex items-center justify-center rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                               >
-                                Create Deal
+                                {t("inventory.createDeal")}
                               </Link>
                             ) : isSupplierCar && !car.purchase_order_id ? (
                               <button
                                 type="button"
-                                onClick={() =>
-                                  setCreateDealSupplierHint(
-                                    "Supplier listings cannot be used for deals. Use \"→ AXIRA Stock\" first, then use Create Deal on the AXIRA stock row."
-                                  )
-                                }
+                                onClick={() => setCreateDealSupplierHint(t("inventory.supplierDealHint"))}
                                 className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-400 hover:bg-gray-50"
                               >
-                                Create Deal
+                                {t("inventory.createDeal")}
                               </button>
                             ) : car.purchase_order_id && !isPoCarEligibleForDeal(car) ? (
                               <span className="rounded-md border border-app bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-400">
-                                Waiting Arrival
+                                {t("inventory.waitingArrival")}
                               </span>
                             ) : (
                               <span className="rounded-md border border-app bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-400">
-                                Deal Exists
+                                {t("inventory.dealExistsLabel")}
                               </span>
                             )}
                             {canDelete ? (
@@ -1409,7 +1469,7 @@ export default function InventoryPage() {
                               disabled={isDeletingId === car.id}
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
                             >
-                              {isDeletingId === car.id ? "Deleting..." : "Delete"}
+                              {isDeletingId === car.id ? t("inventory.deleting") : t("common.delete")}
                             </button>
                             ) : null}
                           </RowActionsMenu>
@@ -1424,7 +1484,7 @@ export default function InventoryPage() {
             {filteredCars.length > 0 && (
               <div className="flex flex-col gap-2 border-t border-app px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 text-xs text-muted">
-                  <span>Rows per page</span>
+                  <span>{t("inventory.rowsPerPage")}</span>
                   <select
                     value={carsPageSize}
                     onChange={(e) => setCarsPageSize(Number(e.target.value))}
@@ -1437,16 +1497,20 @@ export default function InventoryPage() {
                     ))}
                   </select>
                   <span>
-                    {(carsPage - 1) * carsPageSize + 1}-{Math.min(carsPage * carsPageSize, filteredCars.length)} of {filteredCars.length}
+                    {t("inventory.paginationOf", {
+                      start: (carsPage - 1) * carsPageSize + 1,
+                      end: Math.min(carsPage * carsPageSize, filteredCars.length),
+                      total: filteredCars.length,
+                    })}
                   </span>
                 </div>
                 <div className="flex items-center justify-end gap-2">
-                <span className="text-xs text-muted">Page {carsPage} / {carsPages}</span>
+                <span className="text-xs text-muted">{t("inventory.pageOf", { page: carsPage, pages: carsPages })}</span>
                 <Button type="button" size="sm" variant="outline" isDisabled={carsPage <= 1} onPress={() => setCarsPage((p) => Math.max(1, p - 1))}>
-                  Previous
+                  {t("inventory.pagerPrevious")}
                 </Button>
                 <Button type="button" size="sm" variant="outline" isDisabled={carsPage >= carsPages} onPress={() => setCarsPage((p) => Math.min(carsPages, p + 1))}>
-                  Next
+                  {t("inventory.pagerNext")}
                 </Button>
                 </div>
               </div>
@@ -1464,20 +1528,24 @@ export default function InventoryPage() {
             <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
                 <div className="text-lg font-semibold text-app">
-                  {editingCarId ? "Edit Car" : form.stockType === "supplier" ? "Add Supplier Listing" : "Add Car"}
+                  {editingCarId
+                    ? t("inventory.editCarTitle")
+                    : form.stockType === "supplier"
+                      ? t("inventory.addSupplierTitle")
+                      : t("inventory.addCarTitle")}
                 </div>
-                <div className="text-xs text-muted">Fields marked * are required.</div>
+                <div className="text-xs text-muted">{t("inventory.fieldsRequiredHint")}</div>
               </div>
               <button type="button" onClick={closeModal} disabled={isSaving}
                 className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app disabled:opacity-50">
-                Close
+                {t("common.close")}
               </button>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
 
               {/* ── STOCK TYPE ── */}
-              {sectionHeader("Stock Type")}
+              {sectionHeader(t("inventory.stockTypeHeading"))}
               <div className="sm:col-span-2 flex gap-3">
                 {(["axira", "supplier"] as const).map((type) => (
                   <label key={type} className="flex items-center gap-2 cursor-pointer text-xs">
@@ -1486,67 +1554,76 @@ export default function InventoryPage() {
                       className="accent-[var(--color-accent)]"
                     />
                     <span className="font-semibold">
-                      {type === "axira" ? "⚡ AXIRA Stock" : "🏷️ Supplier Listing"}
+                      {type === "axira" ? `⚡ ${t("inventory.axiraStockRadio")}` : `🏷️ ${t("inventory.supplierListingRadio")}`}
                     </span>
                     <span className="text-muted">
-                      {type === "axira" ? "(owned, in reports)" : "(external, listing only)"}
+                      {type === "axira" ? t("inventory.axiraStockBlurb") : t("inventory.supplierListingBlurb")}
                     </span>
                   </label>
                 ))}
               </div>
               {form.stockType === "supplier" && (
                 <label className={`${labelCls} sm:col-span-2`}>
-                  <span className="font-semibold">Supplier Name <span className="text-[var(--color-accent)]">*</span></span>
+                  <span className="font-semibold">
+                    {t("inventory.supplierNameLabel")} <span className="text-[var(--color-accent)]">*</span>
+                  </span>
                   <input value={form.supplierName} onChange={(e) => updateField("supplierName", e.target.value)}
-                    placeholder="e.g. Dubai Motors, Al Habtoor..." className={inputCls} />
+                    placeholder={t("inventory.supplierNamePlaceholder")} className={inputCls} />
                 </label>
               )}
 
               {/* ── VEHICLE DETAILS ── */}
-              {sectionHeader("Vehicle Details")}
+              {sectionHeader(t("inventory.vehicleDetailsHeading"))}
 
               <label className={labelCls}>
-                <span className="font-semibold">Brand</span>
+                <span className="font-semibold">{t("inventory.brand")}</span>
                 <select value={form.brand} onChange={(e) => updateField("brand", e.target.value)} className={inputCls}>
                   {BRANDS.map((b) => <option key={b} value={b}>{b}</option>)}
                 </select>
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Model</span>
+                <span className="font-semibold">{t("inventory.model")}</span>
                 <input value={form.model} onChange={(e) => updateField("model", e.target.value)}
-                  placeholder="e.g. Prado" className={inputCls} />
+                  placeholder={t("inventory.modelPlaceholder")} className={inputCls} />
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Year</span>
+                <span className="font-semibold">{t("inventory.year")}</span>
                 <select value={form.year} onChange={(e) => updateField("year", e.target.value)} className={inputCls}>
                   {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
                 </select>
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Color <span className="text-[var(--color-accent)]">*</span></span>
+                <span className="font-semibold">
+                  {t("inventory.color")} <span className="text-[var(--color-accent)]">*</span>
+                </span>
                 <input value={form.color} onChange={(e) => updateField("color", e.target.value)}
-                  placeholder="e.g. Pearl White" className={inputCls} />
+                  placeholder={t("inventory.colorPlaceholder")} className={inputCls} />
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Mileage (km) <span className="text-[var(--color-accent)]">*</span></span>
+                <span className="font-semibold">
+                  {t("inventory.mileageKmLabel")} <span className="text-[var(--color-accent)]">*</span>
+                </span>
                 <input type="number" value={form.mileage} onChange={(e) => updateField("mileage", e.target.value)}
-                  placeholder="e.g. 54000" className={inputCls} />
+                  placeholder={t("inventory.mileagePlaceholder")} className={inputCls} />
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">VIN (optional)</span>
+                <span className="font-semibold">{t("inventory.vinOptional")}</span>
                 <input value={form.vin} onChange={(e) => updateField("vin", e.target.value)}
-                  placeholder="Chassis number" className={inputCls} />
+                  placeholder={t("inventory.vinChassisPlaceholder")} className={inputCls} />
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Ships From <span className="text-gray-400 font-normal text-xs">(export location — sets public site tab)</span></span>
+                <span className="font-semibold">
+                  {t("inventory.shipsFrom")}{" "}
+                  <span className="text-gray-400 font-normal text-xs">{t("inventory.shipsFromHint")}</span>
+                </span>
                 <select value={form.countryOfOrigin} onChange={(e) => updateField("countryOfOrigin", e.target.value)} className={inputCls}>
-                  <option value="">— Select export location —</option>
+                  <option value="">{t("inventory.selectExportLocation")}</option>
                   <option value="UAE">UAE / Émirats Arabes Unis</option>
                   <option value="Europe">Europe</option>
                   <option value="China">China / Chine</option>
@@ -1555,12 +1632,12 @@ export default function InventoryPage() {
               </label>
 
               {/* ── SPECIFICATIONS ── */}
-              {sectionHeader("Specifications")}
+              {sectionHeader(t("inventory.specificationsHeading"))}
 
               <label className={labelCls}>
-                <span className="font-semibold">Body Type</span>
+                <span className="font-semibold">{t("inventory.bodyTypeLabel")}</span>
                 <select value={form.bodyType} onChange={(e) => updateField("bodyType", e.target.value)} className={inputCls}>
-                  <option value="">Select...</option>
+                  <option value="">{t("inventory.selectOption")}</option>
                   {["SUV","Sedan","Pickup","Coupe","Hatchback","Van","Minivan","Convertible","Wagon"].map((v) => (
                     <option key={v} value={v}>{v}</option>
                   ))}
@@ -1568,9 +1645,9 @@ export default function InventoryPage() {
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Drive Type</span>
+                <span className="font-semibold">{t("inventory.driveTypeLabel")}</span>
                 <select value={form.driveType} onChange={(e) => updateField("driveType", e.target.value)} className={inputCls}>
-                  <option value="">Select...</option>
+                  <option value="">{t("inventory.selectOption")}</option>
                   {["4WD","AWD","2WD / FWD","RWD"].map((v) => (
                     <option key={v} value={v}>{v}</option>
                   ))}
@@ -1578,96 +1655,96 @@ export default function InventoryPage() {
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Transmission</span>
+                <span className="font-semibold">{t("inventory.transmissionLabel")}</span>
                 <select value={form.transmission} onChange={(e) => updateField("transmission", e.target.value)} className={inputCls}>
-                  <option value="">Select...</option>
-                  <option value="Automatic">Automatic</option>
-                  <option value="Manual">Manual</option>
-                  <option value="CVT">CVT</option>
-                  <option value="Semi-Auto">Semi-Auto</option>
+                  <option value="">{t("inventory.selectOption")}</option>
+                  <option value="Automatic">{t("inventory.transmissionAuto")}</option>
+                  <option value="Manual">{t("inventory.transmissionManual")}</option>
+                  <option value="CVT">{t("inventory.transmissionCvt")}</option>
+                  <option value="Semi-Auto">{t("inventory.transmissionSemi")}</option>
                 </select>
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Fuel Type</span>
+                <span className="font-semibold">{t("inventory.fuelTypeLabel")}</span>
                 <select value={form.fuelType} onChange={(e) => updateField("fuelType", e.target.value)} className={inputCls}>
-                  <option value="">Select...</option>
-                  <option value="Petrol">Petrol</option>
-                  <option value="Diesel">Diesel</option>
-                  <option value="Hybrid">Hybrid</option>
-                  <option value="Electric">Electric</option>
-                  <option value="Plug-in Hybrid">Plug-in Hybrid</option>
+                  <option value="">{t("inventory.selectOption")}</option>
+                  <option value="Petrol">{t("inventory.fuelPetrol")}</option>
+                  <option value="Diesel">{t("inventory.fuelDiesel")}</option>
+                  <option value="Hybrid">{t("inventory.fuelHybrid")}</option>
+                  <option value="Electric">{t("inventory.fuelElectric")}</option>
+                  <option value="Plug-in Hybrid">{t("inventory.fuelPluginHybrid")}</option>
                 </select>
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Engine</span>
+                <span className="font-semibold">{t("inventory.engineLabel")}</span>
                 <input value={form.engine} onChange={(e) => updateField("engine", e.target.value)}
-                  placeholder="e.g. 4.0L V8, 2.0T" className={inputCls} />
+                  placeholder={t("inventory.enginePlaceholder")} className={inputCls} />
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Grade / Trim</span>
+                <span className="font-semibold">{t("inventory.gradeTrim")}</span>
                 <input value={form.grade} onChange={(e) => updateField("grade", e.target.value)}
-                  placeholder="e.g. GXR, Limited, Sport, VXR" className={inputCls} />
+                  placeholder={t("inventory.gradePlaceholder")} className={inputCls} />
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Doors</span>
+                <span className="font-semibold">{t("inventory.doorsLabel")}</span>
                 <select value={form.doors} onChange={(e) => updateField("doors", e.target.value)} className={inputCls}>
-                  <option value="">Select...</option>
+                  <option value="">{t("inventory.selectOption")}</option>
                   {["2","3","4","5"].map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Seats</span>
+                <span className="font-semibold">{t("inventory.seatsLabel")}</span>
                 <select value={form.seats} onChange={(e) => updateField("seats", e.target.value)} className={inputCls}>
-                  <option value="">Select...</option>
+                  <option value="">{t("inventory.selectOption")}</option>
                   {["2","4","5","6","7","8","9"].map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
               </label>
 
               {/* ── CONDITION ── */}
-              {sectionHeader("Condition & Features")}
+              {sectionHeader(t("inventory.conditionFeaturesHeading"))}
 
               <label className={labelCls}>
-                <span className="font-semibold">Condition</span>
+                <span className="font-semibold">{t("inventory.conditionLabel")}</span>
                 <select value={form.condition} onChange={(e) => updateField("condition", e.target.value)} className={inputCls}>
-                  <option value="">Select...</option>
-                  <option value="Brand New">Brand New</option>
-                  <option value="Used">Used</option>
+                  <option value="">{t("inventory.selectOption")}</option>
+                  <option value="Brand New">{t("inventory.conditionBrandNew")}</option>
+                  <option value="Used">{t("inventory.conditionUsed")}</option>
                 </select>
               </label>
 
               <label className={`${labelCls} sm:col-span-2`}>
-                <span className="font-semibold">Body Issues (optional)</span>
+                <span className="font-semibold">{t("inventory.bodyIssuesOptional")}</span>
                 <textarea value={form.bodyIssues} onChange={(e) => updateField("bodyIssues", e.target.value)}
-                  placeholder="e.g. Repainted hood, small dent on driver door, scratched rear bumper"
+                  placeholder={t("inventory.bodyIssuesPlaceholder")}
                   rows={2}
                   className="w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
 
               <label className={`${labelCls} sm:col-span-2`}>
-                <span className="font-semibold">Features (comma-separated)</span>
+                <span className="font-semibold">{t("inventory.featuresCommaSeparated")}</span>
                 <input value={form.features} onChange={(e) => updateField("features", e.target.value)}
-                  placeholder="e.g. Sunroof, Leather seats, Android Auto, 360 Camera"
+                  placeholder={t("inventory.featuresPlaceholder")}
                   className={inputCls} />
               </label>
 
               {/* ── PRICING & FINANCIALS ── */}
-              {!isSupplier && sectionHeader("Purchase & Financials", "Included in financial reports")}
-              {isSupplier && sectionHeader("Listing Price", "For display purposes — not tracked in financial reports")}
+              {!isSupplier && sectionHeader(t("inventory.purchaseFinancialsHeading"), t("inventory.purchaseFinancialsSub"))}
+              {isSupplier && sectionHeader(t("inventory.listingPriceHeading"), t("inventory.listingPriceSubSupplier"))}
 
               <label className={labelCls}>
-                <span className="font-semibold">Purchase Price</span>
+                <span className="font-semibold">{t("inventory.purchasePriceLabel")}</span>
                 <input type="number" value={form.purchasePrice} onChange={(e) => updateField("purchasePrice", e.target.value)}
-                  placeholder="e.g. 125000" className={inputCls} />
+                  placeholder={t("inventory.purchasePricePlaceholder")} className={inputCls} />
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Currency</span>
+                <span className="font-semibold">{t("inventory.currencyLabel")}</span>
                 <select value={form.purchaseCurrency}
                   onChange={(e) => updateField("purchaseCurrency", e.target.value as "AED" | "DZD" | "USD" | "EUR")}
                   className={inputCls}>
@@ -1680,14 +1757,14 @@ export default function InventoryPage() {
 
               {showRate ? (
                   <label className={labelCls}>
-                  <span className="font-semibold">Rate <span className="text-[var(--color-accent)]">*</span></span>
+                  <span className="font-semibold">{t("inventory.purchaseRate")} <span className="text-[var(--color-accent)]">*</span></span>
                   <input type="number" value={form.purchaseRate} onChange={(e) => updateField("purchaseRate", e.target.value)}
                     placeholder={
                       form.purchaseCurrency === "DZD"
-                        ? "DZD per 1 AED (dashboard)"
+                        ? t("inventory.ratePlaceholderDzd")
                         : form.purchaseCurrency === "USD"
-                          ? "AED per 1 USD (e.g. 3.67)"
-                          : "AED per 1 EUR"
+                          ? t("inventory.ratePlaceholderUsd")
+                          : t("inventory.ratePlaceholderEur")
                     }
                     className={inputCls} />
                 </label>
@@ -1696,19 +1773,21 @@ export default function InventoryPage() {
               {!isSupplier && (
                 <>
                   <label className={labelCls}>
-                    <span className="font-semibold">Paid to Supplier</span>
+                    <span className="font-semibold">{t("inventory.paidToSupplierLabel")}</span>
                     <input type="number" value={form.amountPaidToSupplier}
                       onChange={(e) => updateField("amountPaidToSupplier", e.target.value)}
-                      placeholder="Defaults to purchase price" className={inputCls} />
+                      placeholder={t("inventory.paidToSupplierDefaultsHint")} className={inputCls} />
                   </label>
 
                   <label className={labelCls}>
-                    <span className="font-semibold">Supplier Owed</span>
+                    <span className="font-semibold">{t("inventory.supplierOwedLabel")}</span>
                     <input type="text" readOnly
                       value={(() => {
                         const p = form.purchasePrice.trim() ? Number(form.purchasePrice) : 0;
                         const paid = form.amountPaidToSupplier.trim() ? Number(form.amountPaidToSupplier) : p;
-                        return p > 0 ? formatNumber(Math.max(0, p - paid)) : "-";
+                        return p > 0
+                          ? formatNumberForLocale(locale, Math.max(0, p - paid), { maximumFractionDigits: 0 })
+                          : t("common.emiDash");
                       })()}
                       className="w-full rounded-md border border-app bg-gray-50 px-3 py-2 text-sm text-muted"
                     />
@@ -1716,13 +1795,15 @@ export default function InventoryPage() {
 
                   {showPaidFromPocket && (
                     <label className={labelCls}>
-                      <span className="font-semibold">Paid From Pocket <span className="text-[var(--color-accent)]">*</span></span>
+                      <span className="font-semibold">
+                        {t("inventory.paidFromPocketLabel")} <span className="text-[var(--color-accent)]">*</span>
+                      </span>
                       <select value={form.paidFromPocket}
                         onChange={(e) => updateField("paidFromPocket", e.target.value as PaidPocket | "")}
                         className={inputCls}>
-                        <option value="">Select pocket</option>
+                        <option value="">{t("inventory.selectPocket")}</option>
                         {(form.purchaseCurrency === "AED" ? AED_POCKETS : form.purchaseCurrency === "DZD" ? DZD_POCKETS : EUR_POCKETS).map((p) => (
-                          <option key={p} value={p}>{p}</option>
+                          <option key={p} value={p}>{pocketDetailLabel(t, p)}</option>
                         ))}
                       </select>
                     </label>
@@ -1731,10 +1812,10 @@ export default function InventoryPage() {
               )}
 
               {/* ── LOCATION & OWNER ── */}
-              {sectionHeader("Location & Owner")}
+              {sectionHeader(t("inventory.locationOwnerHeading"))}
 
               <label className={labelCls}>
-                <span className="font-semibold">Location</span>
+                <span className="font-semibold">{t("inventory.location")}</span>
                 <select
                   value={form.location}
                   onChange={(e) => {
@@ -1743,89 +1824,94 @@ export default function InventoryPage() {
                   }}
                   className={inputCls}
                 >
-                  <option value="">— None —</option>
+                  <option value="">{t("inventory.locationNone")}</option>
                   {CAR_LOCATIONS.map((loc) => (
                     <option key={loc} value={loc}>
-                      {loc}
+                      {carLocationOptionLabel(t, loc)}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className={labelCls}>
-                <span className="font-semibold">Owner</span>
+                <span className="font-semibold">{t("inventory.owner")}</span>
                 <select value={form.owner} onChange={(e) => updateField("owner", e.target.value as "Axira" | "Client")} className={inputCls}>
-                  <option value="Axira">Axira</option>
-                  <option value="Client">Client</option>
+                  <option value="Axira">{t("inventory.ownerAxira")}</option>
+                  <option value="Client">{t("inventory.ownerClient")}</option>
                 </select>
               </label>
 
               {showClientName && (
                 <label className={`${labelCls} sm:col-span-2`}>
-                  <span className="font-semibold">Client Name <span className="text-[var(--color-accent)]">*</span></span>
+                  <span className="font-semibold">
+                    {t("inventory.clientNameLabel")} <span className="text-[var(--color-accent)]">*</span>
+                  </span>
                   <input value={form.clientName} onChange={(e) => updateField("clientName", e.target.value)}
-                    placeholder="Client name" className={inputCls} />
+                    placeholder={t("inventory.clientName")} className={inputCls} />
                 </label>
               )}
 
               {/* ── LISTING PRICE ── */}
-              {sectionHeader("Listing Price")}
+              {sectionHeader(t("inventory.listingPriceHeading"))}
 
               <label className={`${labelCls} sm:col-span-2`}>
-                <span className="font-semibold">Sale Price (DZD) <span className="text-gray-400 font-normal text-xs">— shown on public site; leave blank for Prix sur demande</span></span>
+                <span className="font-semibold">
+                  {t("inventory.salePriceDzdLabel")}{" "}
+                  <span className="text-gray-400 font-normal text-xs">{t("inventory.salePriceDzdHint")}</span>
+                </span>
                 <input
                   type="number"
                   min="0"
                   step="1000"
                   value={form.salePriceDzd}
                   onChange={(e) => updateField("salePriceDzd", e.target.value)}
-                  placeholder="e.g. 3500000"
+                  placeholder={t("inventory.salePricePlaceholder")}
                   className={inputCls}
                 />
               </label>
 
               {canEditSalesListMeta ? (
                 <>
-                  {sectionHeader("Algeria sales list")}
+                  {sectionHeader(t("inventory.algeriaSalesListHeading"))}
                   <label className={labelCls}>
-                    <span className="font-semibold">Lead time (days)</span>
+                    <span className="font-semibold">{t("inventory.leadTimeDays")}</span>
                     <input
                       type="number"
                       min="0"
                       value={form.salesLeadTimeDays}
                       onChange={(e) => updateField("salesLeadTimeDays", e.target.value)}
-                      placeholder="e.g. 14"
+                      placeholder={t("inventory.leadTimePlaceholder")}
                       className={inputCls}
                     />
                   </label>
                   <label className={labelCls}>
-                    <span className="font-semibold">Deposit (DZD)</span>
+                    <span className="font-semibold">{t("inventory.depositDzd")}</span>
                     <input
                       type="number"
                       min="0"
                       value={form.salesDepositDzd}
                       onChange={(e) => updateField("salesDepositDzd", e.target.value)}
-                      placeholder="e.g. 500000"
+                      placeholder={t("inventory.depositPlaceholder")}
                       className={inputCls}
                     />
                   </label>
                   <label className={`${labelCls} sm:col-span-2`}>
-                    <span className="font-semibold">Cost estimate (DZD)</span>
+                    <span className="font-semibold">{t("inventory.costEstimateDzdField")}</span>
                     <input
                       type="number"
                       min="0"
                       value={form.salesCostEstimateDzd}
                       onChange={(e) => updateField("salesCostEstimateDzd", e.target.value)}
-                      placeholder="Optional — for margin hints on sales list"
+                      placeholder={t("inventory.costEstimatePlaceholder")}
                       className={inputCls}
                     />
                   </label>
                   <label className={`${labelCls} sm:col-span-2`}>
-                    <span className="font-semibold">Internal note (sales list)</span>
+                    <span className="font-semibold">{t("inventory.internalNoteSalesList")}</span>
                     <textarea
                       value={form.salesInternalNote}
                       onChange={(e) => updateField("salesInternalNote", e.target.value)}
-                      placeholder="Margin / sourcing notes — not shown to staff on sales list"
+                      placeholder={t("inventory.internalNotePlaceholder")}
                       rows={2}
                       className="w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                     />
@@ -1834,7 +1920,7 @@ export default function InventoryPage() {
               ) : null}
 
               {/* ── SALES NOTES (shared with sales list) ── */}
-              {sectionHeader("Sales notes (Algeria)")}
+              {sectionHeader(t("inventory.salesNotesHeading"))}
               <div className="sm:col-span-2">
                 {editingCarId ? (
                   <SalesNotesField
@@ -1850,7 +1936,7 @@ export default function InventoryPage() {
                         body: JSON.stringify({ sales_notes: text }),
                       });
                       const data = (await res.json().catch(() => ({}))) as SalesNotesSaveResult & { error?: string };
-                      if (!res.ok) throw new Error(data.error || "Failed to save");
+                      if (!res.ok) throw new Error(data.error || t("inventory.failedSaveShort"));
                       setForm((prev) => ({
                         ...prev,
                         salesNotesUpdatedAt: data.sales_notes_updated_at ?? null,
@@ -1862,14 +1948,14 @@ export default function InventoryPage() {
                   />
                 ) : (
                   <label className={labelCls}>
-                    <span className="font-semibold">Sales notes</span>
+                    <span className="font-semibold">{t("inventory.salesNotesFieldLabel")}</span>
                     <span className="mt-0.5 block text-[11px] text-muted">
-                      Saved with the vehicle. After the first save, use the Save button here to refresh the “last updated” audit.
+                      {t("inventory.salesNotesAddOnlyHint")}
                     </span>
                     <textarea
                       value={form.salesNotes}
                       onChange={(e) => updateField("salesNotes", e.target.value)}
-                      placeholder="Notes for the Algeria sales team…"
+                      placeholder={t("inventory.salesNotesPlaceholder")}
                       rows={3}
                       className="mt-1 w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                     />
@@ -1878,36 +1964,36 @@ export default function InventoryPage() {
               </div>
 
               {/* ── PUBLISHING & STATUS ── */}
-              {sectionHeader("Publishing & Status")}
+              {sectionHeader(t("inventory.publishingStatusHeading"))}
 
               <div className="sm:col-span-2 flex flex-wrap gap-4 items-center">
                 <label className="flex items-center gap-2 cursor-pointer text-xs">
                   <input type="checkbox" checked={form.isPublished}
                     onChange={(e) => updateField("isPublished", e.target.checked)}
                     className="accent-[var(--color-accent)] w-4 h-4" />
-                  <span className="font-semibold">Published on public site</span>
-                  <span className="text-muted">(visitors can see this car)</span>
+                  <span className="font-semibold">{t("inventory.publishedPublicLabel")}</span>
+                  <span className="text-muted">{t("inventory.publishedPublicHint")}</span>
                 </label>
               </div>
 
               <label className={labelCls}>
-                <span className="font-semibold">Status Override</span>
+                <span className="font-semibold">{t("inventory.statusOverride")}</span>
                 <select value={form.statusOverride} onChange={(e) => updateField("statusOverride", e.target.value)} className={inputCls}>
-                  <option value="">Auto (follow container + deal)</option>
-                  <option value="available">Force: Available</option>
-                  <option value="in_transit">Force: In Transit (For Sale)</option>
-                  <option value="sold">Force: Sold</option>
+                  <option value="">{t("inventory.statusAuto")}</option>
+                  <option value="available">{t("inventory.statusForceAvailable")}</option>
+                  <option value="in_transit">{t("inventory.statusForceInTransit")}</option>
+                  <option value="sold">{t("inventory.statusForceSold")}</option>
                 </select>
               </label>
 
               {/* ── NOTES ── */}
-              {sectionHeader("Notes")}
+              {sectionHeader(t("inventory.notesHeading"))}
 
               <div className="sm:col-span-2">
                 <label className={labelCls}>
-                  <span className="font-semibold">Notes</span>
+                  <span className="font-semibold">{t("deals.notes")}</span>
                   <textarea value={form.notes} onChange={(e) => updateField("notes", e.target.value)}
-                    placeholder="Internal notes..." rows={3}
+                    placeholder={t("inventory.internalNotesPlaceholder")} rows={3}
                     className="w-full resize-none rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
@@ -1920,7 +2006,7 @@ export default function InventoryPage() {
                     onClick={() => toggleCarAuditSection()}
                     className="flex w-full items-center justify-between text-left text-xs font-semibold text-app hover:bg-black/[0.03]"
                   >
-                    <span>History (audit)</span>
+                    <span>{t("inventory.historyAudit")}</span>
                     <span aria-hidden>{carHistoryOpen ? "▼" : "►"}</span>
                   </button>
                   {carHistoryOpen ? (
@@ -1935,10 +2021,10 @@ export default function InventoryPage() {
                       {carHistoryLoading && carHistoryRows.length === 0 ? (
                         <div className="flex items-center gap-2 text-[11px] text-muted">
                           <Spinner size="sm" color="danger" />
-                          Loading…
+                          {t("inventory.loadingShort")}
                         </div>
                       ) : carHistoryRows.length === 0 ? (
-                        <p className="text-[11px] text-muted">No audit entries yet.</p>
+                        <p className="text-[11px] text-muted">{t("inventory.noAuditYet")}</p>
                       ) : (
                         <div className="max-h-[14rem] space-y-1.5 overflow-y-auto text-[11px]">
                           {carHistoryRows.map((row) => (
@@ -1948,7 +2034,12 @@ export default function InventoryPage() {
                             >
                               <div className="flex flex-wrap justify-between gap-1 font-medium">
                                 <span className="text-[var(--color-accent)]">{row.field_name}</span>
-                                <span className="text-muted">{new Date(row.changed_at).toLocaleString()}</span>
+                                <span className="text-muted">
+                                  {formatDateForLocale(locale, row.changed_at, {
+                                    dateStyle: "short",
+                                    timeStyle: "short",
+                                  })}
+                                </span>
                               </div>
                               <div className="mt-1 text-muted">
                                 {row.old_value != null && row.old_value !== "" ? (
@@ -1966,10 +2057,12 @@ export default function InventoryPage() {
                                 </span>
                               </div>
                               {row.reason ? (
-                                <div className="mt-1 text-[10px] italic text-muted">Reason: {row.reason}</div>
+                                <div className="mt-1 text-[10px] italic text-muted">
+                                  {t("inventory.auditReason", { reason: row.reason })}
+                                </div>
                               ) : null}
                               <div className="mt-0.5 font-mono text-[10px] text-muted">
-                                By {(row.changed_by || "?").slice(0, 8)}…
+                                {t("inventory.auditBy", { id: `${(row.changed_by || "?").slice(0, 8)}…` })}
                               </div>
                             </div>
                           ))}
@@ -1986,7 +2079,7 @@ export default function InventoryPage() {
                             editingCarId && void fetchCarAuditHistory({ offset: carHistoryRows.length })
                           }
                         >
-                          {carHistoryLoading ? "Loading…" : "Load more"}
+                          {carHistoryLoading ? t("inventory.loadingShort") : t("inventory.loadMore")}
                         </Button>
                       ) : null}
                     </div>
@@ -1995,7 +2088,7 @@ export default function InventoryPage() {
               ) : null}
 
               {/* ── PHOTOS ── */}
-              {sectionHeader("Photos")}
+              {sectionHeader(t("inventory.photosHeading"))}
 
               <div className="sm:col-span-2 space-y-2 text-xs text-app">
                 {carPhotos.length > 0 && (
@@ -2003,7 +2096,7 @@ export default function InventoryPage() {
                     {carPhotos.map((url, i) => (
                       <div key={url} className="relative group">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt={`Car photo ${i + 1}`}
+                        <img src={url} alt={t("inventory.photoAlt", { n: i + 1 })}
                           className="h-20 w-20 rounded-md object-cover border border-app" />
                         <button type="button" onClick={() => handleDeletePhoto(url, i)}
                           className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center w-5 h-5 bg-red-600 text-white rounded-full text-[11px] font-bold">
@@ -2019,7 +2112,7 @@ export default function InventoryPage() {
                     disabled={isUploadingPhoto} />
                   <div className={["rounded-md border border-dashed border-app p-3 text-center text-muted transition",
                     isUploadingPhoto ? "opacity-60 cursor-not-allowed" : "hover:border-[var(--color-accent)] hover:text-app cursor-pointer"].join(" ")}>
-                    {isUploadingPhoto ? "Uploading..." : carPhotos.length > 0 ? "Add more photos" : "Click to upload photos"}
+                    {isUploadingPhoto ? t("inventory.uploading") : carPhotos.length > 0 ? t("inventory.addMorePhotos") : t("inventory.clickUploadPhotos")}
                   </div>
                 </label>
               </div>
@@ -2028,10 +2121,10 @@ export default function InventoryPage() {
 
             <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" size="sm" isDisabled={isSaving} onPress={closeModal}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="button" variant="primary" size="sm" isDisabled={isSaving} onPress={handleSave}>
-                {isSaving ? "Saving..." : "Save"}
+                {isSaving ? t("inventory.saving") : t("common.save")}
               </Button>
             </div>
           </div>

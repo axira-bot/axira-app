@@ -45,6 +45,12 @@ import type { Car } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
+import {
+  formatDateForLocale,
+  formatNumberForLocale,
+  useI18n,
+  type TranslateFn,
+} from "@/lib/context/I18nContext";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import { PageContainer } from "@/components/ui/page-container";
 
@@ -107,36 +113,29 @@ const emptyForm = (): DebtFormState => ({
   status: "outstanding",
 });
 
-function formatNumber(value: number): string {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function formatMoney(value: number | null | undefined, currency: string) {
-  const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
-  return `${formatNumber(v)} ${currency || ""}`;
-}
-
 function parseNum(s: string): number {
   const v = Number(s);
   return Number.isFinite(v) ? v : 0;
 }
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+function debtStatusNormalized(s: string | null | undefined): "outstanding" | "partially_paid" | "settled" {
+  const v = (s || "").toLowerCase();
+  if (v === "settled") return "settled";
+  if (v === "partially_paid") return "partially_paid";
+  return "outstanding";
 }
 
-function statusLabel(s: string | null | undefined): string {
-  const v = (s || "").toLowerCase();
-  if (v === "settled") return "Settled";
-  if (v === "partially_paid") return "Partially paid";
-  return "Outstanding";
+function debtStatusTranslationKey(status: string | null | undefined): string {
+  return `debts.statusValues.${debtStatusNormalized(status)}`;
+}
+
+/** UI label for cash pocket names (DB keeps English, e.g. `Dubai Cash`). */
+function translatePocket(t: TranslateFn, pocket: string | null | undefined): string {
+  const c = String(pocket ?? "").trim();
+  if (!c) return "";
+  const key = `debts.pockets.${c.replace(/\s+/g, "")}`;
+  const translated = t(key);
+  return translated === key ? c : translated;
 }
 
 function carLabel(c: Car): string {
@@ -144,7 +143,10 @@ function carLabel(c: Car): string {
   return parts.join(" ");
 }
 
+type PayablesRow = Debt & { _isSupplier?: boolean; _carId?: string };
+
 export default function DebtsPage() {
+  const { locale, t } = useI18n();
   const { canDelete } = useAuth();
   const [activeTab, setActiveTab] = useState<"receivables" | "payables">("receivables");
   const [isLoading, setIsLoading] = useState(true);
@@ -171,6 +173,19 @@ export default function DebtsPage() {
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const fmtNum = (n: number) => formatNumberForLocale(locale, n, { maximumFractionDigits: 0 });
+
+  const formatDateDisp = (value: string | null | undefined): string => {
+    if (!value) return t("common.emiDash");
+    const s = formatDateForLocale(locale, value);
+    return s || t("common.emiDash");
+  };
+
+  const formatMoneyAmt = (value: number | null | undefined, currency: string): string => {
+    const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
+    return `${fmtNum(v)} ${currency || ""}`.trim();
+  };
 
   const fetchAll = async () => {
     setIsLoading(true);
@@ -234,6 +249,38 @@ export default function DebtsPage() {
     return map;
   }, [payablesManual, supplierPayables]);
 
+  const listPayables = useMemo((): PayablesRow[] => {
+    const fromSuppliers = supplierPayables.map((c) => {
+      const typed = c as Car & { purchase_currency?: string };
+      return {
+        id: `car-${c.id}`,
+        type: "payable" as const,
+        name: t("debts.supplierDebtName", { car: carLabel(c) }),
+        original_amount: c.supplier_owed ?? 0,
+        amount_paid: 0,
+        amount_remaining: c.supplier_owed ?? 0,
+        currency: typed.purchase_currency ?? "AED",
+        reason: t("debts.supplierReason"),
+        date: null,
+        due_date: null,
+        notes: null,
+        status: "outstanding",
+        _isSupplier: true,
+        _carId: c.id,
+      } satisfies PayablesRow;
+    });
+    return [...payablesManual, ...fromSuppliers];
+  }, [payablesManual, supplierPayables, t]);
+
+  const modalTitle =
+    editingId !== null
+      ? activeTab === "receivables"
+        ? t("debts.modalEditReceivable")
+        : t("debts.modalEditPayable")
+      : activeTab === "receivables"
+        ? t("debts.modalAddReceivable")
+        : t("debts.modalAddPayable");
+
   const updateField = <K extends keyof DebtFormState>(key: K, value: DebtFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -255,7 +302,7 @@ export default function DebtsPage() {
       date: d.date ?? new Date().toISOString().slice(0, 10),
       dueDate: d.due_date ?? "",
       notes: d.notes ?? "",
-      status: (d.status as DebtFormState["status"]) || "outstanding",
+      status: debtStatusNormalized(d.status) as DebtFormState["status"],
     });
     setIsModalOpen(true);
     setError(null);
@@ -270,12 +317,12 @@ export default function DebtsPage() {
 
   const handleSaveDebt = async () => {
     if (!form.name.trim()) {
-      setError("Name is required.");
+      setError(t("debts.nameRequired"));
       return;
     }
     const amount = parseNum(form.amount);
     if (amount <= 0) {
-      setError("Amount must be greater than 0.");
+      setError(t("debts.amountPositive"));
       return;
     }
     setIsSaving(true);
@@ -406,7 +453,7 @@ export default function DebtsPage() {
 
   const handleDeleteDebt = async (d: Debt) => {
     if (!canDelete) return;
-    if (!window.confirm("Delete this debt record? This cannot be undone.")) return;
+    if (!window.confirm(t("debts.deleteDebtConfirm"))) return;
     setDeletingId(d.id);
     const { error: delErr } = await supabase.from("debts").delete().eq("id", d.id);
     if (delErr) {
@@ -462,18 +509,23 @@ export default function DebtsPage() {
     if (!viewDebt) return;
     const amount = parseNum(newPaymentAmount);
     if (amount <= 0) {
-      setPaymentsError("Amount must be greater than 0.");
+      setPaymentsError(t("debts.paymentAmountPositive"));
       return;
     }
     const currency = viewDebt.currency || "AED";
     const remaining = viewDebt.amount_remaining ?? 0;
     if (amount > remaining) {
-      setPaymentsError(`Payment exceeds remaining balance. Maximum: ${formatNumber(remaining)} ${currency}`);
+      setPaymentsError(
+        t("debts.paymentExceeds", {
+          amount: fmtNum(remaining),
+          currency,
+        })
+      );
       return;
     }
     const pocket = newPaymentPocket || (POCKETS_BY_CURRENCY[currency] ?? [])[0];
     if (!pocket) {
-      setPaymentsError("Please select a pocket.");
+      setPaymentsError(t("debts.selectPocket"));
       return;
     }
     const date = newPaymentDate || new Date().toISOString().slice(0, 10);
@@ -522,9 +574,10 @@ export default function DebtsPage() {
     }
 
     const isReceivable = (viewDebt.type || "").toLowerCase() === "receivable";
+    const namePart = viewDebt.name?.trim() || t("debts.debtFallbackName");
     const movementDescription = isReceivable
-      ? `Payment received from ${viewDebt.name ?? "debt"}`
-      : `Payment to ${viewDebt.name ?? "debt"}`;
+      ? t("debts.movementPaymentReceivedFrom", { name: namePart })
+      : t("debts.movementPaymentPaidTo", { name: namePart });
 
     const { error: movementErr } = await supabase.from("movements").insert({
       date,
@@ -573,9 +626,7 @@ export default function DebtsPage() {
 
     setDebtPayments((prev) => [inserted as DebtPayment, ...prev]);
     setViewDebt((v) =>
-      v && v.id === viewDebt.id
-        ? { ...v, amount_paid: newPaid, amount_remaining: newRem, status: newStatus }
-        : v
+      v && v.id === viewDebt.id ? { ...v, amount_paid: newPaid, amount_remaining: newRem, status: newStatus } : v
     );
     setDebts((prev) =>
       prev.map((d) =>
@@ -593,7 +644,7 @@ export default function DebtsPage() {
     if (!viewDebt) return;
     const amount = payment.amount ?? 0;
     if (amount <= 0) return;
-    if (!window.confirm("Remove this payment record?")) return;
+    if (!window.confirm(t("debts.deletePaymentConfirm"))) return;
     setDeletingPaymentId(payment.id);
 
     const prevPaid = viewDebt.amount_paid ?? 0;
@@ -650,32 +701,13 @@ export default function DebtsPage() {
   };
 
   const listReceivables = receivables;
-  const listPayables = [
-    ...payablesManual,
-    ...supplierPayables.map((c) => ({
-      id: `car-${c.id}`,
-      type: "payable" as const,
-      name: `Supplier Debt - ${carLabel(c)}`,
-      original_amount: c.supplier_owed ?? 0,
-      amount_paid: 0,
-      amount_remaining: c.supplier_owed ?? 0,
-      currency: (c as Car & { purchase_currency?: string }).purchase_currency ?? "AED",
-      reason: "Supplier",
-      date: null,
-      due_date: null,
-      notes: null,
-      status: "outstanding" as string,
-      _isSupplier: true,
-      _carId: c.id,
-    })),
-  ];
 
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <PageContainer size="xl">
         <header>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Debts</h1>
-          <p className="text-sm font-medium text-danger">Receivables & Payables</p>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("debts.title")}</h1>
+          <p className="text-sm font-medium text-danger">{t("debts.subtitle")}</p>
         </header>
 
         <div className="flex flex-wrap gap-2">
@@ -687,7 +719,7 @@ export default function DebtsPage() {
               variant={activeTab === tab ? "primary" : "outline"}
               onPress={() => setActiveTab(tab)}
             >
-              {tab === "receivables" ? "Receivables" : "Payables"}
+              {tab === "receivables" ? t("debts.tabReceivables") : t("debts.tabPayables")}
             </Button>
           ))}
         </div>
@@ -703,87 +735,89 @@ export default function DebtsPage() {
         {activeTab === "receivables" && (
           <>
             <div className="rounded-lg border border-app surface p-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Total outstanding (receivables)</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+                {t("debts.totalOutstandingReceivables")}
+              </h2>
               <div className="mt-2 flex flex-wrap gap-4">
                 {Object.entries(receivableTotalsByCurrency).length === 0 ? (
-                  <span className="text-gray-400">No outstanding</span>
+                  <span className="text-gray-400">{t("debts.noOutstandingTotal")}</span>
                 ) : (
                   Object.entries(receivableTotalsByCurrency).map(([cur, sum]) => (
                     <span key={cur} className="text-lg font-semibold text-emerald-400">
-                      {formatMoney(sum, cur)}
+                      {formatMoneyAmt(sum, cur)}
                     </span>
                   ))
                 )}
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-app">Receivables</h2>
+              <h2 className="text-sm font-semibold text-app">{t("debts.tabReceivables")}</h2>
               <Button type="button" variant="primary" size="sm" onPress={openAdd}>
-                Add Receivable
+                {t("debts.addReceivable")}
               </Button>
             </div>
             <div className="rounded-lg border border-app surface overflow-hidden">
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
                   <Spinner size="md" color="danger" />
-                  <span className="text-sm">Loading…</span>
+                  <span className="text-sm">{t("common.loadingEllipsis")}</span>
                 </div>
               ) : listReceivables.length === 0 ? (
-                <div className="p-8 text-center text-gray-400">No receivables yet.</div>
+                <div className="p-8 text-center text-gray-400">{t("debts.emptyReceivables")}</div>
               ) : (
                 <div className="responsive-table-wrap">
                   <table className="min-w-[620px] w-full text-left text-xs">
                     <thead className="border-b border-app text-muted">
                       <tr>
-                        <th className="px-4 py-3">Name</th>
-                        <th className="px-4 py-3 text-right">Amount</th>
-                        <th className="px-4 py-3 hidden sm:table-cell">Currency</th>
-                        <th className="px-4 py-3 hidden sm:table-cell">Reason</th>
-                        <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3 hidden sm:table-cell">Due date</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Actions</th>
+                        <th className="px-4 py-3">{t("debts.thName")}</th>
+                        <th className="px-4 py-3 text-right">{t("debts.thAmount")}</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">{t("debts.thCurrency")}</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">{t("debts.thReason")}</th>
+                        <th className="px-4 py-3">{t("debts.thDate")}</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">{t("debts.thDueDate")}</th>
+                        <th className="px-4 py-3">{t("debts.thStatus")}</th>
+                        <th className="px-4 py-3">{t("debts.thActions")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {listReceivables.map((d) => (
                         <tr key={d.id} className="border-b border-app last:border-b-0">
-                          <td className="px-4 py-3 font-medium text-app">{d.name ?? "-"}</td>
+                          <td className="px-4 py-3 font-medium text-app">{d.name ?? t("common.emiDash")}</td>
                           <td className="px-4 py-3 text-right text-app">
-                            {formatMoney(d.amount_remaining ?? d.original_amount, d.currency ?? "AED")}
+                            {formatMoneyAmt(d.amount_remaining ?? d.original_amount, d.currency ?? "AED")}
                           </td>
-                          <td className="px-4 py-3 text-app hidden sm:table-cell">{d.currency ?? "-"}</td>
-                          <td className="px-4 py-3 text-app hidden sm:table-cell">{d.reason ?? "-"}</td>
-                          <td className="px-4 py-3 text-app">{formatDate(d.date)}</td>
-                          <td className="px-4 py-3 text-app hidden sm:table-cell">{formatDate(d.due_date)}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{d.currency ?? t("common.emiDash")}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{d.reason ?? t("common.emiDash")}</td>
+                          <td className="px-4 py-3 text-app">{formatDateDisp(d.date)}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{formatDateDisp(d.due_date)}</td>
                           <td className="px-4 py-3">
                             <span
                               className={
-                                (d.status || "").toLowerCase() === "settled"
+                                debtStatusNormalized(d.status) === "settled"
                                   ? "rounded bg-emerald-900/50 px-2 py-0.5 text-emerald-300"
-                                  : (d.status || "").toLowerCase() === "partially_paid"
-                                  ? "rounded bg-amber-900/50 px-2 py-0.5 text-amber-300"
-                                  : "rounded bg-zinc-700/50 px-2 py-0.5 text-app"
+                                  : debtStatusNormalized(d.status) === "partially_paid"
+                                    ? "rounded bg-amber-900/50 px-2 py-0.5 text-amber-300"
+                                    : "rounded bg-zinc-700/50 px-2 py-0.5 text-app"
                               }
                             >
-                              {statusLabel(d.status)}
+                              {t(debtStatusTranslationKey(d.status))}
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <RowActionsMenu label="Receivable actions">
+                            <RowActionsMenu label={t("debts.menuReceivableActions")}>
                               <button
                                 type="button"
                                 onClick={() => openView(d)}
                                 className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                               >
-                                View
+                                {t("debts.view")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => openEdit(d)}
                                 className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                               >
-                                Edit
+                                {t("debts.edit")}
                               </button>
                               {(d.amount_remaining ?? 0) > 0 && (
                                 <button
@@ -791,7 +825,7 @@ export default function DebtsPage() {
                                   onClick={() => handleMarkSettled(d)}
                                   className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-emerald-600 hover:bg-emerald-100"
                                 >
-                                  Mark settled
+                                  {t("debts.markSettled")}
                                 </button>
                               )}
                               {canDelete ? (
@@ -801,7 +835,7 @@ export default function DebtsPage() {
                                   disabled={deletingId === d.id}
                                   className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
                                 >
-                                  {deletingId === d.id ? "Deleting..." : "Delete"}
+                                  {deletingId === d.id ? t("debts.deleting") : t("debts.delete")}
                                 </button>
                               ) : null}
                             </RowActionsMenu>
@@ -819,83 +853,81 @@ export default function DebtsPage() {
         {activeTab === "payables" && (
           <>
             <div className="rounded-lg border border-app surface p-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Total payable</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">{t("debts.totalPayable")}</h2>
               <div className="mt-2 flex flex-wrap gap-4">
                 {Object.entries(payableTotalsByCurrency).length === 0 ? (
-                  <span className="text-gray-400">No payables</span>
+                  <span className="text-gray-400">{t("debts.noPayablesTotal")}</span>
                 ) : (
                   Object.entries(payableTotalsByCurrency).map(([cur, sum]) => (
-                    <span key={cur} className="text-lg font-semibold text-red-400">
-                      {formatMoney(sum, cur)}
-                    </span>
+                    <span key={cur} className="text-lg font-semibold text-red-400">{formatMoneyAmt(sum, cur)}</span>
                   ))
                 )}
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-app">Payables</h2>
+              <h2 className="text-sm font-semibold text-app">{t("debts.tabPayables")}</h2>
               <Button type="button" variant="primary" size="sm" onPress={openAdd}>
-                Add Payable
+                {t("debts.addPayable")}
               </Button>
             </div>
             <div className="rounded-lg border border-app surface overflow-hidden">
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
                   <Spinner size="md" color="danger" />
-                  <span className="text-sm">Loading…</span>
+                  <span className="text-sm">{t("common.loadingEllipsis")}</span>
                 </div>
               ) : listPayables.length === 0 ? (
-                <div className="p-8 text-center text-gray-400">No payables yet.</div>
+                <div className="p-8 text-center text-gray-400">{t("debts.emptyPayables")}</div>
               ) : (
                 <div className="responsive-table-wrap">
                   <table className="min-w-[620px] w-full text-left text-xs">
                     <thead className="border-b border-app text-muted">
                       <tr>
-                        <th className="px-4 py-3">Name</th>
-                        <th className="px-4 py-3 text-right">Amount</th>
-                        <th className="px-4 py-3 hidden sm:table-cell">Currency</th>
-                        <th className="px-4 py-3 hidden sm:table-cell">Reason</th>
-                        <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3 hidden sm:table-cell">Due date</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Actions</th>
+                        <th className="px-4 py-3">{t("debts.thName")}</th>
+                        <th className="px-4 py-3 text-right">{t("debts.thAmount")}</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">{t("debts.thCurrency")}</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">{t("debts.thReason")}</th>
+                        <th className="px-4 py-3">{t("debts.thDate")}</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">{t("debts.thDueDate")}</th>
+                        <th className="px-4 py-3">{t("debts.thStatus")}</th>
+                        <th className="px-4 py-3">{t("debts.thActions")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {listPayables.map((item) => {
                         const isSupplier = "_isSupplier" in item && item._isSupplier;
-                        const d = item as Debt & { _isSupplier?: boolean; _carId?: string };
+                        const d = item as PayablesRow;
                         return (
                           <tr key={d.id} className="border-b border-app last:border-b-0">
-                            <td className="px-4 py-3 font-medium text-app">{d.name ?? "-"}</td>
+                            <td className="px-4 py-3 font-medium text-app">{d.name ?? t("common.emiDash")}</td>
                             <td className="px-4 py-3 text-right text-app">
-                              {formatMoney(d.amount_remaining ?? d.original_amount, d.currency ?? "AED")}
+                              {formatMoneyAmt(d.amount_remaining ?? d.original_amount, d.currency ?? "AED")}
                             </td>
-                            <td className="px-4 py-3 text-app hidden sm:table-cell">{d.currency ?? "-"}</td>
-                            <td className="px-4 py-3 text-app hidden sm:table-cell">{d.reason ?? "-"}</td>
-                            <td className="px-4 py-3 text-app">{formatDate(d.date)}</td>
-                            <td className="px-4 py-3 text-app hidden sm:table-cell">{formatDate(d.due_date)}</td>
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">{d.currency ?? t("common.emiDash")}</td>
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">{d.reason ?? t("common.emiDash")}</td>
+                            <td className="px-4 py-3 text-app">{formatDateDisp(d.date)}</td>
+                            <td className="px-4 py-3 text-app hidden sm:table-cell">{formatDateDisp(d.due_date)}</td>
                             <td className="px-4 py-3">
                               <span className="rounded bg-zinc-700/50 px-2 py-0.5 text-app">
-                                {statusLabel(d.status)}
+                                {t(debtStatusTranslationKey(d.status))}
                               </span>
                             </td>
                             <td className="px-4 py-3">
                               {!isSupplier && (
-                                <RowActionsMenu label="Payable actions">
+                                <RowActionsMenu label={t("debts.menuPayableActions")}>
                                   <button
                                     type="button"
                                     onClick={() => openView(d)}
                                     className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                                   >
-                                    View
+                                    {t("debts.view")}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => openEdit(d)}
                                     className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                                   >
-                                    Edit
+                                    {t("debts.edit")}
                                   </button>
                                   {(d.amount_remaining ?? 0) > 0 && (
                                     <button
@@ -903,7 +935,7 @@ export default function DebtsPage() {
                                       onClick={() => handleMarkSettled(d)}
                                       className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-emerald-600 hover:bg-emerald-100"
                                     >
-                                      Mark settled
+                                      {t("debts.markSettled")}
                                     </button>
                                   )}
                                   {canDelete ? (
@@ -913,14 +945,12 @@ export default function DebtsPage() {
                                       disabled={deletingId === d.id}
                                       className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
                                     >
-                                      {deletingId === d.id ? "Deleting..." : "Delete"}
+                                      {deletingId === d.id ? t("debts.deleting") : t("debts.delete")}
                                     </button>
                                   ) : null}
                                 </RowActionsMenu>
                               )}
-                              {isSupplier && (
-                                <span className="text-gray-400 text-[11px]">From inventory</span>
-                              )}
+                              {isSupplier && <span className="text-gray-400 text-[11px]">{t("debts.fromInventory")}</span>}
                             </td>
                           </tr>
                         );
@@ -933,17 +963,14 @@ export default function DebtsPage() {
           </>
         )}
 
-        {/* Add/Edit Debt Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
             <div className="absolute inset-0 bg-black/70" onClick={closeModal} />
             <div className="relative w-full max-w-lg rounded-lg border border-app surface p-6 shadow-xl">
-              <h2 className="text-lg font-semibold text-app">
-                {editingId ? "Edit" : "Add"} {activeTab === "receivables" ? "Receivable" : "Payable"}
-              </h2>
+              <h2 className="text-lg font-semibold text-app">{modalTitle}</h2>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="space-y-1 text-xs text-muted sm:col-span-2">
-                  <span className="font-semibold">Name</span>
+                  <span className="font-semibold">{t("debts.debtName")}</span>
                   <input
                     type="text"
                     value={form.name}
@@ -952,7 +979,7 @@ export default function DebtsPage() {
                   />
                 </label>
                 <label className="space-y-1 text-xs text-muted">
-                  <span className="font-semibold">Amount</span>
+                  <span className="font-semibold">{t("debts.amount")}</span>
                   <input
                     type="number"
                     value={form.amount}
@@ -961,19 +988,21 @@ export default function DebtsPage() {
                   />
                 </label>
                 <label className="space-y-1 text-xs text-muted">
-                  <span className="font-semibold">Currency</span>
+                  <span className="font-semibold">{t("debts.currencyLabel")}</span>
                   <select
                     value={form.currency}
                     onChange={(e) => updateField("currency", e.target.value as DebtFormState["currency"])}
                     className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   >
                     {CURRENCIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
                     ))}
                   </select>
                 </label>
                 <label className="space-y-1 text-xs text-muted sm:col-span-2">
-                  <span className="font-semibold">Reason</span>
+                  <span className="font-semibold">{t("debts.reason")}</span>
                   <input
                     type="text"
                     value={form.reason}
@@ -982,7 +1011,7 @@ export default function DebtsPage() {
                   />
                 </label>
                 <label className="space-y-1 text-xs text-muted">
-                  <span className="font-semibold">Date</span>
+                  <span className="font-semibold">{t("debts.dateLabel")}</span>
                   <input
                     type="date"
                     value={form.date}
@@ -991,7 +1020,7 @@ export default function DebtsPage() {
                   />
                 </label>
                 <label className="space-y-1 text-xs text-muted">
-                  <span className="font-semibold">Due date (optional)</span>
+                  <span className="font-semibold">{t("debts.dueDateOptional")}</span>
                   <input
                     type="date"
                     value={form.dueDate}
@@ -1000,7 +1029,7 @@ export default function DebtsPage() {
                   />
                 </label>
                 <label className="space-y-1 text-xs text-muted sm:col-span-2">
-                  <span className="font-semibold">Notes</span>
+                  <span className="font-semibold">{t("debts.notes")}</span>
                   <textarea
                     value={form.notes}
                     onChange={(e) => updateField("notes", e.target.value)}
@@ -1010,14 +1039,16 @@ export default function DebtsPage() {
                 </label>
                 {editingId && (
                   <label className="space-y-1 text-xs text-muted sm:col-span-2">
-                    <span className="font-semibold">Status</span>
+                    <span className="font-semibold">{t("debts.status")}</span>
                     <select
                       value={form.status}
                       onChange={(e) => updateField("status", e.target.value as DebtFormState["status"])}
                       className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                     >
                       {STATUSES.map((s) => (
-                        <option key={s} value={s}>{statusLabel(s)}</option>
+                        <option key={s} value={s}>
+                          {t(debtStatusTranslationKey(s))}
+                        </option>
                       ))}
                     </select>
                   </label>
@@ -1029,7 +1060,7 @@ export default function DebtsPage() {
                   onClick={closeModal}
                   className="rounded-md border border-app px-4 py-2 text-sm font-semibold text-app"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="button"
@@ -1037,51 +1068,53 @@ export default function DebtsPage() {
                   disabled={isSaving}
                   className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
-                  {isSaving ? "Saving..." : "Save"}
+                  {isSaving ? t("debts.save") : t("debts.saveIdle")}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* View Debt Modal (with payments) */}
         {viewDebt && !("_isSupplier" in viewDebt) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
             <div className="absolute inset-0 bg-black/70" onClick={closeView} />
             <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-app surface p-6 shadow-xl">
-              <h2 className="text-lg font-semibold text-app">{viewDebt.name ?? "Debt"}</h2>
+              <h2 className="text-lg font-semibold text-app">{viewDebt.name ?? t("debts.debtFallbackName")}</h2>
               <p className="mt-1 text-xs text-muted">
-                {viewDebt.type === "receivable" ? "Receivable" : "Payable"} • {viewDebt.reason ?? "-"}
+                {viewDebt.type === "receivable" ? t("debts.typeReceivable") : t("debts.typePayable")} •{" "}
+                {viewDebt.reason ?? t("common.emiDash")}
               </p>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-gray-400">Original</span>
-                  <p className="font-semibold text-app">{formatMoney(viewDebt.original_amount, viewDebt.currency ?? "AED")}</p>
+                  <span className="text-gray-400">{t("debts.thOriginal")}</span>
+                  <p className="font-semibold text-app">{formatMoneyAmt(viewDebt.original_amount, viewDebt.currency ?? "AED")}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Paid</span>
-                  <p className="font-semibold text-app">{formatMoney(viewDebt.amount_paid, viewDebt.currency ?? "AED")}</p>
+                  <span className="text-gray-400">{t("debts.thPaid")}</span>
+                  <p className="font-semibold text-app">{formatMoneyAmt(viewDebt.amount_paid, viewDebt.currency ?? "AED")}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Remaining</span>
-                  <p className="font-semibold text-[var(--color-accent)]">{formatMoney(viewDebt.amount_remaining, viewDebt.currency ?? "AED")}</p>
+                  <span className="text-gray-400">{t("debts.thRemaining")}</span>
+                  <p className="font-semibold text-[var(--color-accent)]">
+                    {formatMoneyAmt(viewDebt.amount_remaining, viewDebt.currency ?? "AED")}
+                  </p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Status</span>
-                  <p className="font-semibold text-app">{statusLabel(viewDebt.status)}</p>
+                  <span className="text-gray-400">{t("debts.thStatus")}</span>
+                  <p className="font-semibold text-app">{t(debtStatusTranslationKey(viewDebt.status))}</p>
                 </div>
               </div>
 
               <div className="mt-6 border-t border-app pt-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Payment history</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">{t("debts.paymentHistoryTitle")}</h3>
                   {(viewDebt.amount_remaining ?? 0) > 0 && (
                     <button
                       type="button"
                       onClick={() => setIsPaymentFormOpen((p) => !p)}
                       className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                     >
-                      {isPaymentFormOpen ? "Cancel" : "Add Payment"}
+                      {isPaymentFormOpen ? t("common.cancel") : t("debts.addPayment")}
                     </button>
                   )}
                 </div>
@@ -1090,7 +1123,7 @@ export default function DebtsPage() {
                   <div className="mt-3 rounded-md border border-app bg-white p-3 text-xs">
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <label className="space-y-1">
-                        <span className="font-semibold text-app">Amount</span>
+                        <span className="font-semibold text-app">{t("debts.paymentAmount")}</span>
                         <input
                           type="number"
                           value={newPaymentAmount}
@@ -1099,7 +1132,7 @@ export default function DebtsPage() {
                         />
                       </label>
                       <label className="space-y-1">
-                        <span className="font-semibold text-app">Date</span>
+                        <span className="font-semibold text-app">{t("debts.paymentDate")}</span>
                         <input
                           type="date"
                           value={newPaymentDate}
@@ -1108,19 +1141,21 @@ export default function DebtsPage() {
                         />
                       </label>
                       <label className="space-y-1 sm:col-span-2">
-                        <span className="font-semibold text-app">Pocket</span>
+                        <span className="font-semibold text-app">{t("debts.paymentPocket")}</span>
                         <select
                           value={newPaymentPocket}
                           onChange={(e) => setNewPaymentPocket(e.target.value)}
                           className="w-full rounded-md border border-app bg-white px-2 py-1 text-app outline-none focus:border-[var(--color-accent)]"
                         >
                           {(POCKETS_BY_CURRENCY[viewDebt.currency ?? "AED"] ?? []).map((p) => (
-                            <option key={p} value={p}>{p}</option>
+                            <option key={p} value={p}>
+                              {translatePocket(t, p)}
+                            </option>
                           ))}
                         </select>
                       </label>
                       <label className="space-y-1 sm:col-span-2">
-                        <span className="font-semibold text-app">Notes</span>
+                        <span className="font-semibold text-app">{t("debts.paymentNotes")}</span>
                         <input
                           type="text"
                           value={newPaymentNote}
@@ -1137,18 +1172,18 @@ export default function DebtsPage() {
                         disabled={isAddingPayment}
                         className="rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
                       >
-                        {isAddingPayment ? "Saving..." : "Save Payment"}
+                        {isAddingPayment ? t("debts.save") : t("debts.savePayment")}
                       </button>
                     </div>
                   </div>
                 )}
 
                 {paymentsLoading ? (
-                  <p className="mt-2 text-gray-400">Loading payments...</p>
+                  <p className="mt-2 text-gray-400">{t("debts.loadingPayments")}</p>
                 ) : paymentsError && !isPaymentFormOpen ? (
                   <p className="mt-2 text-red-300">{paymentsError}</p>
                 ) : debtPayments.length === 0 ? (
-                  <p className="mt-2 text-gray-400">No payments yet.</p>
+                  <p className="mt-2 text-gray-400">{t("debts.noPaymentsYet")}</p>
                 ) : (
                   <div className="mt-2 space-y-2">
                     {debtPayments.map((p) => (
@@ -1157,20 +1192,20 @@ export default function DebtsPage() {
                         className="flex flex-wrap items-center justify-between gap-2 border-b border-app pb-2 text-[11px] last:border-b-0"
                       >
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-app">{formatDate(p.date)}</span>
-                          <span className="text-app">{formatMoney(p.amount, p.currency ?? 'AED')}</span>
-                          <span className="text-gray-400">{p.pocket}</span>
+                          <span className="font-semibold text-app">{formatDateDisp(p.date)}</span>
+                          <span className="text-app">{formatMoneyAmt(p.amount, p.currency ?? "AED")}</span>
+                          <span className="text-gray-400">{translatePocket(t, p.pocket)}</span>
                           {p.notes && <span className="text-gray-400">{p.notes}</span>}
                         </div>
                         {canDelete ? (
-                        <button
-                          type="button"
-                          onClick={() => handleDeletePayment(p)}
-                          disabled={deletingPaymentId === p.id}
-                          className="rounded border border-app bg-white px-2 py-0.5 text-[10px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
-                        >
-                          {deletingPaymentId === p.id ? "Removing..." : "Delete"}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePayment(p)}
+                            disabled={deletingPaymentId === p.id}
+                            className="rounded border border-app bg-white px-2 py-0.5 text-[10px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
+                          >
+                            {deletingPaymentId === p.id ? t("debts.removing") : t("debts.delete")}
+                          </button>
                         ) : null}
                       </div>
                     ))}
@@ -1184,7 +1219,7 @@ export default function DebtsPage() {
                   onClick={closeView}
                   className="rounded-md border border-app px-4 py-2 text-sm font-semibold text-app"
                 >
-                  Close
+                  {t("common.close")}
                 </button>
               </div>
             </div>

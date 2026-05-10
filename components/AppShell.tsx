@@ -6,39 +6,16 @@ import { Spinner } from "@heroui/react";
 import Sidebar, { MobileDrawer, MobileMenuButton } from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useAuth } from "@/lib/context/AuthContext";
-
-const PAGE_TITLES: Record<string, string> = {
-  "/dashboard":   "Dashboard",
-  "/audit":       "Audit log",
-  "/activity":    "Activity",
-  "/inventory":   "Inventory",
-  "/deals":       "Deals",
-  "/sales-list":  "Sales list",
-  "/catalog":     "Sales catalog",
-  "/containers":  "Containers",
-  "/movements":   "Movements",
-  "/transfers":   "Transfers",
-  "/debts":       "Debts",
-  "/employees":   "Employees",
-  "/payroll":     "Payroll",
-  "/investors":   "Investors",
-  "/reports":     "Reports",
-  "/clients":     "Clients",
-  "/suppliers":   "Suppliers",
-  "/admin/users": "Users",
-};
-
-function getPageTitle(pathname: string): string {
-  if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
-  const segment = pathname.split("/")[1];
-  if (segment && PAGE_TITLES[`/${segment}`]) return PAGE_TITLES[`/${segment}`];
-  return "Axira";
-}
+import { useI18n } from "@/lib/context/I18nContext";
+import { pageMetaKeysForPathname } from "@/lib/i18n/pageMeta";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { t } = useI18n();
+  const { titleKey } = pageMetaKeysForPathname(pathname);
+  const mobileTitle = t(titleKey);
   const isLogin = pathname === "/login";
   const [mobileOpen, setMobileOpen] = useState(false);
   const prefetchTargets = [
@@ -73,7 +50,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         style={{ background: "var(--color-bg)" }}
       >
         <Spinner size="lg" color="danger" />
-        <span className="text-sm text-default-500">Loading…</span>
+        <span className="text-sm text-default-500">{t("appShell.loading")}</span>
       </div>
     );
   }
@@ -113,7 +90,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             className="text-sm font-medium"
             style={{ color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-body)" }}
           >
-            {getPageTitle(pathname)}
+            {mobileTitle}
           </span>
         </div>
 

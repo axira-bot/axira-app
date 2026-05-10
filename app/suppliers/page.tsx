@@ -13,6 +13,7 @@ import {
   TextField,
 } from "@heroui/react";
 import { useAuth } from "@/lib/context/AuthContext";
+import { useI18n } from "@/lib/context/I18nContext";
 import { normalizeRole } from "@/lib/auth/roles";
 import { PaginatedTable } from "@/components/ui/paginated-table";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
@@ -29,6 +30,7 @@ type Supplier = {
 };
 
 export default function SuppliersPage() {
+  const { t } = useI18n();
   const { user, profile, permissions } = useAuth();
   const effectiveRole = useMemo(() => {
     const metaRole = (user?.app_metadata as { role?: string } | undefined)?.role;
@@ -61,13 +63,13 @@ export default function SuppliersPage() {
     const data = await res.json().catch(() => ({}));
     setLoading(false);
     if (!res.ok) {
-      setError(data.error || "Failed to load suppliers");
+      setError(data.error || t("suppliers.loadFailed"));
       setRows([]);
       return;
     }
     setRows((data.rows as Supplier[]) ?? []);
     setTotal(Number(data.total || 0));
-  }, [canAccess, page]);
+  }, [canAccess, page, pageSize, t]);
 
   useEffect(() => {
     load();
@@ -78,7 +80,7 @@ export default function SuppliersPage() {
     if (!canAccess) return;
     const name = form.name.trim();
     if (!name) {
-      setError("Supplier name is required.");
+      setError(t("suppliers.nameRequired"));
       return;
     }
     setSaving(true);
@@ -98,7 +100,7 @@ export default function SuppliersPage() {
     const data = await res.json().catch(() => ({}));
     setSaving(false);
     if (!res.ok) {
-      setError(data.error || "Failed to create supplier");
+      setError(data.error || t("suppliers.createFailed"));
       return;
     }
     setForm({ name: "", country: "", contact_name: "", contact_phone: "", default_currency: "USD" });
@@ -115,7 +117,7 @@ export default function SuppliersPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(data.error || "Failed to update supplier");
+      setError(data.error || t("suppliers.updateFailed"));
       return;
     }
     load();
@@ -126,12 +128,12 @@ export default function SuppliersPage() {
       <main className="min-h-full p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
         <Card.Root className="max-w-md border border-default-200 shadow-sm">
           <Card.Content className="space-y-3">
-            <Text className="text-sm text-default-600">You do not have access to manage suppliers.</Text>
+            <Text className="text-sm text-default-600">{t("suppliers.noAccess")}</Text>
             <Link
               href="/dashboard"
               className="inline-flex min-h-8 items-center justify-center rounded-lg border border-default-200 bg-transparent px-3 py-1.5 text-sm font-semibold text-danger hover:bg-danger/10"
             >
-              Back to dashboard
+              {t("common.backToDashboard")}
             </Link>
           </Card.Content>
         </Card.Root>
@@ -143,11 +145,11 @@ export default function SuppliersPage() {
     <main className="min-h-full space-y-6 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Suppliers</h1>
+          <h1 className="text-2xl font-bold">{t("suppliers.title")}</h1>
           <p className="text-xs text-default-600">
-            Add suppliers here. Active suppliers appear in{" "}
+            {t("suppliers.blurb")}{" "}
             <Link href="/purchase-orders" className="text-danger hover:underline">
-              Purchase Orders
+              {t("suppliers.purchaseOrdersLink")}
             </Link>
             .
           </p>
@@ -156,7 +158,7 @@ export default function SuppliersPage() {
           href="/purchase-orders"
           className="inline-flex min-h-8 items-center justify-center rounded-lg border border-default-200 bg-content1 px-3 py-1.5 text-sm font-semibold text-default-700 hover:bg-default-100"
         >
-          Open Purchase Orders
+          {t("suppliers.openPurchaseOrders")}
         </Link>
       </div>
 
@@ -170,7 +172,7 @@ export default function SuppliersPage() {
 
       <Card.Root className="border border-default-200 shadow-sm">
         <Card.Content className="space-y-4">
-          <h2 className="text-base font-semibold">Add supplier</h2>
+          <h2 className="text-base font-semibold">{t("suppliers.addSupplierHeading")}</h2>
           <form className="grid gap-3 md:grid-cols-6" onSubmit={createSupplier}>
             <TextField
               name="name"
@@ -179,8 +181,8 @@ export default function SuppliersPage() {
               isRequired
               className="md:col-span-2"
             >
-              <Label className="text-xs text-default-500">Name</Label>
-              <Input className="text-sm" placeholder="e.g. Eric Trading" />
+              <Label className="text-xs text-default-500">{t("suppliers.name")}</Label>
+              <Input className="text-sm" placeholder={t("suppliers.namePlaceholder")} />
             </TextField>
             <TextField
               name="country"
@@ -188,11 +190,11 @@ export default function SuppliersPage() {
               onChange={(v) => setForm((p) => ({ ...p, country: v }))}
               className="md:col-span-1"
             >
-              <Label className="text-xs text-default-500">Country</Label>
-              <Input className="text-sm" placeholder="China / UAE" />
+              <Label className="text-xs text-default-500">{t("suppliers.country")}</Label>
+              <Input className="text-sm" placeholder={t("suppliers.countryPlaceholder")} />
             </TextField>
             <div className="flex min-w-0 flex-col gap-1 md:col-span-1">
-              <Label className="text-xs text-default-500">Default currency</Label>
+              <Label className="text-xs text-default-500">{t("suppliers.defaultCurrency")}</Label>
               <select
                 value={form.default_currency}
                 onChange={(e) => setForm((p) => ({ ...p, default_currency: e.target.value as "USD" | "AED" }))}
@@ -208,7 +210,7 @@ export default function SuppliersPage() {
               onChange={(v) => setForm((p) => ({ ...p, contact_name: v }))}
               className="md:col-span-1"
             >
-              <Label className="text-xs text-default-500">Contact name</Label>
+              <Label className="text-xs text-default-500">{t("suppliers.contactName")}</Label>
               <Input className="text-sm" />
             </TextField>
             <TextField
@@ -217,12 +219,12 @@ export default function SuppliersPage() {
               onChange={(v) => setForm((p) => ({ ...p, contact_phone: v }))}
               className="md:col-span-1"
             >
-              <Label className="text-xs text-default-500">Contact phone</Label>
+              <Label className="text-xs text-default-500">{t("suppliers.contactPhone")}</Label>
               <Input className="text-sm" />
             </TextField>
             <div className="md:col-span-6">
               <Button type="submit" variant="primary" size="sm" isDisabled={saving}>
-                {saving ? "Saving…" : "Add supplier"}
+                {saving ? t("dashboard.saving") : t("suppliers.addSupplier")}
               </Button>
             </div>
           </form>
@@ -234,7 +236,7 @@ export default function SuppliersPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-2 py-8 text-default-500">
               <Spinner size="md" color="danger" />
-              <span className="text-sm">Loading…</span>
+              <span className="text-sm">{t("common.loadingEllipsis")}</span>
             </div>
           ) : (
             <PaginatedTable
@@ -245,20 +247,20 @@ export default function SuppliersPage() {
               total={total}
               onPageChange={setPage}
               onPageSizeChange={setPageSize}
-              emptyContent="No suppliers yet. Add one above."
+              emptyContent={t("suppliers.emptyTable")}
               columns={[
-                { key: "name", label: "Name", render: (row) => <span className="font-medium">{row.name}</span> },
-                { key: "country", label: "Country", render: (row) => row.country || "—" },
-                { key: "currency", label: "Currency", render: (row) => row.default_currency || "—" },
-                { key: "contact", label: "Contact", render: (row) => [row.contact_name, row.contact_phone].filter(Boolean).join(" · ") || "—" },
-                { key: "active", label: "Active", render: (row) => (row.active ? "Yes" : "No") },
+                { key: "name", label: t("suppliers.name"), render: (row) => <span className="font-medium">{row.name}</span> },
+                { key: "country", label: t("suppliers.country"), render: (row) => row.country || t("common.emiDash") },
+                { key: "currency", label: t("suppliers.columnCurrency"), render: (row) => row.default_currency || t("common.emiDash") },
+                { key: "contact", label: t("suppliers.columnContact"), render: (row) => [row.contact_name, row.contact_phone].filter(Boolean).join(" · ") || t("common.emiDash") },
+                { key: "active", label: t("suppliers.columnActive"), render: (row) => (row.active ? t("common.yes") : t("common.no")) },
                 {
                   key: "actions",
-                  label: "Actions",
+                  label: t("inventory.actions"),
                   render: (row) => (
-                    <RowActionsMenu label="Supplier actions">
+                    <RowActionsMenu label={t("suppliers.supplierActions")}>
                       <Button type="button" variant="ghost" size="sm" className="justify-start text-xs" onPress={() => toggleActive(row)}>
-                        {row.active ? "Deactivate" : "Activate"}
+                        {row.active ? t("suppliers.deactivate") : t("suppliers.activate")}
                       </Button>
                     </RowActionsMenu>
                   ),

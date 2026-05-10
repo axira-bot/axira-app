@@ -8,6 +8,8 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { normalizeRole } from "@/lib/auth/roles";
 import { cashPocketOptionsForCurrency, validatePocketForCurrency } from "@/lib/finance/cashPockets";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
+import { formatDateForLocale, formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
+import { pocketDetailLabel, poStatusLabel } from "@/lib/i18n/enumLabels";
 
 type Supplier = { id: string; name: string | null };
 type PurchaseOrder = {
@@ -55,11 +57,17 @@ type PoPaymentDraft = {
 const inputCls =
   "w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]";
 
-function formatMoney(amount: number, currency: string) {
-  return `${Number(amount || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} ${currency || ""}`.trim();
-}
-
 export default function PurchaseOrdersPage() {
+  const { locale, t } = useI18n();
+  const dash = t("common.emiDash");
+  const fmtMoney = (amount: number, currency: string) =>
+    `${formatNumberForLocale(locale, Number(amount || 0), { maximumFractionDigits: 2 })} ${currency || ""}`.trim();
+  const fmtDate = (value: string | null | undefined) => {
+    if (!value) return dash;
+    const d = value.includes("T") ? value.slice(0, 10) : value;
+    const s = formatDateForLocale(locale, d, { day: "2-digit", month: "short", year: "numeric" });
+    return s || dash;
+  };
   const { user, profile, permissions, role } = useAuth();
   const effectiveRole = useMemo(() => {
     const metaRole = (user?.app_metadata as { role?: string } | undefined)?.role;
@@ -123,9 +131,9 @@ export default function PurchaseOrdersPage() {
 
   const supplierMap = useMemo(() => {
     const m = new Map<string, string>();
-    suppliers.forEach((s) => m.set(s.id, s.name || "Unknown"));
+    suppliers.forEach((s) => m.set(s.id, s.name || t("purchaseOrders.unknown")));
     return m;
-  }, [suppliers]);
+  }, [suppliers, t]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -142,7 +150,7 @@ export default function PurchaseOrdersPage() {
     const poData = await poRes.json().catch(() => ({}));
     const suppliersData = await suppliersRes.json().catch(() => ({}));
     if (!poRes.ok) {
-      setError(poData.error || "Failed to load purchase orders");
+      setError(poData.error || t("purchaseOrders.listLoadFailed"));
       setRows([]);
     } else {
       setRows((poData.rows as PurchaseOrder[] | undefined) || []);
@@ -150,7 +158,7 @@ export default function PurchaseOrdersPage() {
     }
     if (!suppliersRes.ok) {
       setSuppliers([]);
-      setError((prev) => prev ?? suppliersData.error ?? "Failed to load suppliers");
+      setError((prev) => prev ?? suppliersData.error ?? t("purchaseOrders.listLoadSuppliersFailed"));
     } else {
       const activeSuppliers = ((suppliersData.rows as Array<Supplier & { active?: boolean }> | undefined) ?? [])
         .filter((row) => row.active !== false)
@@ -203,7 +211,7 @@ export default function PurchaseOrdersPage() {
       .filter((item) => item.brand && item.model && item.quantity > 0);
     if (!normalizedItems.length) {
       setSaving(false);
-      setError("Please add at least one valid line item.");
+      setError(t("purchaseOrders.lineItemRequired"));
       return;
     }
     const res = await fetch("/api/purchase-orders", {
@@ -236,7 +244,7 @@ export default function PurchaseOrdersPage() {
     const data = await res.json().catch(() => ({}));
     setSaving(false);
     if (!res.ok) {
-      setError(data.error || "Failed to create purchase order");
+      setError(data.error || t("purchaseOrders.createFailed"));
       return;
     }
     setForm({ supplier_id: "", source_market: "china", currency: "USD", expected_arrival_date: "", notes: "" });
@@ -284,18 +292,18 @@ export default function PurchaseOrdersPage() {
     const data = await res.json().catch(() => ({}));
     setSavingEligibility(false);
     if (!res.ok) {
-      setError(data.error || "Failed to save deal eligibility setting");
+      setError(data.error || t("purchaseOrders.eligibilitySaveFailed"));
     }
   };
 
   const removePo = async (id: string) => {
     if (!isOwner) return;
-    if (!window.confirm("Delete this purchase order? This is blocked if linked inventory cars exist.")) return;
+    if (!window.confirm(t("purchaseOrders.deleteConfirm"))) return;
     setError(null);
     const res = await fetch(`/api/purchase-orders/${id}`, { method: "DELETE" });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(data.error || "Failed to delete PO");
+      setError(data.error || t("purchaseOrders.deleteFailed"));
       return;
     }
     fetchAll();
@@ -412,104 +420,104 @@ export default function PurchaseOrdersPage() {
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Purchase Orders</h1>
-          <p className="text-xs text-muted">Bulk procurement, payment tracking, and receive workflow.</p>
+          <h1 className="text-2xl font-bold">{t("purchaseOrders.title")}</h1>
+          <p className="text-xs text-muted">{t("purchaseOrders.subtitle")}</p>
         </div>
         {canManageSuppliers ? (
           <Link
             href="/suppliers"
             className="inline-flex shrink-0 items-center justify-center rounded-lg border border-[var(--color-accent)] bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
           >
-            Add / manage suppliers
+            {t("purchaseOrders.manageSuppliers")}
           </Link>
         ) : null}
       </div>
 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-app bg-panel p-3">
-          <p className="text-xs text-muted">Total cost</p>
-          <p className="text-lg font-semibold">{formatMoney(stats.total, "USD")}</p>
+          <p className="text-xs text-muted">{t("purchaseOrders.totalCost")}</p>
+          <p className="text-lg font-semibold">{fmtMoney(stats.total, "USD")}</p>
         </div>
         <div className="rounded-xl border border-app bg-panel p-3">
-          <p className="text-xs text-muted">Paid</p>
-          <p className="text-lg font-semibold">{formatMoney(stats.paid, "USD")}</p>
+          <p className="text-xs text-muted">{t("purchaseOrders.paid")}</p>
+          <p className="text-lg font-semibold">{fmtMoney(stats.paid, "USD")}</p>
         </div>
         <div className="rounded-xl border border-app bg-panel p-3">
-          <p className="text-xs text-muted">Supplier owed</p>
-          <p className="text-lg font-semibold">{formatMoney(stats.owed, "USD")}</p>
+          <p className="text-xs text-muted">{t("purchaseOrders.supplierOwed")}</p>
+          <p className="text-lg font-semibold">{fmtMoney(stats.owed, "USD")}</p>
         </div>
       </section>
 
       <section className="grid gap-3 rounded-xl border border-app bg-panel p-4 md:grid-cols-3">
         <label className="space-y-1 text-xs">
-          <span className="text-muted">Filter by supplier</span>
+          <span className="text-muted">{t("purchaseOrders.filterSupplier")}</span>
           <select className={inputCls} value={supplierFilter} onChange={(e) => setSupplierFilter(e.target.value)}>
-            <option value="">All suppliers</option>
+            <option value="">{t("purchaseOrders.allSuppliers")}</option>
             {suppliers.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name || "Unknown"}
+                {s.name || t("purchaseOrders.unknown")}
               </option>
             ))}
           </select>
         </label>
         <label className="space-y-1 text-xs">
-          <span className="text-muted">Status</span>
+          <span className="text-muted">{t("purchaseOrders.status")}</span>
           <select className={inputCls} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All</option>
-            <option value="draft">Draft</option>
-            <option value="ordered">Ordered</option>
-            <option value="partial_received">Partial Received</option>
-            <option value="received">Received</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="">{t("purchaseOrders.filterStatusAll")}</option>
+            <option value="draft">{poStatusLabel(t, "draft")}</option>
+            <option value="ordered">{poStatusLabel(t, "ordered")}</option>
+            <option value="partial_received">{poStatusLabel(t, "partial_received")}</option>
+            <option value="received">{poStatusLabel(t, "received")}</option>
+            <option value="cancelled">{poStatusLabel(t, "cancelled")}</option>
           </select>
         </label>
         <label className="space-y-1 text-xs">
-          <span className="text-muted">PO deal eligibility</span>
+          <span className="text-muted">{t("purchaseOrders.poDealEligibility")}</span>
           <select
             className={inputCls}
             value={eligibility}
             disabled={!isOwner || savingEligibility}
             onChange={(e) => saveEligibility(e.target.value as "in_transit_or_arrived" | "arrived_only")}
           >
-            <option value="in_transit_or_arrived">In Transit or Arrived</option>
-            <option value="arrived_only">Arrived Only</option>
+            <option value="in_transit_or_arrived">{t("purchaseOrders.eligibilityInTransitOrArrived")}</option>
+            <option value="arrived_only">{t("purchaseOrders.eligibilityArrivedOnly")}</option>
           </select>
         </label>
       </section>
 
       {isOwner && (
         <section className="rounded-xl border border-app bg-panel p-4">
-          <h2 className="mb-3 text-base font-semibold">Create Purchase Order</h2>
+          <h2 className="mb-3 text-base font-semibold">{t("purchaseOrders.createHeading")}</h2>
           <form className="grid gap-3 md:grid-cols-5" onSubmit={createPo}>
             <label className="space-y-1 text-xs">
-              <span className="text-muted">Supplier</span>
+              <span className="text-muted">{t("purchaseOrders.supplier")}</span>
               <select
                 className={inputCls}
                 value={form.supplier_id}
                 onChange={(e) => setForm((p) => ({ ...p, supplier_id: e.target.value }))}
               >
-                <option value="">No supplier</option>
+                <option value="">{t("purchaseOrders.noSupplier")}</option>
                 {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name || "Unknown"}
+                    {s.name || t("purchaseOrders.unknown")}
                   </option>
                 ))}
               </select>
             </label>
             <label className="space-y-1 text-xs">
-              <span className="text-muted">Market</span>
+              <span className="text-muted">{t("purchaseOrders.market")}</span>
               <select
                 className={inputCls}
                 value={form.source_market}
                 onChange={(e) => setForm((p) => ({ ...p, source_market: e.target.value }))}
               >
-                <option value="china">China</option>
-                <option value="dubai">Dubai</option>
-                <option value="other">Other</option>
+                <option value="china">{t("purchaseOrders.marketChina")}</option>
+                <option value="dubai">{t("purchaseOrders.marketDubai")}</option>
+                <option value="other">{t("purchaseOrders.marketOther")}</option>
               </select>
             </label>
             <label className="space-y-1 text-xs">
-              <span className="text-muted">Currency</span>
+              <span className="text-muted">{t("purchaseOrders.currency")}</span>
               <select
                 className={inputCls}
                 value={form.currency}
@@ -522,7 +530,7 @@ export default function PurchaseOrdersPage() {
               </select>
             </label>
             <label className="space-y-1 text-xs">
-              <span className="text-muted">ETA</span>
+              <span className="text-muted">{t("purchaseOrders.eta")}</span>
               <input
                 className={inputCls}
                 type="date"
@@ -531,23 +539,23 @@ export default function PurchaseOrdersPage() {
               />
             </label>
             <label className="space-y-1 text-xs md:col-span-5">
-              <span className="text-muted">Notes</span>
+              <span className="text-muted">{t("purchaseOrders.notes")}</span>
               <input
                 className={inputCls}
                 value={form.notes}
                 onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                placeholder="Optional notes"
+                placeholder={t("purchaseOrders.notesOptionalPlaceholder")}
               />
             </label>
             <div className="md:col-span-5 rounded-lg border border-app/60 p-3">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Line Items</h3>
+                <h3 className="text-sm font-semibold">{t("purchaseOrders.lineItems")}</h3>
                 <button
                   type="button"
                   onClick={addLineItem}
                   className="rounded-md border border-app px-3 py-1 text-xs font-semibold hover:bg-white/70"
                 >
-                  + Add item
+                  {t("purchaseOrders.addItem")}
                 </button>
               </div>
               <div className="space-y-2">
@@ -557,27 +565,27 @@ export default function PurchaseOrdersPage() {
                     <div key={item.rowId} className="grid gap-2 rounded-md border border-app/40 p-2 md:grid-cols-12">
                       <div className="md:col-span-2">
                         <label className="space-y-1 text-xs">
-                          <span className="text-muted">Source</span>
+                          <span className="text-muted">{t("purchaseOrders.sourceLabel")}</span>
                           <select
                             className={inputCls}
                             value={item.sourceMode}
                             onChange={(e) => updateLineItem(item.rowId, "sourceMode", e.target.value)}
                           >
-                            <option value="manual">Manual</option>
-                            <option value="catalog">Catalog</option>
+                            <option value="manual">{t("purchaseOrders.sourceManual")}</option>
+                            <option value="catalog">{t("purchaseOrders.sourceCatalog")}</option>
                           </select>
                         </label>
                       </div>
                       {item.sourceMode === "catalog" && (
                         <div className="md:col-span-3">
                           <label className="space-y-1 text-xs">
-                            <span className="text-muted">Catalog car</span>
+                            <span className="text-muted">{t("purchaseOrders.catalogCar")}</span>
                             <select
                               className={inputCls}
                               value={item.catalogId}
                               onChange={(e) => updateLineItem(item.rowId, "catalogId", e.target.value)}
                             >
-                              <option value="">Select</option>
+                              <option value="">{t("purchaseOrders.selectPlaceholder")}</option>
                               {catalogRows.map((row) => (
                                 <option key={row.id} value={row.id}>
                                   {row.brand} {row.model} {row.year || ""}
@@ -589,50 +597,49 @@ export default function PurchaseOrdersPage() {
                       )}
                       <div className="md:col-span-2">
                         <label className="space-y-1 text-xs">
-                          <span className="text-muted">Brand</span>
+                          <span className="text-muted">{t("purchaseOrders.colBrand")}</span>
                           <input className={inputCls} value={item.brand} onChange={(e) => updateLineItem(item.rowId, "brand", e.target.value)} />
                         </label>
                       </div>
                       <div className="md:col-span-2">
                         <label className="space-y-1 text-xs">
-                          <span className="text-muted">Model</span>
+                          <span className="text-muted">{t("purchaseOrders.colModel")}</span>
                           <input className={inputCls} value={item.model} onChange={(e) => updateLineItem(item.rowId, "model", e.target.value)} />
                         </label>
                       </div>
                       <div className="md:col-span-1">
                         <label className="space-y-1 text-xs">
-                          <span className="text-muted">Year</span>
+                          <span className="text-muted">{t("purchaseOrders.colYear")}</span>
                           <input className={inputCls} value={item.year} onChange={(e) => updateLineItem(item.rowId, "year", e.target.value)} />
                         </label>
                       </div>
                       <div className="md:col-span-2">
                         <label className="space-y-1 text-xs">
-                          <span className="text-muted">Color</span>
+                          <span className="text-muted">{t("purchaseOrders.colColor")}</span>
                           <input className={inputCls} value={item.color} onChange={(e) => updateLineItem(item.rowId, "color", e.target.value)} />
                         </label>
                       </div>
                       <div className="md:col-span-1">
                         <label className="space-y-1 text-xs">
-                          <span className="text-muted">Qty</span>
+                          <span className="text-muted">{t("purchaseOrders.qty")}</span>
                           <input className={inputCls} value={item.quantity} onChange={(e) => updateLineItem(item.rowId, "quantity", e.target.value)} />
                         </label>
                       </div>
                       <div className="md:col-span-2">
                         <label className="space-y-1 text-xs">
-                          <span className="text-muted">Unit price</span>
+                          <span className="text-muted">{t("purchaseOrders.unitPrice")}</span>
                           <input className={inputCls} value={item.unitPrice} onChange={(e) => updateLineItem(item.rowId, "unitPrice", e.target.value)} />
                         </label>
                       </div>
                       <div className="md:col-span-2">
                         <label className="space-y-1 text-xs">
-                          <span className="text-muted">Subtotal</span>
-                          <input className={inputCls} value={formatMoney(subtotal, form.currency)} readOnly />
+                          <span className="text-muted">{t("purchaseOrders.subtotal")}</span>
+                          <input className={inputCls} value={fmtMoney(subtotal, form.currency)} readOnly />
                         </label>
                       </div>
                       <div className="md:col-span-4">
                         <label className="space-y-1 text-xs">
-                          <span className="text-muted">Notes</span>
-                          <input className={inputCls} value={item.notes} onChange={(e) => updateLineItem(item.rowId, "notes", e.target.value)} />
+                          <span className="text-muted">{t("purchaseOrders.notes")}</span>
                         </label>
                       </div>
                       <div className="md:col-span-2 flex items-end">
@@ -641,9 +648,9 @@ export default function PurchaseOrdersPage() {
                           onClick={() => removeLineItem(item.rowId)}
                           className="rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
                         >
-                          Remove
+                          {t("purchaseOrders.removeLine")}
                         </button>
-                        <span className="ml-2 text-[10px] text-muted">Item #{idx + 1}</span>
+                        <span className="ml-2 text-[10px] text-muted">{t("purchaseOrders.itemNumber", { n: idx + 1 })}</span>
                       </div>
                     </div>
                   );
@@ -652,66 +659,66 @@ export default function PurchaseOrdersPage() {
             </div>
             <div className="md:col-span-5 rounded-lg border border-app/60 p-3">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Initial Supplier Payments (Optional)</h3>
+                <h3 className="text-sm font-semibold">{t("purchaseOrders.initialPaymentsHeading")}</h3>
                 <button
                   type="button"
                   onClick={addPaymentRow}
                   className="rounded-md border border-app px-3 py-1 text-xs font-semibold hover:bg-white/70"
                 >
-                  + Add payment
+                  {t("purchaseOrders.addPayment")}
                 </button>
               </div>
               <div className="space-y-2">
                 {payments.map((payment, idx) => (
                   <div key={payment.rowId} className="grid gap-2 rounded-md border border-app/40 p-2 md:grid-cols-12">
                     <input className={`${inputCls} md:col-span-2`} type="date" value={payment.date} onChange={(e) => updatePaymentRow(payment.rowId, "date", e.target.value)} />
-                    <input className={`${inputCls} md:col-span-2`} placeholder="Amount" value={payment.amount} onChange={(e) => updatePaymentRow(payment.rowId, "amount", e.target.value)} />
+                    <input className={`${inputCls} md:col-span-2`} placeholder={t("purchaseOrders.placeholderAmount")} value={payment.amount} onChange={(e) => updatePaymentRow(payment.rowId, "amount", e.target.value)} />
                     <select className={`${inputCls} md:col-span-1`} value={payment.currency} onChange={(e) => updatePaymentRow(payment.rowId, "currency", e.target.value)}>
                       <option value="USD">USD</option>
                       <option value="AED">AED</option>
                       <option value="DZD">DZD</option>
                       <option value="EUR">EUR</option>
                     </select>
-                    <input className={`${inputCls} md:col-span-2`} placeholder="Rate snapshot" value={payment.rate_snapshot} onChange={(e) => updatePaymentRow(payment.rowId, "rate_snapshot", e.target.value)} />
+                    <input className={`${inputCls} md:col-span-2`} placeholder={t("purchaseOrders.placeholderRateSnapshot")} value={payment.rate_snapshot} onChange={(e) => updatePaymentRow(payment.rowId, "rate_snapshot", e.target.value)} />
                     <select
                       required={Number(payment.amount || 0) > 0}
                       className={`${inputCls} md:col-span-2`}
                       value={payment.pocket}
                       onChange={(e) => updatePaymentRow(payment.rowId, "pocket", e.target.value)}
                     >
-                      <option value="">Cash pocket…</option>
+                      <option value="">{t("purchaseOrders.cashPocketPlaceholder")}</option>
                       {cashPocketOptionsForCurrency(payment.currency).map((opt) => (
                         <option key={opt} value={opt}>
-                          {opt}
+                          {pocketDetailLabel(t, opt)}
                         </option>
                       ))}
                     </select>
-                    <input className={`${inputCls} md:col-span-2`} placeholder="Method" value={payment.method} onChange={(e) => updatePaymentRow(payment.rowId, "method", e.target.value)} />
-                    <button type="button" onClick={() => removePaymentRow(payment.rowId)} className="rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 md:col-span-1">Remove</button>
-                    <input className={`${inputCls} md:col-span-11`} placeholder="Notes" value={payment.notes} onChange={(e) => updatePaymentRow(payment.rowId, "notes", e.target.value)} />
-                    <span className="text-[10px] text-muted md:col-span-1">Pay #{idx + 1}</span>
+                    <input className={`${inputCls} md:col-span-2`} placeholder={t("purchaseOrders.placeholderMethod")} value={payment.method} onChange={(e) => updatePaymentRow(payment.rowId, "method", e.target.value)} />
+                    <button type="button" onClick={() => removePaymentRow(payment.rowId)} className="rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 md:col-span-1">{t("purchaseOrders.removeLine")}</button>
+                    <input className={`${inputCls} md:col-span-11`} placeholder={t("purchaseOrders.placeholderNotes")} value={payment.notes} onChange={(e) => updatePaymentRow(payment.rowId, "notes", e.target.value)} />
+                    <span className="text-[10px] text-muted md:col-span-1">{t("purchaseOrders.payNumber", { n: idx + 1 })}</span>
                   </div>
                 ))}
               </div>
             </div>
             <div className="md:col-span-5 rounded-lg border border-app/60 p-3">
-              <h3 className="mb-2 text-sm font-semibold">Order Summary</h3>
+              <h3 className="mb-2 text-sm font-semibold">{t("purchaseOrders.orderSummary")}</h3>
               <div className="grid gap-2 md:grid-cols-4">
                 <label className="space-y-1 text-xs">
-                  <span className="text-muted">Items subtotal</span>
-                  <input className={inputCls} readOnly value={formatMoney(itemSubtotal, form.currency)} />
+                  <span className="text-muted">{t("purchaseOrders.subtotalLines")}</span>
+                  <input className={inputCls} readOnly value={fmtMoney(itemSubtotal, form.currency)} />
                 </label>
                 <label className="space-y-1 text-xs">
-                  <span className="text-muted">Shipping estimate (optional)</span>
+                  <span className="text-muted">{t("purchaseOrders.shippingEstimateOptional")}</span>
                   <input className={inputCls} value={shippingEstimate} onChange={(e) => setShippingEstimate(e.target.value)} />
                 </label>
                 <label className="space-y-1 text-xs">
-                  <span className="text-muted">Other fees (optional)</span>
+                  <span className="text-muted">{t("purchaseOrders.otherFeesOptional")}</span>
                   <input className={inputCls} value={otherFees} onChange={(e) => setOtherFees(e.target.value)} />
                 </label>
                 <label className="space-y-1 text-xs">
-                  <span className="text-muted">Grand total</span>
-                  <input className={inputCls} readOnly value={formatMoney(grandTotal, form.currency)} />
+                  <span className="text-muted">{t("purchaseOrders.grandTotal")}</span>
+                  <input className={inputCls} readOnly value={fmtMoney(grandTotal, form.currency)} />
                 </label>
               </div>
               <label className="mt-3 inline-flex items-center gap-2 text-xs">
@@ -720,12 +727,12 @@ export default function PurchaseOrdersPage() {
                   checked={createInventoryRows}
                   onChange={(e) => setCreateInventoryRows(e.target.checked)}
                 />
-                Generate placeholder inventory entries now (INCOMING / in-transit)
+                {t("purchaseOrders.inventoryCheckboxHelp")}
               </label>
             </div>
             <div className="md:col-span-5">
               <Button type="submit" variant="primary" size="sm" isDisabled={saving}>
-                {saving ? "Creating..." : "Create PO"}
+                {saving ? t("purchaseOrders.creatingPo") : t("purchaseOrders.createPoShort")}
               </Button>
             </div>
           </form>
@@ -736,15 +743,15 @@ export default function PurchaseOrdersPage() {
         <table className="min-w-full text-sm">
           <thead className="bg-black/5 text-xs uppercase text-muted">
             <tr>
-              <th className="px-3 py-2 text-left">PO</th>
-              <th className="px-3 py-2 text-left">Supplier</th>
-              <th className="px-3 py-2 text-left">Status</th>
-              <th className="px-3 py-2 text-right">Total</th>
-              <th className="px-3 py-2 text-right">Paid</th>
-              <th className="px-3 py-2 text-right">Owed</th>
-              <th className="px-3 py-2 text-left">ETA</th>
-              <th className="px-3 py-2 text-left">Created</th>
-              {isOwner && <th className="px-3 py-2 text-left">Actions</th>}
+              <th className="px-3 py-2 text-left">{t("purchaseOrders.thPo")}</th>
+              <th className="px-3 py-2 text-left">{t("purchaseOrders.supplierCol")}</th>
+              <th className="px-3 py-2 text-left">{t("purchaseOrders.status")}</th>
+              <th className="px-3 py-2 text-right">{t("purchaseOrders.thTotal")}</th>
+              <th className="px-3 py-2 text-right">{t("purchaseOrders.paid")}</th>
+              <th className="px-3 py-2 text-right">{t("purchaseOrders.owedCol")}</th>
+              <th className="px-3 py-2 text-left">{t("purchaseOrders.etaCol")}</th>
+              <th className="px-3 py-2 text-left">{t("purchaseOrders.thCreated")}</th>
+              {isOwner && <th className="px-3 py-2 text-left">{t("purchaseOrders.actionsCol")}</th>}
             </tr>
           </thead>
           <tbody>
@@ -753,14 +760,14 @@ export default function PurchaseOrdersPage() {
                 <td className="px-3 py-8" colSpan={isOwner ? 9 : 8}>
                   <div className="flex flex-col items-center justify-center gap-2 text-default-500">
                     <Spinner size="md" color="danger" />
-                    <span className="text-sm">Loading…</span>
+                    <span className="text-sm">{t("purchaseOrders.loadingList")}</span>
                   </div>
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
                 <td className="px-3 py-4 text-muted" colSpan={isOwner ? 9 : 8}>
-                  No purchase orders yet.
+                  {t("purchaseOrders.emptyList")}
                 </td>
               </tr>
             ) : (
@@ -771,18 +778,20 @@ export default function PurchaseOrdersPage() {
                       {row.po_number || row.id.slice(0, 8)}
                     </Link>
                   </td>
-                  <td className="px-3 py-2">{(row.supplier_id && supplierMap.get(row.supplier_id)) || "-"}</td>
-                  <td className="px-3 py-2">{row.status}</td>
-                  <td className="px-3 py-2 text-right">{formatMoney(row.total_cost, row.currency)}</td>
-                  <td className="px-3 py-2 text-right">{formatMoney(row.paid_amount, row.currency)}</td>
-                  <td className="px-3 py-2 text-right">{formatMoney(row.supplier_owed, row.currency)}</td>
-                  <td className="px-3 py-2">{row.expected_arrival_date || "-"}</td>
-                  <td className="px-3 py-2">{row.created_at ? new Date(row.created_at).toLocaleDateString() : "-"}</td>
+                  <td className="px-3 py-2">
+                    {(row.supplier_id && supplierMap.get(row.supplier_id)) || dash}
+                  </td>
+                  <td className="px-3 py-2">{poStatusLabel(t, row.status)}</td>
+                  <td className="px-3 py-2 text-right">{fmtMoney(row.total_cost, row.currency)}</td>
+                  <td className="px-3 py-2 text-right">{fmtMoney(row.paid_amount, row.currency)}</td>
+                  <td className="px-3 py-2 text-right">{fmtMoney(row.supplier_owed, row.currency)}</td>
+                  <td className="px-3 py-2">{fmtDate(row.expected_arrival_date)}</td>
+                  <td className="px-3 py-2">{row.created_at ? fmtDate(row.created_at) : dash}</td>
                   {isOwner && (
                     <td className="px-3 py-2">
-                      <RowActionsMenu label="Purchase order actions">
+                      <RowActionsMenu label={t("purchaseOrders.actionsMenuPo")}>
                         <Button type="button" variant="ghost" size="sm" className="justify-start text-xs text-danger" onPress={() => removePo(row.id)}>
-                          Remove
+                          {t("purchaseOrders.removeLine")}
                         </Button>
                       </RowActionsMenu>
                     </td>
@@ -795,7 +804,7 @@ export default function PurchaseOrdersPage() {
         {rows.length > 0 && (
           <div className="flex flex-col gap-2 border-t border-app/50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted">
-              <span>Rows per page</span>
+              <span>{t("purchaseOrders.rowsPerPage")}</span>
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(Number(e.target.value))}
@@ -808,13 +817,26 @@ export default function PurchaseOrdersPage() {
                 ))}
               </select>
               <span>
-                {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} of {total}
+                {t("purchaseOrders.paginationRange", {
+                  from: formatNumberForLocale(locale, (page - 1) * pageSize + 1, { maximumFractionDigits: 0 }),
+                  to: formatNumberForLocale(locale, Math.min(page * pageSize, total), {
+                    maximumFractionDigits: 0,
+                  }),
+                  total: formatNumberForLocale(locale, total, { maximumFractionDigits: 0 }),
+                })}
               </span>
             </div>
             <div className="flex items-center justify-end gap-2">
-            <span className="text-xs text-muted">Page {page} / {Math.max(1, Math.ceil(total / pageSize))}</span>
+            <span className="text-xs text-muted">
+              {t("purchaseOrders.pageStatus", {
+                page: formatNumberForLocale(locale, page, { maximumFractionDigits: 0 }),
+                pages: formatNumberForLocale(locale, Math.max(1, Math.ceil(total / pageSize)), {
+                  maximumFractionDigits: 0,
+                }),
+              })}
+            </span>
             <Button type="button" size="sm" variant="outline" isDisabled={page <= 1} onPress={() => setPage((p) => Math.max(1, p - 1))}>
-              Previous
+              {t("purchaseOrders.pagePrevious")}
             </Button>
             <Button
               type="button"
@@ -823,7 +845,7 @@ export default function PurchaseOrdersPage() {
               isDisabled={page >= Math.max(1, Math.ceil(total / pageSize))}
               onPress={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / pageSize)), p + 1))}
             >
-              Next
+              {t("purchaseOrders.pageNext")}
             </Button>
             </div>
           </div>

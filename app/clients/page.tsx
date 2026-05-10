@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { PaginatedTable } from "@/components/ui/paginated-table";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import { PageContainer } from "@/components/ui/page-container";
+import { useI18n } from "@/lib/context/I18nContext";
 
 type Client = {
   id: string;
@@ -52,14 +53,14 @@ const emptyForm: ClientForm = {
   driveLink: "",
 };
 
-function DriveLinkIcon({ href }: { href: string }) {
+function DriveLinkIcon({ href, title }: { href: string; title: string }) {
   if (!href?.trim()) return null;
   return (
     <a
       href={href.startsWith("http") ? href : `https://${href}`}
       target="_blank"
       rel="noopener noreferrer"
-      title="Open Google Drive folder"
+      title={title}
       className="inline-flex items-center justify-center rounded border border-app bg-white p-1.5 text-muted transition hover:border-[var(--color-accent)]/70 hover:text-app"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -72,6 +73,7 @@ function DriveLinkIcon({ href }: { href: string }) {
 }
 
 export default function ClientsPage() {
+  const { t } = useI18n();
   const { canDelete } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -98,12 +100,7 @@ export default function ClientsPage() {
 
     if (fetchError) {
       setError(
-        [
-          "Failed to load clients.",
-          fetchError.message,
-          fetchError.details,
-          fetchError.hint,
-        ]
+        [t("clients.loadFailed"), fetchError.message, fetchError.details, fetchError.hint]
           .filter(Boolean)
           .join(" ")
       );
@@ -179,8 +176,8 @@ export default function ClientsPage() {
   };
 
   const validate = () => {
-    if (!form.fullName.trim()) return "Name is required.";
-    if (!form.phone.trim()) return "Phone is required.";
+    if (!form.fullName.trim()) return t("clients.nameRequired");
+    if (!form.phone.trim()) return t("clients.phoneRequired");
     return null;
   };
 
@@ -213,12 +210,7 @@ export default function ClientsPage() {
         // eslint-disable-next-line no-console
         console.log("Supabase update client error:", updateError);
         setError(
-          [
-            "Failed to update client.",
-            updateError.message,
-            updateError.details,
-            updateError.hint,
-          ]
+          [t("clients.updateFailed"), updateError.message, updateError.details, updateError.hint]
             .filter(Boolean)
             .join(" ")
         );
@@ -241,12 +233,7 @@ export default function ClientsPage() {
         // eslint-disable-next-line no-console
         console.log("Supabase insert client error:", insertError);
         setError(
-          [
-            "Failed to add client.",
-            insertError.message,
-            insertError.details,
-            insertError.hint,
-          ]
+          [t("clients.addFailed"), insertError.message, insertError.details, insertError.hint]
             .filter(Boolean)
             .join(" ")
         );
@@ -273,7 +260,9 @@ export default function ClientsPage() {
     if (!canDelete) return;
     if (
       !window.confirm(
-        `Delete client ${client.name || client.phone || client.id}? This cannot be undone.`
+        t("clients.deleteConfirm", {
+          name: String(client.name || client.phone || client.id),
+        })
       )
     ) {
       return;
@@ -289,12 +278,7 @@ export default function ClientsPage() {
       // eslint-disable-next-line no-console
       console.log("Supabase delete client error:", deleteError);
       setError(
-        [
-          "Failed to delete client.",
-          deleteError.message,
-          deleteError.details,
-          deleteError.hint,
-        ]
+        [t("clients.deleteFailed"), deleteError.message, deleteError.details, deleteError.hint]
           .filter(Boolean)
           .join(" ")
       );
@@ -315,14 +299,14 @@ export default function ClientsPage() {
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              Clients
+              {t("clients.title")}
             </h1>
             <p className="text-sm font-medium text-danger">
-              Manage clients and prospects
+              {t("clients.subtitle")}
             </p>
           </div>
           <Button type="button" variant="primary" size="sm" onPress={openAddModal}>
-            Add Client
+            {t("clients.addClient")}
           </Button>
         </header>
 
@@ -336,7 +320,7 @@ export default function ClientsPage() {
                 variant={activeTab === tab ? "primary" : "outline"}
                 onPress={() => setActiveTab(tab)}
               >
-                {tab}
+                {tab === "Clients" ? t("clients.tabClients") : t("clients.tabProspects")}
               </Button>
             ))}
           </div>
@@ -346,8 +330,8 @@ export default function ClientsPage() {
             onChange={setSearch}
             className="w-full sm:w-64"
           >
-            <Label className="text-xs text-default-500">Search</Label>
-            <Input className="text-xs" placeholder="Name or phone" />
+            <Label className="text-xs text-default-500">{t("clients.search")}</Label>
+            <Input className="text-xs" placeholder={t("clients.searchPlaceholder")} />
           </TextField>
         </div>
 
@@ -364,43 +348,67 @@ export default function ClientsPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10">
               <Spinner size="md" color="danger" />
-              <span className="text-sm text-default-500">Loading clients…</span>
+              <span className="text-sm text-default-500">{t("clients.loading")}</span>
             </div>
           ) : filteredClients.length === 0 ? (
-            <div className="p-4 text-sm text-default-500">No clients found.</div>
+            <div className="p-4 text-sm text-default-500">{t("clients.empty")}</div>
           ) : (
             <div className="responsive-table-wrap">
               <PaginatedTable
                 rows={filteredClients}
                 rowKey={(row) => row.id}
                 pageSize={10}
-                emptyContent="No clients found."
+                emptyContent={t("clients.empty")}
                 columns={[
-                  { key: "name", label: "Name", render: (row) => <span className="font-semibold text-app">{row.name || "-"}</span> },
-                  { key: "phone", label: "Phone", render: (row) => row.phone || "-" },
-                  { key: "email", label: "Email", render: (row) => row.email || "-" },
-                  { key: "type", label: "Type", render: (row) => <span className="text-xs font-semibold">{(row.type || "Client") as string}</span> },
-                  { key: "lookingFor", label: "Looking For", render: (row) => row.looking_for || "-" },
-                  { key: "drive", label: "Drive", render: (row) => <DriveLinkIcon href={row.drive_link ?? ""} /> },
+                  {
+                    key: "name",
+                    label: t("clients.nameCol"),
+                    render: (row) => <span className="font-semibold text-app">{row.name || "-"}</span>,
+                  },
+                  { key: "phone", label: t("clients.phoneCol"), render: (row) => row.phone || "-" },
+                  { key: "email", label: t("clients.emailCol"), render: (row) => row.email || "-" },
+                  {
+                    key: "type",
+                    label: t("clients.typeCol"),
+                    render: (row) => (
+                      <span className="text-xs font-semibold">
+                        {t(`clients.types.${(row.type || "Client") as "Client" | "Prospect"}`)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "lookingFor",
+                    label: t("clients.lookingForCol"),
+                    render: (row) => row.looking_for || "-",
+                  },
+                  {
+                    key: "drive",
+                    label: t("clients.driveCol"),
+                    render: (row) => <DriveLinkIcon href={row.drive_link ?? ""} title={t("common.openDriveFolder")} />,
+                  },
                   {
                     key: "actions",
-                    label: "Actions",
+                    label: t("clients.actionsCol"),
                     render: (row) => (
-                      <RowActionsMenu label="Client actions">
+                      <RowActionsMenu label={t("clients.clientActions")}>
                         <button
                           type="button"
-                          onClick={() => router.push(`/deals?clientId=${encodeURIComponent(row.id)}&clientName=${encodeURIComponent(row.name || "")}`)}
+                          onClick={() =>
+                            router.push(
+                              `/deals?clientId=${encodeURIComponent(row.id)}&clientName=${encodeURIComponent(row.name || "")}`
+                            )
+                          }
                           disabled={!clientDealCounts[row.id] && !clientDealCounts[(row.name || "").trim()]}
                           className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100 disabled:opacity-40"
                         >
-                          View Deals
+                          {t("clients.viewDeals")}
                         </button>
                         <button
                           type="button"
                           onClick={() => openEditModal(row)}
                           className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                         >
-                          Edit
+                          {t("common.edit")}
                         </button>
                         {canDelete ? (
                           <button
@@ -408,7 +416,7 @@ export default function ClientsPage() {
                             onClick={() => handleDelete(row)}
                             className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10"
                           >
-                            Delete
+                            {t("common.delete")}
                           </button>
                         ) : null}
                       </RowActionsMenu>
@@ -433,10 +441,10 @@ export default function ClientsPage() {
             <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
                 <div className="text-sm font-semibold text-app">
-                  {editingClientId ? "Edit Client" : "Add Client"}
+                  {editingClientId ? t("clients.editClient") : t("clients.addClientModal")}
                 </div>
                 <div className="text-[11px] text-muted">
-                  Name and phone are required.
+                  {t("clients.namePhoneRequiredHint")}
                 </div>
               </div>
               <Button
@@ -446,14 +454,14 @@ export default function ClientsPage() {
                 isDisabled={isSaving}
                 onPress={closeModal}
               >
-                Close
+                {t("common.close")}
               </Button>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1">
                 <span className="font-semibold text-app">
-                  Name <span className="text-[var(--color-accent)]">*</span>
+                  {t("clients.nameLabel")} <span className="text-[var(--color-accent)]">*</span>
                 </span>
                 <input
                   value={form.fullName}
@@ -463,7 +471,7 @@ export default function ClientsPage() {
               </label>
               <label className="space-y-1">
                 <span className="font-semibold text-app">
-                  Phone <span className="text-[var(--color-accent)]">*</span>
+                  {t("clients.phoneLabel")} <span className="text-[var(--color-accent)]">*</span>
                 </span>
                 <input
                   value={form.phone}
@@ -472,7 +480,7 @@ export default function ClientsPage() {
                 />
               </label>
               <label className="space-y-1">
-                <span className="font-semibold text-app">Email</span>
+                <span className="font-semibold text-app">{t("clients.emailLabel")}</span>
                 <input
                   type="email"
                   value={form.email}
@@ -481,7 +489,7 @@ export default function ClientsPage() {
                 />
               </label>
               <label className="space-y-1">
-                <span className="font-semibold text-app">Type</span>
+                <span className="font-semibold text-app">{t("clients.typeLabel")}</span>
                 <select
                   value={form.type}
                   onChange={(e) =>
@@ -489,33 +497,33 @@ export default function ClientsPage() {
                   }
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 >
-                  <option value="Client">Client</option>
-                  <option value="Prospect">Prospect</option>
+                  <option value="Client">{t("clients.types.Client")}</option>
+                  <option value="Prospect">{t("clients.types.Prospect")}</option>
                 </select>
               </label>
               <label className="space-y-1 sm:col-span-2">
                 <span className="font-semibold text-app">
-                  Looking for (optional)
+                  {t("clients.lookingForOptional")}
                 </span>
                 <input
                   value={form.lookingFor}
                   onChange={(e) => updateField("lookingFor", e.target.value)}
-                  placeholder="e.g. 2023 Prado VX, white, <80k km"
+                  placeholder={t("clients.lookingForPlaceholder")}
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 sm:col-span-2">
-                <span className="font-semibold text-app">Google Drive Folder Link</span>
+                <span className="font-semibold text-app">{t("clients.driveLinkLabel")}</span>
                 <input
                   type="text"
                   value={form.driveLink}
                   onChange={(e) => updateField("driveLink", e.target.value)}
-                  placeholder="https://drive.google.com/..."
+                  placeholder={t("clients.driveLinkPlaceholder")}
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 sm:col-span-2">
-                <span className="font-semibold text-app">Notes</span>
+                <span className="font-semibold text-app">{t("clients.notesLabel")}</span>
                 <textarea
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
@@ -527,10 +535,10 @@ export default function ClientsPage() {
 
             <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" size="sm" isDisabled={isSaving} onPress={closeModal}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="button" variant="primary" size="sm" isDisabled={isSaving} onPress={handleSave}>
-                {isSaving ? "Saving..." : "Save"}
+                {isSaving ? t("clients.saving") : t("common.save")}
               </Button>
             </div>
           </div>

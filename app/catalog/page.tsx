@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { hasFeature } from "@/lib/auth/permissions";
 import type { FeatureKey, FeaturePermissions } from "@/lib/auth/featureKeys";
 import { PageContainer } from "@/components/ui/page-container";
+import { formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
 
 type CatalogRow = {
   id: string;
@@ -103,6 +104,7 @@ const inputCls =
 const labelCls = "block text-xs font-medium text-default-600";
 
 export default function SalesCatalogAdminPage() {
+  const { t, locale } = useI18n();
   const { permissions, loading: authLoading } = useAuth();
   const canAccess = hasFeature(permissions as FeaturePermissions, "sales_catalog_admin" as FeatureKey);
 
@@ -124,11 +126,11 @@ export default function SalesCatalogAdminPage() {
     const data = await res.json().catch(() => ({}));
     setLoading(false);
     if (!res.ok) {
-      setError(data.error || "Failed to load catalog");
+      setError(data.error || t("catalog.loadFailed"));
       return;
     }
     setRows((data.rows as CatalogRow[]) || []);
-  }, [canAccess]);
+  }, [canAccess, t]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -157,22 +159,22 @@ export default function SalesCatalogAdminPage() {
 
   const save = async () => {
     if (!form.brand.trim() || !form.model.trim()) {
-      setError("Brand and model are required.");
+      setError(t("catalog.brandModelRequired"));
       return;
     }
     const sale = Number(form.salePriceDzd);
     const lead = Number(form.leadTimeDays);
     const dep = Number(form.depositDzd);
     if (!Number.isFinite(sale) || sale < 0) {
-      setError("Invalid sale price (DZD).");
+      setError(t("catalog.invalidSalePrice"));
       return;
     }
     if (!Number.isFinite(lead) || lead < 0) {
-      setError("Invalid lead time (days).");
+      setError(t("catalog.invalidLeadTime"));
       return;
     }
     if (!Number.isFinite(dep) || dep < 0) {
-      setError("Invalid deposit (DZD).");
+      setError(t("catalog.invalidDeposit"));
       return;
     }
 
@@ -193,7 +195,7 @@ export default function SalesCatalogAdminPage() {
     const data = await res.json().catch(() => ({}));
     setSaving(false);
     if (!res.ok) {
-      setError(data.error || "Save failed");
+      setError(data.error || t("catalog.saveFailed"));
       return;
     }
     closeModal();
@@ -209,19 +211,19 @@ export default function SalesCatalogAdminPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(data.error || "Update failed");
+      setError(data.error || t("catalog.updateFailed"));
       return;
     }
     await load();
   };
 
   const remove = async (r: CatalogRow) => {
-    if (!window.confirm(`Delete catalog entry ${r.brand} ${r.model}?`)) return;
+    if (!window.confirm(t("catalog.deleteConfirm", { brand: r.brand, model: r.model }))) return;
     setError(null);
     const res = await fetch(`/api/sales-catalog/${encodeURIComponent(r.id)}`, { method: "DELETE" });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(data.error || "Delete failed");
+      setError(data.error || t("catalog.deleteFailed"));
       return;
     }
     await load();
@@ -231,7 +233,7 @@ export default function SalesCatalogAdminPage() {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 p-8">
         <Spinner color="danger" />
-        <span className="text-sm text-default-500">Loading…</span>
+        <span className="text-sm text-default-500">{t("common.loadingEllipsis")}</span>
       </div>
     );
   }
@@ -241,8 +243,8 @@ export default function SalesCatalogAdminPage() {
       <main className="p-6">
         <Alert.Root status="warning">
           <Alert.Content>
-            <Alert.Title>Owner only</Alert.Title>
-            <Alert.Description>Only owners and admins can manage the order-on-demand catalog.</Alert.Description>
+            <Alert.Title>{t("catalog.ownerOnlyTitle")}</Alert.Title>
+            <Alert.Description>{t("catalog.ownerOnlyBlurb")}</Alert.Description>
           </Alert.Content>
         </Alert.Root>
       </main>
@@ -254,13 +256,13 @@ export default function SalesCatalogAdminPage() {
       <PageContainer size="lg" className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold">Sales catalog (order on demand)</h1>
+          <h1 className="text-xl font-bold">{t("catalog.pageTitle")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-default-500">
-            Owner-priced Algeria list entries. Active rows appear on the sales list “Order on demand” tab for the team.
+            {t("catalog.pageBlurb")}
           </p>
         </div>
         <Button type="button" variant="primary" size="sm" onPress={openNew}>
-          New entry
+          {t("catalog.newEntry")}
         </Button>
       </div>
 
@@ -281,19 +283,19 @@ export default function SalesCatalogAdminPage() {
           <table className="w-full min-w-[620px] text-left text-sm">
             <thead className="border-b border-app bg-black/[0.02] text-xs uppercase text-default-500">
               <tr>
-                <th className="px-3 py-2">Vehicle</th>
-                <th className="px-3 py-2">Price (DZD)</th>
-                <th className="px-3 py-2">Lead</th>
-                <th className="px-3 py-2">Deposit</th>
-                <th className="px-3 py-2">Active</th>
-                <th className="px-3 py-2 text-right">Actions</th>
+                <th className="px-3 py-2">{t("catalog.vehicle")}</th>
+                <th className="px-3 py-2">{t("catalog.priceDzd")}</th>
+                <th className="px-3 py-2">{t("catalog.lead")}</th>
+                <th className="px-3 py-2">{t("catalog.deposit")}</th>
+                <th className="px-3 py-2">{t("catalog.active")}</th>
+                <th className="px-3 py-2 text-right">{t("inventory.actions")}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-8 text-center text-default-500">
-                    No catalog entries yet.
+                    {t("catalog.noEntries")}
                   </td>
                 </tr>
               ) : (
@@ -306,19 +308,23 @@ export default function SalesCatalogAdminPage() {
                       </div>
                       {r.trim ? <div className="text-xs text-default-500">{r.trim}</div> : null}
                     </td>
-                    <td className="px-3 py-2 tabular-nums">{Number(r.sale_price_dzd).toLocaleString()}</td>
-                    <td className="px-3 py-2">{r.lead_time_days}d</td>
-                    <td className="px-3 py-2 tabular-nums">{Number(r.deposit_amount_dzd).toLocaleString()}</td>
-                    <td className="px-3 py-2">{r.active ? "Yes" : "No"}</td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {formatNumberForLocale(locale, Number(r.sale_price_dzd), { maximumFractionDigits: 0 })}
+                    </td>
+                    <td className="px-3 py-2">{t("catalog.daysSuffix", { n: r.lead_time_days })}</td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {formatNumberForLocale(locale, Number(r.deposit_amount_dzd), { maximumFractionDigits: 0 })}
+                    </td>
+                    <td className="px-3 py-2">{r.active ? t("common.yes") : t("common.no")}</td>
                     <td className="px-3 py-2 text-right space-x-2">
                       <Button type="button" size="sm" variant="ghost" onPress={() => openEdit(r)}>
-                        Edit
+                        {t("common.edit")}
                       </Button>
                       <Button type="button" size="sm" variant="outline" onPress={() => void toggleActive(r)}>
-                        {r.active ? "Hide" : "Show"}
+                        {r.active ? t("catalog.hide") : t("catalog.show")}
                       </Button>
                       <Button type="button" size="sm" variant="ghost" className="text-danger" onPress={() => void remove(r)}>
-                        Delete
+                        {t("common.delete")}
                       </Button>
                     </td>
                   </tr>
@@ -331,82 +337,82 @@ export default function SalesCatalogAdminPage() {
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <button type="button" className="absolute inset-0 bg-black/60" aria-label="Close" onClick={closeModal} />
+          <button type="button" className="absolute inset-0 bg-black/60" aria-label={t("catalog.closeAria")} onClick={closeModal} />
           <div className="relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-xl border border-app bg-panel p-5 shadow-xl sm:rounded-xl">
             <div className="mb-4 flex items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">{editingId ? "Edit entry" : "New catalog entry"}</h2>
+              <h2 className="text-lg font-semibold">{editingId ? t("catalog.editEntry") : t("catalog.newCatalogEntry")}</h2>
               <Button type="button" size="sm" variant="ghost" onPress={closeModal}>
-                Close
+                {t("common.close")}
               </Button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className={labelCls}>
-                Brand *
+                {t("catalog.brandRequired")}
                 <input className={inputCls} value={form.brand} onChange={(e) => update("brand", e.target.value)} />
               </label>
               <label className={labelCls}>
-                Model *
+                {t("catalog.modelRequired")}
                 <input className={inputCls} value={form.model} onChange={(e) => update("model", e.target.value)} />
               </label>
               <label className={labelCls}>
-                Year
+                {t("catalog.year")}
                 <input className={inputCls} type="number" value={form.year} onChange={(e) => update("year", e.target.value)} />
               </label>
               <label className={labelCls}>
-                Trim
+                {t("catalog.trim")}
                 <input className={inputCls} value={form.trim} onChange={(e) => update("trim", e.target.value)} />
               </label>
               <label className={`${labelCls} sm:col-span-2`}>
-                Color options (comma-separated)
+                {t("catalog.colorOptions")}
                 <input className={inputCls} value={form.colorOptions} onChange={(e) => update("colorOptions", e.target.value)} />
               </label>
               <label className={labelCls}>
-                Sale price (DZD) *
+                {t("catalog.salePriceDzdRequired")}
                 <input className={inputCls} type="number" min={0} value={form.salePriceDzd} onChange={(e) => update("salePriceDzd", e.target.value)} />
               </label>
               <label className={labelCls}>
-                Lead time (days) *
+                {t("catalog.leadTimeDaysRequired")}
                 <input className={inputCls} type="number" min={0} value={form.leadTimeDays} onChange={(e) => update("leadTimeDays", e.target.value)} />
               </label>
               <label className={labelCls}>
-                Deposit (DZD) *
+                {t("catalog.depositDzdRequired")}
                 <input className={inputCls} type="number" min={0} value={form.depositDzd} onChange={(e) => update("depositDzd", e.target.value)} />
               </label>
               <label className={labelCls}>
-                Supplier reference
+                {t("catalog.supplierReference")}
                 <input className={inputCls} value={form.supplierReference} onChange={(e) => update("supplierReference", e.target.value)} />
               </label>
               <label className={labelCls}>
-                Cost estimate (DZD)
+                {t("catalog.costEstimateDzd")}
                 <input className={inputCls} type="number" min={0} value={form.costEstimateDzd} onChange={(e) => update("costEstimateDzd", e.target.value)} />
               </label>
               <label className={`${labelCls} sm:col-span-2`}>
-                Margin note
+                {t("catalog.marginNote")}
                 <input className={inputCls} value={form.marginNote} onChange={(e) => update("marginNote", e.target.value)} />
               </label>
               <label className={`${labelCls} sm:col-span-2`}>
-                Internal note
+                {t("catalog.internalNote")}
                 <textarea className={`${inputCls} resize-none`} rows={2} value={form.internalNote} onChange={(e) => update("internalNote", e.target.value)} />
               </label>
               <label className={`${labelCls} sm:col-span-2`}>
-                Buyer responsibilities (optional override)
+                {t("catalog.buyerRespNote")}
                 <textarea className={`${inputCls} resize-none`} rows={2} value={form.buyerRespNote} onChange={(e) => update("buyerRespNote", e.target.value)} />
               </label>
               <label className={`${labelCls} sm:col-span-2`}>
-                Photo URLs (one per line)
+                {t("catalog.photoUrls")}
                 <textarea className={`${inputCls} resize-none font-mono text-xs`} rows={4} value={form.photosText} onChange={(e) => update("photosText", e.target.value)} />
               </label>
               <label className="flex items-center gap-2 sm:col-span-2 text-sm">
                 <input type="checkbox" checked={form.active} onChange={(e) => update("active", e.target.checked)} className="accent-[var(--color-accent)]" />
-                Active (visible on sales list)
+                {t("catalog.activeVisibleHint")}
               </label>
             </div>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <Button type="button" variant="outline" size="sm" onPress={closeModal} isDisabled={saving}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="button" variant="primary" size="sm" onPress={() => void save()} isDisabled={saving}>
-                {saving ? "Saving…" : "Save"}
+                {saving ? t("catalog.saving") : t("common.save")}
               </Button>
             </div>
           </div>

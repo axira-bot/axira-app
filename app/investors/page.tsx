@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabase";
 import { getRates, type AppRates } from "@/lib/rates";
 import { eurPerAedFromAppEurSetting, usdPerAedFromAppUsdSetting } from "@/lib/finance/dealMoney";
 import { useAuth } from "@/lib/context/AuthContext";
+import { formatDateForLocale, formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
+import { investorReturnStatusLabel, pocketDetailLabel } from "@/lib/i18n/enumLabels";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 
 const CURRENCIES = ["AED", "DZD", "EUR", "USD"] as const;
@@ -61,29 +63,9 @@ const emptyForm = (): InvestorFormState => ({
   notes: "",
 });
 
-function formatNumber(value: number): string {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function formatMoney(value: number | null | undefined, currency: string) {
-  const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
-  return `${formatNumber(v)} ${currency || "AED"}`;
-}
-
 function parseNum(s: string): number {
   const v = Number(s);
   return Number.isFinite(v) ? v : 0;
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 function monthFromDate(dateStr: string | null | undefined): string {
@@ -94,8 +76,29 @@ function monthFromDate(dateStr: string | null | undefined): string {
 }
 
 export default function InvestorsPage() {
+  const { locale, t } = useI18n();
+  const dash = t("common.emiDash");
+  const fmtNum = (n: number, options?: Intl.NumberFormatOptions) =>
+    formatNumberForLocale(locale, n, { maximumFractionDigits: 0, ...options });
+  const fmtMoney = (value: number | null | undefined, currency: string) => {
+    const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
+    const c = currency || "AED";
+    return `${fmtNum(v)} ${c}`;
+  };
+  const fmtDate = (value: string | null | undefined) => {
+    if (!value) return dash;
+    const s = formatDateForLocale(locale, value, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    return s || dash;
+  };
+  const fmtPct1 = (n: number) =>
+    formatNumberForLocale(locale, n, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
   const { canDelete, isInvestorReadOnly } = useAuth();
-  const [activeTab, setActiveTab] = useState<"Investors" | "Returns" | "Owner">("Investors");
+  const [activeTab, setActiveTab] = useState<"investors" | "returns" | "owner">("investors");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,7 +157,7 @@ export default function InvestorsPage() {
         warnings?: { deals?: string | null; settings?: string | null };
       };
       if (!response.ok) {
-        setError(payload.error ?? "Failed to load investors data");
+        setError(payload.error ?? t("investors.loadFailed"));
         return;
       }
 
@@ -308,7 +311,7 @@ export default function InvestorsPage() {
   const handleSave = async () => {
     if (isInvestorReadOnly) return;
     if (!form.name.trim()) {
-      setError("Full name is required.");
+      setError(t("investors.nameRequired"));
       return;
     }
     const amount = parseNum(form.investmentAmount);
@@ -332,14 +335,14 @@ export default function InvestorsPage() {
         : baseTotalCapital + investmentAed;
     const share = parseNum(form.profitSharePercent);
     if (share < 0 || share > 100) {
-      setError("Profit share % must be between 0 and 100.");
+      setError(t("investors.profitShareRange"));
       return;
     }
     const otherSharesTotal = investors
       .filter((i) => i.id !== editingId)
       .reduce((s, i) => s + (i.profit_share_percent ?? 0), 0);
     if (otherSharesTotal + share > 100) {
-      setError("Total investor profit share cannot exceed 100%.");
+      setError(t("investors.profitShareCap"));
       return;
     }
     setIsSaving(true);
@@ -386,7 +389,7 @@ export default function InvestorsPage() {
 
   const handleDelete = async (i: Investor) => {
     if (!canDelete) return;
-    if (!window.confirm(`Delete investor "${i.name}"? This cannot be undone.`)) return;
+    if (!window.confirm(t("investors.deleteConfirm", { name: i.name ?? "" }))) return;
     setDeletingId(i.id);
     const { error: delErr } = await supabase.from("investors").delete().eq("id", i.id);
     if (delErr) {
@@ -555,23 +558,29 @@ export default function InvestorsPage() {
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="border-b border-default-200 bg-content1 px-4 py-4">
-        <h1 className="text-xl font-semibold">Investor Dashboard</h1>
-        <p className="mt-1 text-xs text-default-500">Manage investors and profit share returns.</p>
+        <h1 className="text-xl font-semibold">{t("investors.pageTitle")}</h1>
+        <p className="mt-1 text-xs text-default-500">{t("investors.pageSubtitle")}</p>
       </div>
 
       <div className="flex border-b border-default-200 bg-content1 px-4">
-        {(["Investors", "Returns", "Owner"] as const).map((tab) => (
+        {(
+          [
+            { key: "investors" as const, label: t("investors.tabInvestors") },
+            { key: "returns" as const, label: t("investors.tabReturns") },
+            { key: "owner" as const, label: t("investors.tabOwner") },
+          ] as const
+        ).map((tab) => (
           <Button
-            key={tab}
+            key={tab.key}
             type="button"
             variant="ghost"
             size="sm"
             className={`rounded-none border-b-2 px-4 py-3 ${
-              activeTab === tab ? "border-danger text-danger" : "border-transparent text-default-500"
+              activeTab === tab.key ? "border-danger text-danger" : "border-transparent text-default-500"
             }`}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => setActiveTab(tab.key)}
           >
-            {tab}
+            {tab.label}
           </Button>
         ))}
       </div>
@@ -585,19 +594,19 @@ export default function InvestorsPage() {
           </Alert.Root>
         ) : null}
 
-        {activeTab === "Investors" && (
+        {activeTab === "investors" && (
           <>
             <div className="mb-4 grid gap-3 sm:grid-cols-3 items-end">
               <div className="rounded-lg border border-app surface p-3">
                 <div className="text-xs font-medium uppercase tracking-wide text-muted">
-                  Total Capital (AED equivalent)
+                  {t("investors.totalCapitalCard")}
                 </div>
                 <div className="mt-2 text-xl font-semibold text-app">
-                  {formatMoney(effectiveTotalCapital, "AED")}
+                  {fmtMoney(effectiveTotalCapital, "AED")}
                 </div>
               </div>
               <div className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Override total capital (optional)</span>
+                <span className="font-semibold">{t("investors.overrideTotalCapital")}</span>
                 <input
                   type="number"
                   min="0"
@@ -608,33 +617,33 @@ export default function InvestorsPage() {
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
                 />
                 <p className="text-[10px] text-gray-400">
-                  Leave empty to use sum of all investor capital.
+                  {t("investors.overrideHint")}
                 </p>
               </div>
               <div className="flex justify-end">
                 {!isInvestorReadOnly ? (
                 <Button type="button" variant="primary" size="sm" className="h-10" onPress={openAdd}>
-                  Add Investor
+                  {t("investors.addInvestor")}
                 </Button>
                 ) : null}
               </div>
             </div>
             {isLoading ? (
               <div className="rounded-lg border border-app surface p-6 text-center text-muted">
-                Loading...
+                {t("investors.loading")}
               </div>
             ) : (
               <div className="responsive-table-wrap rounded-lg border border-app surface">
                 <table className="min-w-[620px] w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-app text-muted">
-                      <th className="px-4 py-3 font-semibold">Name</th>
-                      <th className="px-4 py-3 font-semibold">Investment (AED eq)</th>
-                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Profit share %</th>
-                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Total profit earned</th>
-                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Total withdrawn</th>
-                      <th className="px-4 py-3 font-semibold">Balance</th>
-                      <th className="px-4 py-3 font-semibold">Actions</th>
+                      <th className="px-4 py-3 font-semibold">{t("investors.thName")}</th>
+                      <th className="px-4 py-3 font-semibold">{t("investors.thInvestmentAedEq")}</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">{t("investors.thProfitShare")}</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">{t("investors.thProfitEarned")}</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">{t("investors.thWithdrawn")}</th>
+                      <th className="px-4 py-3 font-semibold">{t("investors.thBalance")}</th>
+                      <th className="px-4 py-3 font-semibold">{t("investors.thActions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -645,29 +654,29 @@ export default function InvestorsPage() {
                       const sharePct = i.profit_share_percent ?? 0;
                       return (
                         <tr key={i.id} className="border-b border-app last:border-0">
-                          <td className="px-4 py-3 text-app">{i.name ?? "—"}</td>
+                          <td className="px-4 py-3 text-app">{i.name ?? dash}</td>
                           <td className="px-4 py-3 text-app">
                             {i.original_amount != null && i.original_currency ? (
                               <>
-                                {formatNumber(i.original_amount)} {i.original_currency}{" "}
+                                {fmtNum(i.original_amount)} {i.original_currency}{" "}
                                 <span className="text-[11px] text-gray-400">
-                                  ({formatMoney(i.investment_aed, "AED")} at current rate)
+                                  ({fmtMoney(i.investment_aed, "AED")} {t("investors.atCurrentRate")})
                                 </span>
                               </>
                             ) : (
-                              formatMoney(i.investment_aed, "AED")
+                              fmtMoney(i.investment_aed, "AED")
                             )}
                           </td>
-                          <td className="px-4 py-3 text-app hidden sm:table-cell">{sharePct.toFixed(1)}%</td>
-                          <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(earned, "AED")}</td>
-                          <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(withdrawn, "AED")}</td>
-                          <td className="px-4 py-3 font-medium text-[var(--color-accent)]">{formatMoney(balance, "AED")}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{fmtPct1(sharePct)}%</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{fmtMoney(earned, "AED")}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{fmtMoney(withdrawn, "AED")}</td>
+                          <td className="px-4 py-3 font-medium text-[var(--color-accent)]">{fmtMoney(balance, "AED")}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
                               {!isInvestorReadOnly ? (
-                                <RowActionsMenu label="Investor actions">
+                                <RowActionsMenu label={t("investors.investorActions")}>
                                   <button type="button" onClick={() => openEdit(i)} className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100">
-                                    Edit
+                                    {t("common.edit")}
                                   </button>
                                   <button
                                     type="button"
@@ -680,7 +689,7 @@ export default function InvestorsPage() {
                                     }}
                                     className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-amber-600 hover:bg-amber-100"
                                   >
-                                    Add Bonus
+                                    {t("investors.addBonus")}
                                   </button>
                                   {canDelete ? (
                                     <button
@@ -689,12 +698,12 @@ export default function InvestorsPage() {
                                       disabled={deletingId === i.id}
                                       className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
                                     >
-                                      {deletingId === i.id ? "Deleting..." : "Delete"}
+                                      {deletingId === i.id ? t("transfers.deleting") : t("common.delete")}
                                     </button>
                                   ) : null}
                                 </RowActionsMenu>
                               ) : (
-                                <span className="text-[11px] text-muted">View only</span>
+                                <span className="text-[11px] text-muted">{t("investors.viewOnly")}</span>
                               )}
                             </div>
                           </td>
@@ -704,29 +713,29 @@ export default function InvestorsPage() {
                   </tbody>
                 </table>
                 {investors.length === 0 && (
-                  <div className="p-6 text-center text-gray-400">No investors yet. Add one to get started.</div>
+                  <div className="p-6 text-center text-gray-400">{t("investors.emptyInvestors")}</div>
                 )}
               </div>
             )}
           </>
         )}
 
-        {activeTab === "Returns" && (
+        {activeTab === "returns" && (
           <>
             <div className="mb-4 rounded-lg border border-app surface p-4">
-              <h3 className="text-sm font-semibold text-app">Running total</h3>
+              <h3 className="text-sm font-semibold text-app">{t("investors.runningTotal")}</h3>
               <div className="mt-2 grid gap-2 text-sm sm:grid-cols-3">
                 <div>
-                  <span className="text-gray-400">Total invested</span>
-                  <p className="font-semibold text-app">{formatMoney(totalInvested, "AED")}</p>
+                  <span className="text-gray-400">{t("investors.totalInvested")}</span>
+                  <p className="font-semibold text-app">{fmtMoney(totalInvested, "AED")}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Total returned</span>
-                  <p className="font-semibold text-app">{formatMoney(totalReturned, "AED")}</p>
+                  <span className="text-gray-400">{t("investors.totalReturned")}</span>
+                  <p className="font-semibold text-app">{fmtMoney(totalReturned, "AED")}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400">ROI %</span>
-                  <p className="font-semibold text-[var(--color-accent)]">{roiPercent.toFixed(1)}%</p>
+                  <span className="text-gray-400">{t("investors.roiPct")}</span>
+                  <p className="font-semibold text-[var(--color-accent)]">{fmtPct1(roiPercent)}%</p>
                 </div>
               </div>
             </div>
@@ -735,12 +744,12 @@ export default function InvestorsPage() {
               <table className="min-w-[620px] w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-app text-muted">
-                    <th className="px-4 py-3 font-semibold">Month</th>
-                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">Total profit</th>
-                    <th className="px-4 py-3 font-semibold">Investor</th>
-                    <th className="px-4 py-3 font-semibold">Share</th>
-                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">Status</th>
-                    <th className="px-4 py-3 font-semibold">Action</th>
+                    <th className="px-4 py-3 font-semibold">{t("investors.thMonth")}</th>
+                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">{t("investors.thTotalProfit")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("investors.thInvestor")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("investors.thShare")}</th>
+                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">{t("investors.thStatus")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("investors.thAction")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -756,11 +765,13 @@ export default function InvestorsPage() {
                       return (
                         <tr key={key} className="border-b border-app last:border-0">
                           <td className="px-4 py-3 text-app">{month}</td>
-                          <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(totalProfit, "AED")}</td>
-                          <td className="px-4 py-3 text-app">{inv.name ?? "—"}</td>
-                          <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(share, "AED")}</td>
+                          <td className="px-4 py-3 text-app hidden sm:table-cell">{fmtMoney(totalProfit, "AED")}</td>
+                          <td className="px-4 py-3 text-app">{inv.name ?? dash}</td>
+                          <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{fmtMoney(share, "AED")}</td>
                           <td className="px-4 py-3 hidden sm:table-cell">
-                            <span className={isPaid ? "text-emerald-400" : "text-amber-400"}>{status}</span>
+                            <span className={isPaid ? "text-emerald-400" : "text-amber-400"}>
+                              {investorReturnStatusLabel(t, status)}
+                            </span>
                           </td>
                           <td className="px-4 py-3">
                             {!isPaid && share > 0 && (
@@ -771,14 +782,14 @@ export default function InvestorsPage() {
                                   disabled={markingPaid === key}
                                   className="rounded bg-zinc-700 px-2 py-1 text-xs font-medium text-app disabled:opacity-50"
                                 >
-                                  {markingPaid === key ? "..." : "Reinvest"}
+                                  {markingPaid === key ? t("investors.reinvestBusy") : t("investors.reinvest")}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => openPayOutModal(inv.id, month, totalProfit, share)}
                                   className="rounded bg-[var(--color-accent)] px-2 py-1 text-xs font-medium text-white"
                                 >
-                                  Pay Out
+                                  {t("investors.payOut")}
                                 </button>
                               </div>
                             )}
@@ -790,20 +801,20 @@ export default function InvestorsPage() {
                 </tbody>
               </table>
               {monthsSorted.length === 0 && (
-                <div className="p-6 text-center text-gray-400">No deal profit by month. Deals will appear here.</div>
+                <div className="p-6 text-center text-gray-400">{t("reports.noDealsProfitByMonth")}</div>
               )}
             </div>
           </>
         )}
-        {activeTab === "Owner" && (
+        {activeTab === "owner" && (
           <>
             <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div className="rounded-lg border border-app surface p-4 text-sm space-y-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                  Owner
+                  {t("investors.ownerSection")}
                 </div>
                 <label className="space-y-1 text-xs text-app">
-                  <span className="font-semibold">Name</span>
+                  <span className="font-semibold">{t("investors.ownerName")}</span>
                   <input
                     type="text"
                     value={ownerName}
@@ -812,7 +823,7 @@ export default function InvestorsPage() {
                   />
                 </label>
                 <label className="space-y-1 text-xs text-app">
-                  <span className="font-semibold">My Capital</span>
+                  <span className="font-semibold">{t("investors.myCapital")}</span>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -838,26 +849,26 @@ export default function InvestorsPage() {
                   </div>
                 </label>
                 <div className="text-[11px] text-gray-400">
-                  AED equivalent:{" "}
+                  {t("investors.aedEquivalentLine")}{" "}
                   {(() => {
                     const amt = parseNum(ownerCapital);
                     let aed = amt;
                     if (ownerCapitalCurrency === "DZD" && rates.DZD > 0) aed = amt / rates.DZD;
                     else if (ownerCapitalCurrency === "EUR" && eurPerAed > 0) aed = amt / eurPerAed;
                     else if (ownerCapitalCurrency === "USD" && usdPerAed > 0) aed = amt / usdPerAed;
-                    return formatMoney(aed, "AED");
+                    return fmtMoney(aed, "AED");
                   })()}{" "}
                   <span className="text-[10px]">
-                    (at current rate)
+                    {t("investors.atCurrentRate")}
                   </span>
                 </div>
               </div>
               <div className="rounded-lg border border-app surface p-4 text-sm space-y-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                  Business
+                  {t("investors.businessSection")}
                 </div>
                 <label className="space-y-1 text-xs text-app">
-                  <span className="font-semibold">Business Valuation (AED)</span>
+                  <span className="font-semibold">{t("investors.businessValuation")}</span>
                   <input
                     type="number"
                     min="0"
@@ -868,7 +879,7 @@ export default function InvestorsPage() {
                   />
                 </label>
                 <label className="space-y-1 text-xs text-app">
-                  <span className="font-semibold">Share price (AED)</span>
+                  <span className="font-semibold">{t("investors.sharePrice")}</span>
                   <input
                     type="number"
                     min="0"
@@ -880,7 +891,7 @@ export default function InvestorsPage() {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="space-y-1 text-xs text-app">
-                    <span className="font-semibold">Total shares</span>
+                    <span className="font-semibold">{t("investors.totalShares")}</span>
                     <input
                       type="number"
                       min="0"
@@ -891,7 +902,7 @@ export default function InvestorsPage() {
                     />
                   </label>
                   <label className="space-y-1 text-xs text-app">
-                    <span className="font-semibold">Available shares</span>
+                    <span className="font-semibold">{t("investors.availableShares")}</span>
                     <input
                       type="number"
                       min="0"
@@ -905,7 +916,7 @@ export default function InvestorsPage() {
               </div>
               <div className="rounded-lg border border-app surface p-4 text-sm space-y-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                  Notes
+                  {t("investors.notesSection")}
                 </div>
                 <textarea
                   value={ownerNotes}
@@ -940,7 +951,7 @@ export default function InvestorsPage() {
                     }}
                     className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                   >
-                    {isSavingOwner ? "Saving..." : "Save Owner Settings"}
+                    {isSavingOwner ? t("investors.savingOwner") : t("investors.saveOwnerSettings")}
                   </button>
                 </div>
               </div>
@@ -962,37 +973,37 @@ export default function InvestorsPage() {
               return (
                 <div className="rounded-lg border border-app surface p-4 text-sm space-y-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                    Ownership Summary
+                    {t("investors.ownershipSummary")}
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     <div>
-                      <div className="text-gray-400 text-xs">My equity (AED)</div>
+                      <div className="text-gray-400 text-xs">{t("investors.myEquityAed")}</div>
                       <div className="text-lg font-semibold text-app">
-                        {formatMoney(ownerAed, "AED")}
+                        {fmtMoney(ownerAed, "AED")}
                       </div>
                     </div>
                     <div>
-                      <div className="text-gray-400 text-xs">Business worth</div>
+                      <div className="text-gray-400 text-xs">{t("investors.businessWorth")}</div>
                       <div className="text-lg font-semibold text-app">
-                        {formatMoney(valuation, "AED")}
+                        {fmtMoney(valuation, "AED")}
                       </div>
                     </div>
                     <div>
-                      <div className="text-gray-400 text-xs">My ownership %</div>
+                      <div className="text-gray-400 text-xs">{t("investors.myOwnershipPct")}</div>
                       <div className="text-lg font-semibold text-app">
-                        {myPct.toFixed(1)}%
+                        {fmtPct1(myPct)}%
                       </div>
                     </div>
                     <div>
-                      <div className="text-gray-400 text-xs">Investor ownership %</div>
+                      <div className="text-gray-400 text-xs">{t("investors.investorOwnershipPct")}</div>
                       <div className="text-lg font-semibold text-app">
-                        {investorPct.toFixed(1)}%
+                        {fmtPct1(investorPct)}%
                       </div>
                     </div>
                     <div>
-                      <div className="text-gray-400 text-xs">Available for new investors %</div>
+                      <div className="text-gray-400 text-xs">{t("investors.availableForNewPct")}</div>
                       <div className="text-lg font-semibold text-[var(--color-accent)]">
-                        {availablePct.toFixed(1)}%
+                        {fmtPct1(availablePct)}%
                       </div>
                     </div>
                   </div>
@@ -1008,10 +1019,12 @@ export default function InvestorsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={closeModal} />
           <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-app">{editingId ? "Edit Investor" : "Add Investor"}</h2>
+            <h2 className="text-lg font-semibold text-app">
+              {editingId ? t("investors.editInvestor") : t("investors.addInvestorTitle")}
+            </h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Full name</span>
+                <span className="font-semibold">{t("investors.fullName")}</span>
                 <input
                   type="text"
                   value={form.name}
@@ -1020,7 +1033,7 @@ export default function InvestorsPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Investment amount</span>
+                <span className="font-semibold">{t("investors.investmentAmount")}</span>
                 <input
                   type="number"
                   min="0"
@@ -1031,7 +1044,7 @@ export default function InvestorsPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Currency</span>
+                <span className="font-semibold">{t("investors.currencyLabel")}</span>
                 <select
                   value={form.currency}
                   onChange={(e) => updateField("currency", e.target.value as (typeof CURRENCIES)[number])}
@@ -1046,7 +1059,7 @@ export default function InvestorsPage() {
               </label>
               {form.currency === "DZD" && (
                 <label className="space-y-1 text-xs text-app sm:col-span-2">
-                  <span className="font-semibold">Rate (DZD per AED, to convert to AED)</span>
+                  <span className="font-semibold">{t("investors.rateDzdLabel")}</span>
                   <input
                     type="number"
                     min="0"
@@ -1058,7 +1071,7 @@ export default function InvestorsPage() {
                 </label>
               )}
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Investment date</span>
+                <span className="font-semibold">{t("investors.investmentDate")}</span>
                 <input
                   type="date"
                   value={form.investmentDate}
@@ -1067,7 +1080,7 @@ export default function InvestorsPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Profit share %</span>
+                <span className="font-semibold">{t("investors.profitSharePct")}</span>
                 <input
                   type="number"
                   min="0"
@@ -1079,7 +1092,7 @@ export default function InvestorsPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Notes</span>
+                <span className="font-semibold">{t("investors.notesLabel")}</span>
                 <textarea
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
@@ -1089,7 +1102,7 @@ export default function InvestorsPage() {
               </label>
               {form.investmentAmount && (
                 <p className="sm:col-span-2 text-xs text-gray-400">
-                  AED equivalent: {formatMoney(investmentAedFromForm, "AED")}
+                  {t("investors.aedEquivalentLine")} {fmtMoney(investmentAedFromForm, "AED")}
                 </p>
               )}
             </div>
@@ -1100,7 +1113,7 @@ export default function InvestorsPage() {
                 disabled={isSaving}
                 className="rounded-md border border-app px-4 py-2 text-sm font-medium text-app disabled:opacity-50"
               >
-                Cancel
+                {t("investors.cancel")}
               </button>
               <button
                 type="button"
@@ -1108,7 +1121,7 @@ export default function InvestorsPage() {
                 disabled={isSaving}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : "Save"}
+                {isSaving ? t("investors.saving") : t("investors.save")}
               </button>
             </div>
           </div>
@@ -1125,29 +1138,27 @@ export default function InvestorsPage() {
             }}
           />
           <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-app">Pay out investor return</h2>
-            <p className="mt-1 text-xs text-muted">
-              This will create a movement Out with category <span className="font-semibold">Investor Return</span> and mark this return as paid.
-            </p>
+            <h2 className="text-lg font-semibold text-app">{t("investors.payOutTitle")}</h2>
+            <p className="mt-1 text-xs text-muted">{t("investors.payOutBlurb")}</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 text-xs text-app">
               <div>
-                <span className="text-gray-400">Investor</span>
+                <span className="text-gray-400">{t("investors.thInvestor")}</span>
                 <div className="mt-1 text-app">
-                  {investors.find((i) => i.id === payOutReturn.investorId)?.name ?? "—"}
+                  {investors.find((i) => i.id === payOutReturn.investorId)?.name ?? dash}
                 </div>
               </div>
               <div>
-                <span className="text-gray-400">Month</span>
+                <span className="text-gray-400">{t("investors.thMonth")}</span>
                 <div className="mt-1 text-app">{payOutReturn.month}</div>
               </div>
               <div>
-                <span className="text-gray-400">Amount</span>
+                <span className="text-gray-400">{t("investors.amountLabel")}</span>
                 <div className="mt-1 text-[var(--color-accent)] font-semibold">
-                  {formatMoney(payOutReturn.investorShare, "AED")}
+                  {fmtMoney(payOutReturn.investorShare, "AED")}
                 </div>
               </div>
               <label className="space-y-1">
-                <span className="text-gray-400">Date</span>
+                <span className="text-gray-400">{t("investors.dateLabel")}</span>
                 <input
                   type="date"
                   value={payOutDate}
@@ -1156,7 +1167,7 @@ export default function InvestorsPage() {
                 />
               </label>
               <label className="space-y-1">
-                <span className="text-gray-400">Pocket</span>
+                <span className="text-gray-400">{t("investors.pocketLabel")}</span>
                 <select
                   value={payOutPocket}
                   onChange={(e) => setPayOutPocket(e.target.value)}
@@ -1164,7 +1175,7 @@ export default function InvestorsPage() {
                 >
                   {AED_POCKETS.map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {pocketDetailLabel(t, p)}
                     </option>
                   ))}
                 </select>
@@ -1179,7 +1190,7 @@ export default function InvestorsPage() {
                 disabled={isSavingPayOut}
                 className="rounded-md border border-app px-4 py-2 text-sm font-medium text-app disabled:opacity-50"
               >
-                Cancel
+                {t("investors.cancel")}
               </button>
               <button
                 type="button"
@@ -1187,7 +1198,7 @@ export default function InvestorsPage() {
                 disabled={isSavingPayOut}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {isSavingPayOut ? "Paying..." : "Confirm payout"}
+                {isSavingPayOut ? t("investors.paying") : t("investors.confirmPayout")}
               </button>
             </div>
           </div>
@@ -1208,13 +1219,11 @@ export default function InvestorsPage() {
             }}
           />
           <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-app">Add bonus</h2>
-            <p className="mt-1 text-xs text-muted">
-              Record an extra payout for this investor. This will count as withdrawn and create a movement.
-            </p>
+            <h2 className="text-lg font-semibold text-app">{t("investors.bonusTitle")}</h2>
+            <p className="mt-1 text-xs text-muted">{t("investors.bonusBlurb")}</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Amount (AED)</span>
+                <span className="font-semibold">{t("investors.bonusAmount")}</span>
                 <input
                   type="number"
                   min="0"
@@ -1225,7 +1234,7 @@ export default function InvestorsPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Date</span>
+                <span className="font-semibold">{t("investors.dateLabel")}</span>
                 <input
                   type="date"
                   value={bonusDate}
@@ -1234,7 +1243,7 @@ export default function InvestorsPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Pay from pocket</span>
+                <span className="font-semibold">{t("investors.payFromPocket")}</span>
                 <select
                   value={bonusPocket}
                   onChange={(e) => setBonusPocket(e.target.value)}
@@ -1242,13 +1251,13 @@ export default function InvestorsPage() {
                 >
                   {AED_POCKETS.map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {pocketDetailLabel(t, p)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Reason (optional)</span>
+                <span className="font-semibold">{t("investors.reasonOptional")}</span>
                 <input
                   type="text"
                   value={bonusReason}
@@ -1270,7 +1279,7 @@ export default function InvestorsPage() {
                 className="rounded-md border border-app px-4 py-2 text-sm font-medium text-app disabled:opacity-50"
                 disabled={isSavingBonus}
               >
-                Cancel
+                {t("investors.cancel")}
               </button>
               <button
                 type="button"
@@ -1279,7 +1288,7 @@ export default function InvestorsPage() {
                   if (!bonusInvestorId) return;
                   const amount = parseNum(bonusAmount);
                   if (amount <= 0) {
-                    setError("Bonus amount must be greater than 0.");
+                    setError(t("investors.bonusAmountInvalid"));
                     return;
                   }
                   const date = bonusDate || new Date().toISOString().slice(0, 10);
@@ -1340,7 +1349,7 @@ export default function InvestorsPage() {
                 }}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {isSavingBonus ? "Saving..." : "Save bonus"}
+                {isSavingBonus ? t("investors.saving") : t("investors.saveBonus")}
               </button>
             </div>
           </div>

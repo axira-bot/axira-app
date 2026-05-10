@@ -16,6 +16,7 @@ import { PaginatedTable } from "@/components/ui/paginated-table";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import { PageContainer } from "@/components/ui/page-container";
 import { ResponsiveFilterBar } from "@/components/ui/responsive-filter-bar";
+import { useI18n } from "@/lib/context/I18nContext";
 
 type UserRow = {
   id: string;
@@ -32,30 +33,13 @@ type EmployeeOption = { id: string; name: string | null };
 type InvestorOption = { id: string; name: string | null };
 
 const ROLES = ["owner", "manager", "staff", "accountant", "investor"] as const;
-const FEATURE_LABELS: Record<FeatureKey, string> = {
-  dashboard: "Dashboard",
-  activity: "Activity",
-  inventory: "Inventory",
-  deals: "Deals",
-  containers: "Containers",
-  movements: "Movements",
-  transfers: "Transfers",
-  debts: "Debts",
-  employees: "Employees",
-  payroll: "Payroll",
-  investors: "Investors",
-  reports: "Reports",
-  clients: "Clients",
-  inquiries: "Inquiries",
-  purchase_orders: "Purchase Orders",
-  suppliers: "Suppliers",
-  audit_log: "Audit log",
-  admin_users: "Admin Users",
-  sales_list: "Sales list",
-  sales_catalog_admin: "Sales catalog (owner)",
-};
+
+function featureLabel(t: ReturnType<typeof useI18n>["t"], key: FeatureKey): string {
+  return t(`adminUsers.features.${key}`);
+}
 
 export default function AdminUsersPage() {
+  const { t } = useI18n();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [investors, setInvestors] = useState<InvestorOption[]>([]);
@@ -92,7 +76,7 @@ export default function AdminUsersPage() {
     const res = await fetch(`/api/admin/users?page=${page}&pageSize=${pageSize}`);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(data.error ?? "Failed to load users");
+      setError(data.error ?? t("adminUsers.loadFailed"));
       setUsers([]);
     } else {
       setError(null);
@@ -100,7 +84,7 @@ export default function AdminUsersPage() {
       setTotal(Number(data.total || 0));
     }
     setLoading(false);
-  }, [page, pageSize]);
+  }, [page, pageSize, t]);
 
   useEffect(() => {
     const run = async () => {
@@ -125,7 +109,7 @@ export default function AdminUsersPage() {
     e.preventDefault();
     setAddError(null);
     if (!addName.trim()) {
-      setAddError("Full name is required.");
+      setAddError(t("adminUsers.fullNameRequired"));
       return;
     }
     setAdding(true);
@@ -144,7 +128,7 @@ export default function AdminUsersPage() {
     const data = await res.json().catch(() => ({}));
     setAdding(false);
     if (!res.ok) {
-      setAddError(data.error ?? "Failed to add user");
+      setAddError(data.error ?? t("adminUsers.addFailed"));
       return;
     }
     setAddEmail("");
@@ -157,7 +141,7 @@ export default function AdminUsersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Remove this user? They will no longer be able to sign in.")) return;
+    if (!window.confirm(t("adminUsers.deleteConfirm"))) return;
     setDeletingId(id);
     const res = await fetch(`/api/admin/users?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
@@ -165,7 +149,7 @@ export default function AdminUsersPage() {
     const data = await res.json().catch(() => ({}));
     setDeletingId(null);
     if (!res.ok) {
-      setError(data.error ? `Delete failed: ${data.error}` : "Failed to delete user");
+      setError(data.error ? `${t("adminUsers.deleteFailed")}: ${data.error}` : t("adminUsers.deleteFailed"));
       return;
     }
     fetchUsers();
@@ -617,7 +601,7 @@ export default function AdminUsersPage() {
                         }))
                       }
                     />
-                    {FEATURE_LABELS[feature]}
+                    {featureLabel(t, feature)}
                   </label>
                 ))}
               </div>

@@ -6,6 +6,8 @@ import { useEffect } from "react";
 import { Button } from "@heroui/react";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/context/AuthContext";
+import { useI18n, type TranslateFn } from "@/lib/context/I18nContext";
+import { userRoleLabel } from "@/lib/i18n/enumLabels";
 import { type FeatureKey } from "@/lib/auth/featureKeys";
 
 /* ── Nav Icons ─────────────────────────────────────────────── */
@@ -123,26 +125,26 @@ const icons: Record<string, React.ReactNode> = {
 };
 
 /* ── Nav Items ─────────────────────────────────────────────── */
-const navItems = [
-  { href: "/dashboard",   label: "Dashboard" },
-  { href: "/audit",       label: "Audit" },
-  { href: "/activity",    label: "Activity" },
-  { href: "/inventory",   label: "Inventory" },
-  { href: "/deals",       label: "Deals" },
-  { href: "/sales-list",  label: "Sales list" },
-  { href: "/catalog",     label: "Sales catalog" },
-  { href: "/containers",  label: "Containers" },
-  { href: "/movements",   label: "Movements" },
-  { href: "/transfers",   label: "Transfers" },
-  { href: "/debts",       label: "Debts" },
-  { href: "/employees",   label: "Employees" },
-  { href: "/payroll",     label: "Payroll" },
-  { href: "/investors",   label: "Investors" },
-  { href: "/reports",     label: "Reports" },
-  { href: "/clients",     label: "Clients" },
-  { href: "/inquiries",   label: "Inquiries" },
-  { href: "/suppliers",   label: "Suppliers" },
-  { href: "/purchase-orders", label: "Purchase Orders" },
+const navItems: { href: string; navKey: string }[] = [
+  { href: "/dashboard", navKey: "dashboard" },
+  { href: "/audit", navKey: "audit" },
+  { href: "/activity", navKey: "activity" },
+  { href: "/inventory", navKey: "inventory" },
+  { href: "/deals", navKey: "deals" },
+  { href: "/sales-list", navKey: "salesList" },
+  { href: "/catalog", navKey: "catalog" },
+  { href: "/containers", navKey: "containers" },
+  { href: "/movements", navKey: "movements" },
+  { href: "/transfers", navKey: "transfers" },
+  { href: "/debts", navKey: "debts" },
+  { href: "/employees", navKey: "employees" },
+  { href: "/payroll", navKey: "payroll" },
+  { href: "/investors", navKey: "investors" },
+  { href: "/reports", navKey: "reports" },
+  { href: "/clients", navKey: "clients" },
+  { href: "/inquiries", navKey: "inquiries" },
+  { href: "/suppliers", navKey: "suppliers" },
+  { href: "/purchase-orders", navKey: "purchaseOrders" },
 ];
 
 /* Groups with subtle dividers */
@@ -152,9 +154,9 @@ const groups = [
   ["/employees", "/payroll", "/investors", "/reports", "/clients", "/inquiries", "/suppliers", "/purchase-orders"],
 ];
 
-function roleLabel(role: string | null): string {
+function roleLabel(t: TranslateFn, role: string | null): string {
   if (!role) return "";
-  return role.charAt(0).toUpperCase() + role.slice(1);
+  return userRoleLabel(t, role);
 }
 
 const ROUTE_FEATURE_MAP: Record<string, FeatureKey> = {
@@ -205,6 +207,7 @@ function AxiraLogo() {
 
 /* ── Mobile Hamburger Button ───────────────────────────────── */
 export function MobileMenuButton({ onPress }: { onPress: () => void }) {
+  const { t } = useI18n();
   return (
     <Button
       type="button"
@@ -212,7 +215,7 @@ export function MobileMenuButton({ onPress }: { onPress: () => void }) {
       isIconOnly
       size="sm"
       onPress={onPress}
-      aria-label="Open menu"
+      aria-label={t("appShell.openMenu")}
       className="md:hidden min-w-9 w-9 text-white/80 bg-white/10 hover:bg-white/15"
     >
       <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -229,6 +232,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { profile, role, permissions } = useAuth();
+  const { t } = useI18n();
   const visibleHrefs = visibleHrefsForPermissions(role, permissions);
 
   const handleLogout = async () => {
@@ -236,9 +240,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
     router.replace("/login");
   };
 
-  const renderNavItem = (href: string, label: string) => {
+  const renderNavItem = (href: string, navKey: string) => {
     if (!visibleHrefs.has(href)) return null;
     const isActive = pathname === href;
+    const label = t(`nav.${navKey}`);
     return (
       <Link
         key={href}
@@ -282,10 +287,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           <AxiraLogo />
           <div className="flex flex-col leading-tight">
             <span className="text-base font-bold tracking-[0.15em]" style={{ fontFamily: "var(--font-brand)", color: "#FFFFFF" }}>
-              AXIRA
+              {t("sidebar.axira")}
             </span>
             <span className="text-[9px] tracking-[0.25em] uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>
-              Auto Export
+              {t("sidebar.autoExport")}
             </span>
           </div>
         </div>
@@ -296,7 +301,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             isIconOnly
             size="sm"
             onPress={onClose}
-            aria-label="Close menu"
+            aria-label={t("appShell.closeMenu")}
             className="text-white/40 hover:text-white hover:bg-white/10"
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -316,7 +321,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             .map((href) => {
               const item = navItems.find((n) => n.href === href);
               if (!item) return null;
-              return renderNavItem(item.href, item.label);
+              return renderNavItem(item.href, item.navKey);
             })
             .filter(Boolean);
 
@@ -337,7 +342,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           <>
             <div className="mx-2 my-3" style={{ height: "1px", background: "rgba(255,255,255,0.05)" }} />
             <div className="flex flex-col gap-0.5">
-              {renderNavItem("/admin/users", "Users")}
+              {renderNavItem("/admin/users", "users")}
             </div>
           </>
         )}
@@ -355,11 +360,11 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-medium" style={{ color: "#FFFFFF" }}>
-              {profile?.name?.trim() || "User"}
+              {profile?.name?.trim() || t("common.user")}
             </p>
             {role && (
               <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
-                {roleLabel(role)}
+                {roleLabel(t, role)}
               </p>
             )}
           </div>
@@ -370,7 +375,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             isIconOnly
             size="sm"
             onPress={() => void handleLogout()}
-            aria-label="Log out"
+            aria-label={t("common.logOut")}
             className="text-white/40 hover:text-danger hover:bg-danger/10"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

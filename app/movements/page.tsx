@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Button, Spinner } from "@heroui/react";
 import dynamic from "next/dynamic";
 import type { Movement, Rent } from "@/lib/types";
@@ -10,6 +10,8 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import { PageContainer } from "@/components/ui/page-container";
+import { formatDateForLocale, formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
+import { movementCategoryLabel, movementTypeLabel, pocketDetailLabel } from "@/lib/i18n/enumLabels";
 
 const ReceiptDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.ReceiptDownloadButton),
@@ -115,44 +117,6 @@ type FilterTab =
   | "EUR Cash"
   | "USD Cash";
 
-function formatNumber(value: number): string {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function formatMoney(value: number | null | undefined, currency: string | null | undefined) {
-  const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
-  const c = currency || "";
-  return `${formatNumber(v)}${c ? ` ${c}` : ""}`;
-}
-
-function formatDescription(description: string | null | undefined): string | null {
-  const s = description?.trim();
-  if (!s) return null;
-  try {
-    const obj = JSON.parse(s) as Record<string, unknown>;
-    if (obj && typeof obj === "object" && !Array.isArray(obj)) {
-      const depositedBy = obj.depositedBy;
-      const toCurrency = obj.toCurrency;
-      if (
-        depositedBy != null &&
-        toCurrency != null &&
-        (typeof depositedBy === "string" || typeof depositedBy === "number")
-      ) {
-        const amount = obj.amount != null ? formatNumber(Number(obj.amount)) : "—";
-        const rate = obj.rate != null ? formatNumber(Number(obj.rate)) : "—";
-        return `Conversion by ${String(depositedBy)}: ${amount} DZD → ${toCurrency} at rate ${rate}`;
-      }
-      return Object.entries(obj)
-        .map(([k, v]) => `${k}: ${v == null ? "" : String(v)}`)
-        .filter(Boolean)
-        .join(", ");
-    }
-  } catch {
-    // not JSON
-  }
-  return s;
-}
-
 function parseNum(s: string): number {
   const v = Number(s);
   return Number.isFinite(v) ? v : 0;
@@ -168,19 +132,79 @@ function sortMovementsByDateDesc(items: Movement[]): Movement[] {
   });
 }
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 export default function MovementsPage() {
   const { canDelete } = useAuth();
+  const { t, locale } = useI18n();
+
+  const fmtNum = useCallback(
+    (value: number) => formatNumberForLocale(locale, value, { maximumFractionDigits: 0 }),
+    [locale]
+  );
+
+  const fmtMoney = useCallback(
+    (value: number | null | undefined, currency: string | null | undefined) => {
+      const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
+      const c = currency || "";
+      return `${fmtNum(v)}${c ? ` ${c}` : ""}`;
+    },
+    [fmtNum]
+  );
+
+  const fmtDate = useCallback(
+    (value: string | null | undefined) => {
+      if (!value) return t("common.emiDash");
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return t("common.emiDash");
+      return formatDateForLocale(locale, value, { day: "2-digit", month: "short", year: "numeric" });
+    },
+    [locale, t]
+  );
+
+  const formatDescription = useCallback(
+    (description: string | null | undefined): string | null => {
+      const s = description?.trim();
+      if (!s) return null;
+      try {
+        const obj = JSON.parse(s) as Record<string, unknown>;
+        if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+          const depositedBy = obj.depositedBy;
+          const toCurrency = obj.toCurrency;
+          if (
+            depositedBy != null &&
+            toCurrency != null &&
+            (typeof depositedBy === "string" || typeof depositedBy === "number")
+          ) {
+            const amount = obj.amount != null ? fmtNum(Number(obj.amount)) : t("common.emiDash");
+            const rate = obj.rate != null ? fmtNum(Number(obj.rate)) : t("common.emiDash");
+            return t("movements.conversionDescription", {
+              depositedBy: String(depositedBy),
+              amount,
+              toCurrency: String(toCurrency),
+              rate,
+            });
+          }
+          return Object.entries(obj)
+            .map(([k, v]) => `${k}: ${v == null ? "" : String(v)}`)
+            .filter(Boolean)
+            .join(", ");
+        }
+      } catch {
+        // not JSON
+      }
+      return s;
+    },
+    [fmtNum, t]
+  );
+
+  const filterTabLabel = useCallback(
+    (tab: FilterTab) => {
+      if (tab === "All") return t("movements.filterAll");
+      if (tab === "In" || tab === "Out") return movementTypeLabel(t, tab);
+      return pocketDetailLabel(t, tab);
+    },
+    [t]
+  );
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -250,7 +274,7 @@ export default function MovementsPage() {
     if (cashError || movesError || dealsError || rentsError) {
       setError(
         [
-          "Failed to load movements data.",
+          t("movements.loadFailed"),
           cashError?.message,
           movesError?.message,
           dealsError?.message,
@@ -321,22 +345,22 @@ export default function MovementsPage() {
   };
 
   const validate = () => {
-    if (!form.date) return "Date is required.";
-    if (!form.amount.trim()) return "Amount is required.";
-    if (parseNum(form.amount) <= 0) return "Amount must be greater than 0.";
-    if (!form.pocket) return "Pocket is required.";
+    if (!form.date) return t("movements.valDateRequired");
+    if (!form.amount.trim()) return t("movements.valAmountRequired");
+    if (parseNum(form.amount) <= 0) return t("movements.valAmountPositive");
+    if (!form.pocket) return t("movements.valPocketRequired");
     // Currency/pocket rules
     if (form.currency === "DZD" && !["Algeria Cash", "Algeria Bank"].includes(form.pocket)) {
-      return "DZD movements must go to Algeria Cash or Algeria Bank.";
+      return t("movements.valDzdPocket");
     }
     if (form.currency === "AED" && !["Dubai Cash", "Dubai Bank", "Qatar"].includes(form.pocket)) {
-      return "AED movements must go to Dubai Cash, Dubai Bank, or Qatar.";
+      return t("movements.valAedPocket");
     }
     if (form.currency === "USD" && !["Dubai Cash", "USD Cash"].includes(form.pocket)) {
-      return "USD movements must go to Dubai Cash or USD Cash.";
+      return t("movements.valUsdPocket");
     }
     if (form.currency === "EUR" && form.pocket !== "EUR Cash") {
-      return "EUR movements must go to EUR Cash.";
+      return t("movements.valEurPocket");
     }
     return null;
   };
@@ -470,7 +494,7 @@ export default function MovementsPage() {
         reversedType
       );
       if (!okRev) {
-        setError("Could not reverse the original pocket balance. Nothing was changed.");
+        setError(t("movements.reversePocketFailed"));
         setIsSaving(false);
         return;
       }
@@ -485,15 +509,11 @@ export default function MovementsPage() {
           originalMovement.type.toLowerCase() === "in" ? "In" : "Out"
         );
         if (!okRestore) {
-          setError(
-            "Critical: failed to apply new pocket balance and failed to restore original balance. Cash positions may now be inconsistent; please review balances immediately."
-          );
+          setError(t("movements.criticalPocketInconsistent"));
           setIsSaving(false);
           return;
         }
-        setError(
-          "Could not apply the new pocket balance. Cash positions were reverted to match the original movement."
-        );
+        setError(t("movements.newMovementReverted"));
         setIsSaving(false);
         return;
       }
@@ -511,7 +531,7 @@ export default function MovementsPage() {
         console.log("Supabase update movement error:", updateMovementError);
         setError(
           [
-            "Failed to update movement.",
+            t("movements.failedUpdateMovementPrefix"),
             updateMovementError.message,
             updateMovementError.details,
             updateMovementError.hint,
@@ -553,7 +573,7 @@ export default function MovementsPage() {
       console.log("Supabase insert movement error:", insertError);
       setError(
         [
-          "Failed to add movement.",
+          t("movements.failedAddMovementPrefix"),
           insertError.message,
           insertError.details,
           insertError.hint,
@@ -571,9 +591,7 @@ export default function MovementsPage() {
     const pocketOk = await updateCashPosition(form.pocket, amount, form.currency, form.type);
     if (!pocketOk) {
       await supabase.from("movements").delete().eq("id", newMovement.id);
-      setError(
-        "Could not update the pocket balance (cash_positions). The movement was not saved. Add a matching pocket/currency in cash_positions or check database permissions."
-      );
+      setError(t("movements.pocketBalanceNotSaved"));
       setIsSaving(false);
       return;
     }
@@ -607,17 +625,25 @@ export default function MovementsPage() {
     // Build receipt
     const receiptNum = `RCP-${newMovement.id?.slice(0, 8).toUpperCase() ?? Date.now()}`;
     const receiptRows: ReceiptPDFData["rows"] = [
-      { label: "Date", value: form.date },
-      { label: "Type", value: form.type === "In" ? "Incoming" : "Outgoing" },
-      { label: "Category", value: form.category },
-      { label: "Amount", value: `${Number(form.amount).toLocaleString("en-US")} ${form.currency}`, highlight: true },
-      { label: "Pocket", value: form.pocket },
+      { label: t("movements.receiptRowDate"), value: form.date },
+      {
+        label: t("movements.receiptRowType"),
+        value: form.type === "In" ? t("movements.receiptTypeIncoming") : t("movements.receiptTypeOutgoing"),
+      },
+      { label: t("movements.receiptRowCategory"), value: movementCategoryLabel(t, form.category) },
+      { label: t("movements.receiptRowAmount"), value: `${fmtNum(Number(form.amount))} ${form.currency}`, highlight: true },
+      { label: t("movements.receiptRowPocket"), value: pocketDetailLabel(t, form.pocket) },
     ];
-    if (form.dealId) receiptRows.push({ label: "Related Deal", value: form.dealId });
+    if (form.dealId) {
+      receiptRows.push({ label: t("movements.receiptRowRelatedDeal"), value: dealLabel(form.dealId) || form.dealId });
+    }
     setPendingReceipt({
       receiptNumber: receiptNum,
       date: form.date,
-      type: form.type === "In" ? "Incoming Payment" : `Expense — ${form.category}`,
+      type:
+        form.type === "In"
+          ? t("movements.receiptIncomingPayment")
+          : t("movements.receiptExpensePrefix", { category: movementCategoryLabel(t, form.category) }),
       rows: receiptRows,
       notes: form.notes || undefined,
     });
@@ -625,7 +651,7 @@ export default function MovementsPage() {
 
   const handleDelete = async (movement: Movement) => {
     if (!canDelete) return;
-    if (!window.confirm("Delete this movement? This cannot be undone.")) return;
+    if (!window.confirm(t("movements.deleteMovementConfirm"))) return;
     setIsDeletingId(movement.id);
     setError(null);
 
@@ -639,15 +665,15 @@ export default function MovementsPage() {
     if (fetchError) {
       // eslint-disable-next-line no-console
       console.log("Supabase fetch movement before delete error:", fetchError);
-      setError("Failed to fetch movement before delete.");
+      setError(t("movements.fetchMovementDeleteFailed"));
       setIsDeletingId(null);
       return;
     }
 
     if (movementRow) {
       const amt = (movementRow as { amount: number | null }).amount ?? 0;
-      const t = ((movementRow as { type: string | null }).type || "").toLowerCase();
-      const reversedType = t === "in" ? "Out" : "In";
+      const rowType = ((movementRow as { type: string | null }).type || "").toLowerCase();
+      const reversedType = rowType === "in" ? "Out" : "In";
       const pocketName = (movementRow as { pocket: string | null }).pocket || "";
       const currency = (movementRow as { currency: string | null }).currency || "";
 
@@ -666,7 +692,7 @@ export default function MovementsPage() {
       console.log("Supabase delete movement error:", deleteError);
       setError(
         [
-          "Failed to delete movement.",
+          t("movements.failedDeleteMovement"),
           deleteError.message,
           deleteError.details,
           deleteError.hint,
@@ -751,10 +777,10 @@ export default function MovementsPage() {
   };
 
   const validateRentForm = () => {
-    if (!rentForm.description.trim()) return "Property name is required.";
+    if (!rentForm.description.trim()) return t("movements.rentPropertyRequired");
     const annual = parseNum(rentForm.annual_amount);
-    if (annual <= 0) return "Annual amount must be greater than 0.";
-    if (!rentForm.start_date) return "Start date is required.";
+    if (annual <= 0) return t("movements.rentAnnualPositive");
+    if (!rentForm.start_date) return t("movements.rentStartRequired");
     return null;
   };
 
@@ -792,7 +818,7 @@ export default function MovementsPage() {
           .single();
 
         if (updateError) {
-          setRentError(updateError.message || "Failed to save rent.");
+          setRentError(updateError.message || t("movements.rentSaveFailed"));
           setIsSavingRent(false);
           return;
         }
@@ -861,7 +887,7 @@ export default function MovementsPage() {
           .select("*")
           .single();
         if (insertError) {
-          setRentError(insertError.message || "Failed to save rent.");
+          setRentError(insertError.message || t("movements.rentSaveFailed"));
           setIsSavingRent(false);
           return;
         }
@@ -906,12 +932,12 @@ export default function MovementsPage() {
       .like("reference", `rent:${r.id}:${year}:%`)
       .limit(1);
     if (existingError) {
-      setError(existingError.message || "Failed to verify rent payments.");
+      setError(existingError.message || t("movements.rentPaymentsVerifyFailed"));
       setLoggingRentId(null);
       return;
     }
     if ((existingRows ?? []).length > 0) {
-      setError("Yearly rent for this contract is already logged for the current year.");
+      setError(t("movements.rentYearAlreadyLogged"));
       setLoggingRentId(null);
       return;
     }
@@ -935,7 +961,7 @@ export default function MovementsPage() {
       .select("*")
       .single();
     if (insertError) {
-      setError(insertError.message || "Failed to log payment.");
+      setError(insertError.message || t("movements.rentLogPaymentFailed"));
       setLoggingRentId(null);
       return;
     }
@@ -971,11 +997,7 @@ export default function MovementsPage() {
 
   const handleDeleteRent = async (r: Rent) => {
     if (!canDelete) return;
-    if (
-      !window.confirm(
-        "Delete this rent and its linked annual payment movement(s)? This will also reverse cash position."
-      )
-    ) {
+    if (!window.confirm(t("movements.rentDeleteConfirm"))) {
       return;
     }
     setIsDeletingRentId(r.id);
@@ -989,7 +1011,7 @@ export default function MovementsPage() {
       .like("reference", `rent:${r.id}:%`);
 
     if (movesError) {
-      setRentError("Failed to load rent payments before delete.");
+      setRentError(t("movements.rentPaymentsLoadFailed"));
       setIsDeletingRentId(null);
       return;
     }
@@ -999,8 +1021,8 @@ export default function MovementsPage() {
     // Reverse each payment on cash_positions
     for (const m of rentMovements) {
       const amt = m.amount || 0;
-      const t = (m.type || "").toLowerCase();
-      const reversedType = t === "out" ? "In" : "Out";
+      const movType = (m.type || "").toLowerCase();
+      const reversedType = movType === "out" ? "In" : "Out";
       await updateCashPosition(m.pocket, amt, m.currency, reversedType);
     }
 
@@ -1013,7 +1035,7 @@ export default function MovementsPage() {
         .like("reference", `rent:${r.id}:%`);
 
       if (deleteMovesError) {
-        setRentError("Failed to delete rent payments.");
+        setRentError(t("movements.rentPaymentsDeleteFailed"));
         setIsDeletingRentId(null);
         return;
       }
@@ -1030,7 +1052,7 @@ export default function MovementsPage() {
       .eq("id", r.id);
 
     if (deleteRentError) {
-      setRentError("Failed to delete rent.");
+      setRentError(t("movements.rentDeleteFailed"));
       setIsDeletingRentId(null);
       return;
     }
@@ -1053,14 +1075,14 @@ export default function MovementsPage() {
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              Movements
+              {t("movements.title")}
             </h1>
               <p className="text-sm font-medium text-danger">
-                Cash flow & pockets
+                {t("movements.pageSubtitle")}
               </p>
             </div>
             <Button type="button" variant="primary" size="sm" onPress={openModal}>
-              Add Movement
+              {t("movements.addMovement")}
             </Button>
           </header>
 
@@ -1074,10 +1096,10 @@ export default function MovementsPage() {
                 className="rounded-lg border border-[#222222] surface p-4 text-xs text-app"
               >
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-                  {pocket}
+                  {pocketDetailLabel(t, pocket)}
                 </div>
                 <div className="mt-2 text-lg font-semibold text-app">
-                  {bal ? formatMoney(bal.amount, bal.currency) : "0"}
+                  {bal ? fmtMoney(bal.amount, bal.currency) : fmtNum(0)}
                 </div>
               </div>
             );
@@ -1107,7 +1129,7 @@ export default function MovementsPage() {
               variant={activeTab === tab ? "primary" : "outline"}
               onPress={() => setActiveTab(tab)}
             >
-              {tab}
+              {filterTabLabel(tab)}
             </Button>
           ))}
         </div>
@@ -1124,7 +1146,7 @@ export default function MovementsPage() {
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Rent &amp; Fixed Expenses
+              {t("movements.rentFixedExpenses")}
             </h2>
             <Button
               type="button"
@@ -1145,7 +1167,7 @@ export default function MovementsPage() {
                 setIsRentModalOpen(true);
               }}
             >
-              Add Rent
+              {t("movements.addRent")}
             </Button>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1157,27 +1179,27 @@ export default function MovementsPage() {
                   key={r.id}
                   className="rounded-lg border border-[#222222] surface p-4 text-xs"
                 >
-                  <div className="font-semibold text-app">{r.description || "—"}</div>
+                  <div className="font-semibold text-app">{r.description || t("common.emiDash")}</div>
                   <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-muted">
-                    <span>Annual</span>
+                    <span>{t("movements.annual")}</span>
                     <span className="text-right text-app">
-                      {formatMoney(r.annual_amount, currency)}
+                      {fmtMoney(r.annual_amount, currency)}
                     </span>
-                    <span>Monthly equiv.</span>
+                    <span>{t("movements.monthlyEquiv")}</span>
                     <span className="text-right text-app">
-                      {formatMoney(info.monthly, currency)}
+                      {fmtMoney(info.monthly, currency)}
                     </span>
-                    <span>Last payment</span>
+                    <span>{t("movements.lastPayment")}</span>
                     <span className="text-right text-app">
-                      {info.paymentDate ? formatDate(info.paymentDate) : "—"}
+                      {info.paymentDate ? fmtDate(info.paymentDate) : t("common.emiDash")}
                     </span>
-                    <span>Next due date</span>
+                    <span>{t("movements.nextDueDate")}</span>
                     <span className="text-right text-app">
-                      {formatDate(info.nextDueDate.toISOString())}
+                      {fmtDate(info.nextDueDate.toISOString())}
                     </span>
-                    <span>Days left in contract</span>
+                    <span>{t("movements.daysLeftContract")}</span>
                     <span className="text-right text-app">
-                      {info.daysRemaining != null ? info.daysRemaining : "—"}
+                      {info.daysRemaining != null ? info.daysRemaining : t("common.emiDash")}
                     </span>
                   </div>
                   <div className="mt-3 border-t border-[#222222] pt-2 flex items-center justify-between gap-2">
@@ -1187,7 +1209,7 @@ export default function MovementsPage() {
                       disabled={!!loggingRentId}
                       className="rounded border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-2 py-1 text-[11px] font-medium text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20 disabled:opacity-50"
                     >
-                      {loggingRentId === r.id ? "Logging…" : "Log Yearly Payment"}
+                      {loggingRentId === r.id ? t("movements.loggingEllipsis") : t("movements.logYearlyPayment")}
                     </button>
                     <div className="flex items-center gap-2">
                       <button
@@ -1195,7 +1217,7 @@ export default function MovementsPage() {
                         onClick={() => handleEditRent(r)}
                         className="rounded border border-[#222222] px-2 py-1 text-[11px] text-app hover:border-zinc-500 hover:text-app"
                       >
-                        Edit
+                        {t("common.edit")}
                       </button>
                       {canDelete ? (
                       <button
@@ -1204,7 +1226,7 @@ export default function MovementsPage() {
                         disabled={isDeletingRentId === r.id}
                         className="rounded border border-red-300 bg-red-50 px-2 py-1 text-[11px] text-red-700 hover:border-red-600 disabled:opacity-50"
                       >
-                        {isDeletingRentId === r.id ? "Deleting…" : "Delete"}
+                        {isDeletingRentId === r.id ? t("movements.rowDeletingEllipsis") : t("common.delete")}
                       </button>
                       ) : null}
                     </div>
@@ -1215,7 +1237,7 @@ export default function MovementsPage() {
           </div>
           {rents.length === 0 && (
             <div className="rounded-lg border border-[#222222] surface p-4 text-sm text-gray-400">
-              No rent or fixed expenses. Click &quot;Add Rent&quot; to add one.
+              {t("movements.noRent")}
             </div>
           )}
         </section>
@@ -1225,24 +1247,24 @@ export default function MovementsPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
               <Spinner size="md" color="danger" />
-              <span className="text-sm">Loading movements…</span>
+              <span className="text-sm">{t("movements.loadingMovements")}</span>
             </div>
           ) : filteredMovements.length === 0 ? (
-            <div className="p-4 text-sm text-muted">No movements found.</div>
+            <div className="p-4 text-sm text-muted">{t("movements.noMovementsFound")}</div>
           ) : (
             <>
             <div className="responsive-table-wrap">
               <table className="min-w-[620px] w-full text-left text-xs">
                 <thead className="border-b border-[#222222] text-[11px] uppercase tracking-wide text-muted">
                   <tr>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Amount</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Pocket</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Deal</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Notes</th>
-                    <th className="px-4 py-3">Actions</th>
+                    <th className="px-4 py-3">{t("movements.date")}</th>
+                    <th className="px-4 py-3">{t("movements.type")}</th>
+                    <th className="px-4 py-3">{t("movements.category")}</th>
+                    <th className="px-4 py-3">{t("movements.amount")}</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">{t("movements.pocket")}</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">{t("movements.colDeal")}</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">{t("movements.colNotes")}</th>
+                    <th className="px-4 py-3">{t("movements.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1254,7 +1276,7 @@ export default function MovementsPage() {
                         className="border-b border-[#222222] last:border-b-0"
                       >
                         <td className="px-4 py-3 text-app">
-                          {formatDate(m.date ?? m.created_at)}
+                          {fmtDate(m.date ?? m.created_at)}
                         </td>
                         <td className="px-4 py-3">
                           <span
@@ -1265,27 +1287,27 @@ export default function MovementsPage() {
                                 : "bg-red-900/40 text-red-300",
                             ].join(" ")}
                           >
-                            {isIn ? "In" : "Out"}
+                            {isIn ? movementTypeLabel(t, "In") : movementTypeLabel(t, "Out")}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-app">
-                          {m.category || "-"}
+                          {movementCategoryLabel(t, m.category)}
                         </td>
                         <td className="px-4 py-3 text-app">
-                          {formatMoney(m.amount, m.currency)}
+                          {fmtMoney(m.amount, m.currency)}
                         </td>
                         <td className="px-4 py-3 text-app hidden sm:table-cell">
-                          {m.pocket || "-"}
+                          {m.pocket ? pocketDetailLabel(t, m.pocket) : t("common.emiDash")}
                         </td>
                         <td className="px-4 py-3 text-app hidden sm:table-cell">
                           {dealLabel(m.deal_id ?? null)}
                         </td>
                         <td className="px-4 py-3 text-app hidden sm:table-cell truncate max-w-[150px]">
-                          {formatDescription(m.description) ?? m.reference ?? "-"}
+                          {formatDescription(m.description) ?? m.reference ?? t("common.emiDash")}
                         </td>
                         <td className="px-4 py-3">
                           {canEditDeleteMovement(m.category) ? (
-                            <RowActionsMenu label="Movement actions">
+                            <RowActionsMenu label={t("movements.rowActionsMovement")}>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1320,7 +1342,7 @@ export default function MovementsPage() {
                                 }}
                                 className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                               >
-                                Edit
+                                {t("common.edit")}
                               </button>
                               {canDelete ? (
                                 <button
@@ -1329,12 +1351,12 @@ export default function MovementsPage() {
                                   disabled={isDeletingId === m.id}
                                   className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
                                 >
-                                  {isDeletingId === m.id ? "Deleting..." : "Delete"}
+                                  {isDeletingId === m.id ? t("movements.rowDeletingEllipsis") : t("common.delete")}
                                 </button>
                               ) : null}
                             </RowActionsMenu>
                           ) : (
-                            <span className="text-gray-400 text-[11px]">—</span>
+                            <span className="text-gray-400 text-[11px]">{t("common.emiDash")}</span>
                           )}
                         </td>
                       </tr>
@@ -1345,7 +1367,7 @@ export default function MovementsPage() {
             </div>
             <div className="flex flex-col gap-2 border-t border-[#222222] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-xs text-muted">
-                <span>Rows per page</span>
+                <span>{t("inventory.rowsPerPage")}</span>
                 <select
                   value={rowsPerPage}
                   onChange={(e) => setRowsPerPage(Number(e.target.value))}
@@ -1358,14 +1380,16 @@ export default function MovementsPage() {
                   ))}
                 </select>
                 <span>
-                  {(page - 1) * rowsPerPage + 1}
-                  {"-"}
-                  {Math.min(page * rowsPerPage, filteredMovements.length)} of {filteredMovements.length}
+                  {t("inventory.paginationOf", {
+                    start: (page - 1) * rowsPerPage + 1,
+                    end: Math.min(page * rowsPerPage, filteredMovements.length),
+                    total: filteredMovements.length,
+                  })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted">
-                  Page {page} / {totalPages}
+                  {t("inventory.pageOf", { page, pages: totalPages })}
                 </span>
                 <Button
                   type="button"
@@ -1374,7 +1398,7 @@ export default function MovementsPage() {
                   isDisabled={page <= 1}
                   onPress={() => setPage((prev) => Math.max(1, prev - 1))}
                 >
-                  Previous
+                  {t("inventory.pagerPrevious")}
                 </Button>
                 <Button
                   type="button"
@@ -1383,7 +1407,7 @@ export default function MovementsPage() {
                   isDisabled={page >= totalPages}
                   onPress={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                 >
-                  Next
+                  {t("inventory.pagerNext")}
                 </Button>
               </div>
             </div>
@@ -1400,10 +1424,10 @@ export default function MovementsPage() {
             <div className="flex items-start justify-between gap-4 border-b border-[#222222] pb-3">
               <div>
                 <div className="text-lg font-semibold text-app">
-                  Add Movement
+                  {editingMovement ? t("movements.modalEditTitle") : t("movements.modalAddTitle")}
                 </div>
                 <div className="text-xs text-muted">
-                  Track cash in and out of each pocket.
+                  {t("movements.modalBlurb")}
                 </div>
               </div>
               <button
@@ -1412,13 +1436,13 @@ export default function MovementsPage() {
                 disabled={isSaving}
                 className="rounded-md border border-[#222222] px-3 py-1 text-xs font-semibold text-app disabled:opacity-50"
               >
-                Close
+                {t("common.close")}
               </button>
             </div>
 
             <div className="mt-4 grid max-h-[70vh] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Date</span>
+                <span className="font-semibold">{t("movements.date")}</span>
                 <input
                   type="date"
                   value={form.date}
@@ -1428,19 +1452,19 @@ export default function MovementsPage() {
               </label>
 
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Type</span>
+                <span className="font-semibold">{t("movements.type")}</span>
                 <select
                   value={form.type}
                   onChange={(e) => updateField("type", e.target.value as "In" | "Out")}
                   className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
-                  <option value="In">In</option>
-                  <option value="Out">Out</option>
+                  <option value="In">{movementTypeLabel(t, "In")}</option>
+                  <option value="Out">{movementTypeLabel(t, "Out")}</option>
                 </select>
               </label>
 
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Category</span>
+                <span className="font-semibold">{t("movements.category")}</span>
                 <select
                   value={form.category}
                   onChange={(e) =>
@@ -1453,14 +1477,14 @@ export default function MovementsPage() {
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
-                      {c}
+                      {movementCategoryLabel(t, c)}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Amount</span>
+                <span className="font-semibold">{t("movements.amount")}</span>
                 <input
                   type="number"
                   value={form.amount}
@@ -1470,7 +1494,7 @@ export default function MovementsPage() {
               </label>
 
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Currency</span>
+                <span className="font-semibold">{t("movements.currency")}</span>
                 <select
                   value={form.currency}
                   onChange={(e) => {
@@ -1491,7 +1515,7 @@ export default function MovementsPage() {
               </label>
 
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Pocket</span>
+                <span className="font-semibold">{t("movements.pocket")}</span>
                 <select
                   value={form.pocket}
                   onChange={(e) =>
@@ -1504,20 +1528,20 @@ export default function MovementsPage() {
                 >
                   {(POCKETS_BY_CURRENCY[form.currency] ?? POCKETS).map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {pocketDetailLabel(t, p)}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Deal (optional)</span>
+                <span className="font-semibold">{t("movements.dealOptional")}</span>
                 <select
                   value={form.dealId}
                   onChange={(e) => updateField("dealId", e.target.value)}
                   className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
-                  <option value="">No deal linked</option>
+                  <option value="">{t("movements.noDealLinked")}</option>
                   {openDeals.map((d) => (
                     <option key={d.id} value={d.id}>
                       {dealLabel(d.id) || d.id}
@@ -1527,7 +1551,7 @@ export default function MovementsPage() {
               </label>
 
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Reference (optional)</span>
+                <span className="font-semibold">{t("movements.referenceOptional")}</span>
                 <input
                   value={form.reference}
                   onChange={(e) => updateField("reference", e.target.value)}
@@ -1536,7 +1560,7 @@ export default function MovementsPage() {
               </label>
 
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Notes (optional)</span>
+                <span className="font-semibold">{t("movements.notesOptional")}</span>
                 <input
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
@@ -1552,7 +1576,7 @@ export default function MovementsPage() {
                 disabled={isSaving}
                 className="rounded-md border border-[#222222] bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -1560,7 +1584,7 @@ export default function MovementsPage() {
                 disabled={isSaving}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : "Save"}
+                {isSaving ? t("movements.savingEllipsis") : t("movements.saveMovement")}
               </button>
             </div>
           </div>
@@ -1574,7 +1598,7 @@ export default function MovementsPage() {
           <div className="relative flex w-full max-w-sm flex-col rounded-xl border border-app surface p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-brand-red">Receipt Ready</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-brand-red">{t("movements.receiptReady")}</p>
                 <p className="mt-0.5 text-sm font-bold text-primary">#{pendingReceipt.receiptNumber}</p>
               </div>
               <button
@@ -1592,18 +1616,18 @@ export default function MovementsPage() {
                 </div>
               ))}
             </div>
-            <p className="mb-4 text-center text-xs text-green-400">✓ Saved successfully</p>
+            <p className="mb-4 text-center text-xs text-green-400">{t("movements.receiptSaved")}</p>
             <div className="flex gap-2">
               <ReceiptDownloadButton
                 data={pendingReceipt}
-                label="⬇ Download Receipt"
+                label={t("movements.receiptDownload")}
                 className="flex-1 rounded border border-brand-red/50 bg-brand-red/10 py-2.5 text-xs font-semibold text-brand-red hover:bg-brand-red/20 transition-colors"
               />
               <button
                 onClick={() => setPendingReceipt(null)}
                 className="flex-1 rounded border border-app py-2.5 text-xs font-semibold text-secondary hover:bg-app transition-colors"
               >
-                Close
+                {t("common.close")}
               </button>
             </div>
           </div>
@@ -1620,9 +1644,11 @@ export default function MovementsPage() {
           <div className="relative flex w-full max-w-lg flex-col overflow-y-auto rounded-lg border border-[#222222] surface p-4 shadow-xl">
             <div className="flex items-start justify-between gap-4 border-b border-[#222222] pb-3">
               <div>
-                <div className="text-lg font-semibold text-app">Add Rent / Fixed Expense</div>
+                <div className="text-lg font-semibold text-app">
+                  {editingRent ? t("movements.rentModalEditTitle") : t("movements.rentModalAddTitle")}
+                </div>
                 <div className="text-xs text-muted">
-                  Property or fixed expense with annual amount and schedule.
+                  {t("movements.rentModalBlurb")}
                 </div>
               </div>
               <button
@@ -1631,7 +1657,7 @@ export default function MovementsPage() {
                 disabled={isSavingRent}
                 className="rounded-md border border-[#222222] px-3 py-1 text-xs font-semibold text-app disabled:opacity-50"
               >
-                Close
+                {t("common.close")}
               </button>
             </div>
             {rentError && (
@@ -1641,17 +1667,17 @@ export default function MovementsPage() {
             )}
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Property / description</span>
+                <span className="font-semibold">{t("movements.rentDescriptionLabel")}</span>
                 <input
                   type="text"
                   value={rentForm.description}
                   onChange={(e) => setRentForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="e.g. Dubai warehouse"
+                  placeholder={t("movements.rentDescriptionPlaceholder")}
                   className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Annual amount</span>
+                <span className="font-semibold">{t("movements.rentAnnualLabel")}</span>
                 <input
                   type="number"
                   min="0"
@@ -1662,7 +1688,7 @@ export default function MovementsPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Currency</span>
+                <span className="font-semibold">{t("movements.currency")}</span>
                 <select
                   value={rentForm.currency}
                   onChange={(e) =>
@@ -1675,7 +1701,7 @@ export default function MovementsPage() {
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Start date</span>
+                <span className="font-semibold">{t("movements.rentStartLabel")}</span>
                 <input
                   type="date"
                   value={rentForm.start_date}
@@ -1684,7 +1710,7 @@ export default function MovementsPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Pocket paid from</span>
+                <span className="font-semibold">{t("movements.rentPocketPaidFrom")}</span>
                 <select
                   value={rentForm.pocket}
                   onChange={(e) =>
@@ -1695,21 +1721,21 @@ export default function MovementsPage() {
                   }
                   className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
-                  <option value="">—</option>
+                  <option value="">{t("common.emiDash")}</option>
                   {POCKETS.map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {pocketDetailLabel(t, p)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Notes (optional)</span>
+                <span className="font-semibold">{t("movements.notesOptional")}</span>
                 <input
                   type="text"
                   value={rentForm.notes}
                   onChange={(e) => setRentForm((f) => ({ ...f, notes: e.target.value }))}
-                  placeholder="e.g. landlord, contract ref"
+                  placeholder={t("movements.rentNotesPlaceholder")}
                   className="w-full rounded-md border border-[#222222] bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
@@ -1721,7 +1747,7 @@ export default function MovementsPage() {
                 disabled={isSavingRent}
                 className="rounded-md border border-[#222222] bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -1729,7 +1755,7 @@ export default function MovementsPage() {
                 disabled={isSavingRent}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {isSavingRent ? "Saving..." : "Save"}
+                {isSavingRent ? t("movements.savingEllipsis") : t("common.save")}
               </button>
             </div>
           </div>

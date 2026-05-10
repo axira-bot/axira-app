@@ -7,6 +7,12 @@ import type { ActivityEntity } from "@/lib/activity";
 import { PaginatedTable } from "@/components/ui/paginated-table";
 import { PageContainer } from "@/components/ui/page-container";
 import { ResponsiveFilterBar } from "@/components/ui/responsive-filter-bar";
+import {
+  formatDateForLocale,
+  formatNumberForLocale,
+  useI18n,
+} from "@/lib/context/I18nContext";
+import { activityEntityLabel } from "@/lib/i18n/enumLabels";
 
 type AuditLogRow = {
   id: string;
@@ -21,63 +27,59 @@ type AuditLogRow = {
   created_at: string;
 };
 
-const ENTITY_OPTIONS: { value: ActivityEntity | ""; label: string }[] = [
-  { value: "", label: "All" },
-  { value: "deal", label: "Deal" },
-  { value: "car", label: "Car" },
-  { value: "movement", label: "Movement" },
-  { value: "container", label: "Container" },
-  { value: "client", label: "Client" },
-  { value: "conversion", label: "Conversion" },
-  { value: "rent", label: "Rent" },
-  { value: "salary", label: "Salary" },
-  { value: "payment", label: "Payment" },
-  { value: "employee", label: "Employee" },
-  { value: "debt", label: "Debt" },
+const ENTITY_VALUES: (ActivityEntity | "")[] = [
+  "",
+  "deal",
+  "car",
+  "movement",
+  "container",
+  "client",
+  "conversion",
+  "rent",
+  "salary",
+  "payment",
+  "employee",
+  "debt",
 ];
 
-function formatNumber(value: number): string {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function formatMoney(value: number, currency: string): string {
-  return `${formatNumber(value)} ${currency}`;
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function timeAgo(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  const now = new Date();
-  const sec = Math.floor((now.getTime() - d.getTime()) / 1000);
-  if (sec < 60) return "Just now";
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}d ago`;
-  return formatDate(iso);
-}
-
-function displayType(entity: string): string {
-  if (!entity) return "—";
-  return entity.charAt(0).toUpperCase() + entity.slice(1);
-}
-
 export default function AuditPage() {
+  const { t, locale } = useI18n();
+
+  const formatNumber = (value: number) =>
+    formatNumberForLocale(locale, value, { maximumFractionDigits: 0 });
+
+  const formatMoney = (value: number, currency: string) =>
+    `${formatNumber(value)} ${currency}`;
+
+  const formatDate = (value: string | null | undefined) => {
+    if (!value) return "—";
+    if (Number.isNaN(new Date(value).getTime())) return "—";
+    return formatDateForLocale(locale, value, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const timeAgo = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    const now = new Date();
+    const sec = Math.round((now.getTime() - d.getTime()) / 1000);
+    const loc = locale === "ar" ? "ar" : locale === "fr" ? "fr" : "en";
+    const rtf = new Intl.RelativeTimeFormat(loc, { numeric: "auto" });
+    if (sec < 45) return rtf.format(-sec, "second");
+    const min = Math.round(sec / 60);
+    if (min < 60) return rtf.format(-min, "minute");
+    const hr = Math.round(min / 60);
+    if (hr < 24) return rtf.format(-hr, "hour");
+    const day = Math.round(hr / 24);
+    if (day < 7) return rtf.format(-day, "day");
+    return formatDate(iso);
+  };
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<AuditLogRow[]>([]);
@@ -143,10 +145,8 @@ export default function AuditPage() {
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <PageContainer size="lg">
         <header className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Audit log</h1>
-          <p className="text-sm font-medium text-danger">
-            Create, update, delete and payment events with actor and record id
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("activityLog.auditTitle")}</h1>
+          <p className="text-sm font-medium text-danger">{t("activityLog.auditSubtitle")}</p>
         </header>
 
         {error ? (
@@ -161,23 +161,23 @@ export default function AuditPage() {
           <Card.Content className="pb-6">
             <ResponsiveFilterBar>
             <TextField name="dateFrom" type="date" value={dateFrom} onChange={setDateFrom} className="w-full md:col-span-3">
-              <Label className="text-xs text-default-500">From</Label>
+              <Label className="text-xs text-default-500">{t("activityLog.from")}</Label>
               <Input className="text-sm" />
             </TextField>
             <TextField name="dateTo" type="date" value={dateTo} onChange={setDateTo} className="w-full md:col-span-3">
-              <Label className="text-xs text-default-500">To</Label>
+              <Label className="text-xs text-default-500">{t("activityLog.to")}</Label>
               <Input className="text-sm" />
             </TextField>
             <div className="flex w-full flex-col gap-1 md:col-span-3">
-              <Label className="text-xs text-default-500">Entity</Label>
+              <Label className="text-xs text-default-500">{t("activityLog.entity")}</Label>
               <select
                 value={entityFilter}
                 onChange={(e) => setEntityFilter(e.target.value as ActivityEntity | "")}
                 className="rounded-lg border border-default-200 bg-content1 px-3 py-2 text-sm outline-none focus:border-danger"
               >
-                {ENTITY_OPTIONS.map((o) => (
-                  <option key={o.value || "all"} value={o.value}>
-                    {o.label}
+                {ENTITY_VALUES.map((value) => (
+                  <option key={value || "all"} value={value}>
+                    {value === "" ? t("activityLog.entities.all") : activityEntityLabel(t, value)}
                   </option>
                 ))}
               </select>
@@ -188,12 +188,12 @@ export default function AuditPage() {
               onChange={setActionFilter}
               className="w-full md:col-span-1"
             >
-              <Label className="text-xs text-default-500">Action</Label>
-              <Input className="text-sm" placeholder="e.g. deleted" />
+              <Label className="text-xs text-default-500">{t("activityLog.action")}</Label>
+              <Input className="text-sm" placeholder={t("activityLog.actionPlaceholder")} />
             </TextField>
             <TextField name="actor" value={actorQuery} onChange={setActorQuery} className="w-full md:col-span-2">
-              <Label className="text-xs text-default-500">Actor</Label>
-              <Input className="text-sm" placeholder="Name or user id" type="search" />
+              <Label className="text-xs text-default-500">{t("activityLog.actor")}</Label>
+              <Input className="text-sm" placeholder={t("activityLog.actorPlaceholder")} type="search" />
             </TextField>
             </ResponsiveFilterBar>
           </Card.Content>
@@ -204,21 +204,21 @@ export default function AuditPage() {
             {isLoading ? (
               <div className="flex flex-col items-center justify-center gap-3 py-12">
                 <Spinner size="md" color="danger" />
-                <span className="text-sm text-default-500">Loading audit trail…</span>
+                <span className="text-sm text-default-500">{t("activityLog.loadingAudit")}</span>
               </div>
             ) : rows.length === 0 ? (
-              <div className="p-6 text-sm text-default-500">No events in this range.</div>
+              <div className="p-6 text-sm text-default-500">{t("activityLog.emptyAudit")}</div>
             ) : (
               <div className="responsive-table-wrap">
                 <PaginatedTable
                   rows={rows}
                   rowKey={(row) => row.id}
                   pageSize={12}
-                  emptyContent="No events in this range."
+                  emptyContent={t("activityLog.emptyAudit")}
                   columns={[
                     {
                       key: "time",
-                      label: "Time",
+                      label: t("activityLog.time"),
                       render: (row) => (
                         <span className="whitespace-nowrap">
                           {formatDate(row.created_at)}
@@ -228,7 +228,7 @@ export default function AuditPage() {
                     },
                     {
                       key: "actor",
-                      label: "Actor",
+                      label: t("activityLog.actor"),
                       render: (row) => (
                         <div>
                           <div className="font-medium">{row.actor_name || "—"}</div>
@@ -236,13 +236,37 @@ export default function AuditPage() {
                         </div>
                       ),
                     },
-                    { key: "action", label: "Action", render: (row) => <Chip size="sm" variant="soft">{row.action}</Chip> },
-                    { key: "entity", label: "Entity", render: (row) => <Chip size="sm" variant="secondary">{displayType(row.entity)}</Chip> },
-                    { key: "recordId", label: "Record id", render: (row) => <span className="font-mono text-[10px]">{row.entity_id || "—"}</span> },
-                    { key: "description", label: "Description", render: (row) => <span className="max-w-md">{row.description}</span> },
+                    {
+                      key: "action",
+                      label: t("activityLog.action"),
+                      render: (row) => (
+                        <Chip size="sm" variant="soft">
+                          {row.action}
+                        </Chip>
+                      ),
+                    },
+                    {
+                      key: "entity",
+                      label: t("activityLog.entity"),
+                      render: (row) => (
+                        <Chip size="sm" variant="secondary">
+                          {activityEntityLabel(t, row.entity)}
+                        </Chip>
+                      ),
+                    },
+                    {
+                      key: "recordId",
+                      label: t("activityLog.recordId"),
+                      render: (row) => <span className="font-mono text-[10px]">{row.entity_id || "—"}</span>,
+                    },
+                    {
+                      key: "description",
+                      label: t("activityLog.description"),
+                      render: (row) => <span className="max-w-md">{row.description}</span>,
+                    },
                     {
                       key: "amount",
-                      label: "Amount",
+                      label: t("activityLog.amount"),
                       align: "end",
                       render: (row) => (row.amount != null && row.currency ? formatMoney(row.amount, row.currency) : "—"),
                     },

@@ -10,11 +10,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button, Card, Spinner } from "@heroui/react";
 import type { Car, Deal, Movement, Rent } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
+import {
+  formatDateForLocale,
+  formatNumberForLocale,
+  useI18n,
+} from "@/lib/context/I18nContext";
+import { carLocationLabel, movementCategoryLabel } from "@/lib/i18n/enumLabels";
 import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
 import { dealListSaleDzd } from "@/app/deals/dealFinanceHelpers";
 import { PageContainer } from "@/components/ui/page-container";
@@ -64,47 +70,6 @@ type RateInfo = {
   updatedAt: string | null;
 };
 
-function formatNumber(value: number): string {
-  return value.toLocaleString("en-US", {
-    maximumFractionDigits: 0,
-  });
-}
-
-function formatCurrency(value: number, currency: string): string {
-  return `${formatNumber(value)} ${currency}`;
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function timeAgo(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  const now = new Date();
-  const sec = Math.floor((now.getTime() - d.getTime()) / 1000);
-  if (sec < 60) return "Just now";
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} minute${min !== 1 ? "s" : ""} ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} hour${hr !== 1 ? "s" : ""} ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day} day${day !== 1 ? "s" : ""} ago`;
-  const week = Math.floor(day / 7);
-  if (week < 4) return `${week} week${week !== 1 ? "s" : ""} ago`;
-  const month = Math.floor(day / 30);
-  if (month < 12) return `${month} month${month !== 1 ? "s" : ""} ago`;
-  const year = Math.floor(day / 365);
-  return `${year} year${year !== 1 ? "s" : ""} ago`;
-}
-
 function StaffBlurGate({
   children,
   show,
@@ -112,6 +77,7 @@ function StaffBlurGate({
   children: React.ReactNode;
   show: boolean;
 }) {
+  const { t } = useI18n();
   if (!show) return <>{children}</>;
   return (
     <div className="relative">
@@ -124,7 +90,7 @@ function StaffBlurGate({
           className="text-sm font-medium"
           style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}
         >
-          Managers & Owners Only
+          {t("dashboard.managersOnly")}
         </span>
       </div>
     </div>
@@ -133,6 +99,48 @@ function StaffBlurGate({
 
 export default function DashboardPage() {
   const { role, permissions } = useAuth();
+  const { t, locale } = useI18n();
+  const tRef = useRef(t);
+  tRef.current = t;
+
+  const formatNumber = (value: number) =>
+    formatNumberForLocale(locale, value, { maximumFractionDigits: 0 });
+
+  const formatCurrency = (value: number, currency: string) =>
+    `${formatNumber(value)} ${currency}`;
+
+  const formatDate = (value: string | null | undefined) => {
+    if (!value) return "-";
+    const fd = formatDateForLocale(locale, value, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    return fd || "-";
+  };
+
+  const timeAgo = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    const now = new Date();
+    const sec = Math.round((now.getTime() - d.getTime()) / 1000);
+    const loc = locale === "ar" ? "ar" : locale === "fr" ? "fr" : "en";
+    const rtf = new Intl.RelativeTimeFormat(loc, { numeric: "auto" });
+    if (sec < 45) return rtf.format(-sec, "second");
+    const min = Math.round(sec / 60);
+    if (min < 60) return rtf.format(-min, "minute");
+    const hr = Math.round(min / 60);
+    if (hr < 24) return rtf.format(-hr, "hour");
+    const day = Math.round(hr / 24);
+    if (day < 7) return rtf.format(-day, "day");
+    const week = Math.round(day / 7);
+    if (week < 5) return rtf.format(-week, "week");
+    const month = Math.round(day / 30);
+    if (month < 12) return rtf.format(-month, "month");
+    const year = Math.round(day / 365);
+    return rtf.format(-year, "year");
+  };
+
   const isStaff = role === "staff";
   const isOwner = role === "owner";
   const activityLogHref = permissions.audit_log ? "/audit" : "/activity";
@@ -244,7 +252,7 @@ export default function DashboardPage() {
         appSettingsError ||
         recentActivityError
       ) {
-        setError("Some dashboard data failed to load.");
+        setError(tRef.current("dashboard.loadFailed"));
       }
 
       setCashPositions(cashPositionsData ?? []);
@@ -409,7 +417,7 @@ export default function DashboardPage() {
           nextPaid = {
             date: nextYearDate,
             amount,
-            description: r.description || "Rent",
+            description: r.description || t("dashboard.rentDescriptionFallback"),
             currency: r.currency || "AED",
           };
         }
@@ -420,7 +428,7 @@ export default function DashboardPage() {
           nextUnpaid = {
             date: dueDate,
             amount,
-            description: r.description || "Rent",
+            description: r.description || t("dashboard.rentDescriptionFallback"),
             currency: r.currency || "AED",
           };
         }
@@ -440,11 +448,12 @@ export default function DashboardPage() {
 
   const monthlyProfitData = useMemo(() => {
     const now = new Date();
+    const loc = locale === "ar" ? "ar" : locale === "fr" ? "fr-FR" : "en-US";
     const monthKeys = Array.from({ length: 6 }, (_, idx) => {
       const date = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
       return {
         key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
-        label: date.toLocaleDateString("en-US", { month: "short" }),
+        label: date.toLocaleDateString(loc, { month: "short" }),
       };
     });
     const base = monthKeys.map((m) => ({ month: m.label, revenue: 0, profit: 0 }));
@@ -460,7 +469,7 @@ export default function DashboardPage() {
       base[idx].profit += deal.profit_aed || 0;
     }
     return base;
-  }, [deals]);
+  }, [deals, locale]);
 
   const cashByCurrencyData = useMemo(() => {
     const grouped = cashPositions.reduce<Record<string, number>>((acc, pocket) => {
@@ -474,11 +483,11 @@ export default function DashboardPage() {
 
   const inventoryLocationData = useMemo(
     () => [
-      { name: CAR_LOCATION.dubaiShowroom, value: carsInDubai },
-      { name: CAR_LOCATION.axiraDzShowroom, value: carsInAlgeria },
-      { name: CAR_LOCATION.inTransit, value: carsInTransit },
+      { name: carLocationLabel(t, CAR_LOCATION.dubaiShowroom), value: carsInDubai },
+      { name: carLocationLabel(t, CAR_LOCATION.axiraDzShowroom), value: carsInAlgeria },
+      { name: carLocationLabel(t, CAR_LOCATION.inTransit), value: carsInTransit },
     ],
-    [carsInDubai, carsInAlgeria, carsInTransit]
+    [carsInDubai, carsInAlgeria, carsInTransit, t]
   );
 
   const handleStartEditRate = (key: RateKey) => {
@@ -497,7 +506,7 @@ export default function DashboardPage() {
     if (!editingRateKey) return;
     const value = Number(editingRateValue);
     if (!Number.isFinite(value) || value < 0) {
-      setError("Rate must be a non-negative number.");
+      setError(t("dashboard.rateNonNegative"));
       return;
     }
 
@@ -515,7 +524,7 @@ export default function DashboardPage() {
       .single();
 
     if (saveError) {
-      setError("Failed to save rate.");
+      setError(t("dashboard.rateSaveFailed"));
       return;
     }
 
@@ -538,7 +547,7 @@ export default function DashboardPage() {
     if (!editingListingRateKey) return;
     const value = Number(editingListingRateValue);
     if (!Number.isFinite(value) || value <= 0) {
-      setError("Rate must be a positive number.");
+      setError(t("dashboard.ratePositive"));
       return;
     }
     const { data, error: saveError } = await supabase
@@ -546,7 +555,7 @@ export default function DashboardPage() {
       .upsert({ key: editingListingRateKey, value: String(value), updated_at: new Date().toISOString() }, { onConflict: "key" })
       .select("key, value, updated_at")
       .single();
-    if (saveError) { setError("Failed to save listing rate."); return; }
+    if (saveError) { setError(t("dashboard.listingRateSaveFailed")); return; }
     const row2 = data as { key: ListingRateKey; value: string | null; updated_at: string | null };
     const num2 = Number(row2.value ?? "0");
     setListingRates((prev) => ({ ...prev, [row2.key]: { value: Number.isFinite(num2) ? num2 : 0, updatedAt: row2.updated_at } }));
@@ -582,7 +591,7 @@ export default function DashboardPage() {
       .eq("id", editingPocketId);
 
     if (updateError) {
-      setError("Failed to update cash position.");
+      setError(t("dashboard.cashPositionUpdateFailed"));
       setUpdatingPocketId(null);
       return;
     }
@@ -611,7 +620,7 @@ export default function DashboardPage() {
               className="text-sm font-semibold uppercase tracking-wide"
               style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
             >
-              Currency Rates (display only)
+              {t("dashboard.currencyRates")}
             </h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
@@ -638,7 +647,7 @@ export default function DashboardPage() {
                     </div>
                     {justSaved && (
                       <div className="text-[11px] font-medium" style={{ color: "var(--color-accent)" }}>
-                        Saved ✓
+                        {t("dashboard.saved")}
                       </div>
                     )}
                   </div>
@@ -664,10 +673,10 @@ export default function DashboardPage() {
                     {isEditing ? (
                       <div className="flex gap-1">
                         <Button type="button" size="sm" variant="primary" onPress={handleSaveRate}>
-                          Save
+                          {t("common.save")}
                         </Button>
                         <Button type="button" size="sm" variant="secondary" onPress={handleCancelEditRate}>
-                          Cancel
+                          {t("common.cancel")}
                         </Button>
                       </div>
                     ) : (
@@ -677,12 +686,12 @@ export default function DashboardPage() {
                         variant="outline"
                         onPress={() => handleStartEditRate(key)}
                       >
-                        Edit
+                        {t("common.edit")}
                       </Button>
                     )}
                   </div>
                   <div className="mt-1 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
-                    Last updated:{" "}
+                    {`${t("dashboard.lastUpdated")}: `}
                     {info.updatedAt ? formatDate(info.updatedAt) : "—"}
                   </div>
                 </div>
@@ -699,16 +708,18 @@ export default function DashboardPage() {
               className="text-sm font-semibold uppercase tracking-wide"
               style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
             >
-              Listing Rates (Public Site)
+              {t("dashboard.listingRatesTitle")}
             </h2>
             <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Set daily exchange rates shown to customers on axiratrading.com — prices are listed in DZD and converted using these rates.
+              {t("dashboard.listingRatesBlurb")}
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {[
-              { label: "1 USD = ? DZD", key: "listing_usd_dzd" as ListingRateKey, hint: "e.g. 135" },
-              { label: "1 EUR = ? DZD", key: "listing_eur_dzd" as ListingRateKey, hint: "e.g. 147" },
-            ].map(({ label, key, hint }) => {
+              { labelKey: "listingUsdLabel" as const, key: "listing_usd_dzd" as ListingRateKey, hintKey: "listingHintUsd" as const },
+              { labelKey: "listingEurLabel" as const, key: "listing_eur_dzd" as ListingRateKey, hintKey: "listingHintEur" as const },
+            ].map(({ labelKey, key, hintKey }) => {
+              const label = t(`dashboard.${labelKey}`);
+              const hint = t(`dashboard.${hintKey}`);
               const info = listingRates[key];
               const isEditing = editingListingRateKey === key;
               const justSaved = lastSavedListingRateKey === key;
@@ -727,7 +738,7 @@ export default function DashboardPage() {
                     </div>
                     {justSaved && (
                       <div className="text-[11px] font-medium" style={{ color: "var(--color-accent)" }}>
-                        Saved ✓
+                        {t("dashboard.saved")}
                       </div>
                     )}
                   </div>
@@ -748,13 +759,13 @@ export default function DashboardPage() {
                         className="text-xl font-semibold"
                         style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}
                       >
-                        {info.value > 0 ? `${info.value} DZD` : "—"}
+                        {info.value > 0 ? t("dashboard.listingRateDzd", { value: formatNumber(info.value) }) : "—"}
                       </span>
                     )}
                     {isEditing ? (
                       <div className="flex gap-1">
-                        <Button type="button" size="sm" variant="primary" onPress={handleSaveListingRate}>Save</Button>
-                        <Button type="button" size="sm" variant="secondary" onPress={() => { setEditingListingRateKey(null); setEditingListingRateValue(""); }}>Cancel</Button>
+                        <Button type="button" size="sm" variant="primary" onPress={handleSaveListingRate}>{t("common.save")}</Button>
+                        <Button type="button" size="sm" variant="secondary" onPress={() => { setEditingListingRateKey(null); setEditingListingRateValue(""); }}>{t("common.cancel")}</Button>
                       </div>
                     ) : (
                       <button
@@ -763,12 +774,12 @@ export default function DashboardPage() {
                         className="rounded-md border px-2 py-1 text-xs font-medium transition hover:opacity-90"
                         style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
                       >
-                        Edit
+                        {t("common.edit")}
                       </button>
                     )}
                   </div>
                   <div className="mt-1 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
-                    Last updated: {info.updatedAt ? formatDate(info.updatedAt) : "—"}
+                    {`${t("dashboard.lastUpdated")}: `}{info.updatedAt ? formatDate(info.updatedAt) : "—"}
                   </div>
                 </div>
               );
@@ -782,9 +793,9 @@ export default function DashboardPage() {
             className="text-2xl font-semibold tracking-tight md:text-3xl"
             style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
           >
-            Axira Trading FZE
+            {t("dashboard.brandTitle")}
           </h1>
-          <p className="text-sm font-medium" style={{ color: "var(--color-accent)" }}>Dashboard</p>
+          <p className="text-sm font-medium" style={{ color: "var(--color-accent)" }}>{t("dashboard.title")}</p>
         </header>
 
         {error ? (
@@ -798,9 +809,9 @@ export default function DashboardPage() {
           <Alert.Root status="warning">
             <Alert.Content>
               <Alert.Description>
-                ⚠️ Complete company settings before generating contracts.{" "}
+                {t("dashboard.companySettingsBanner")}{" "}
                 <Link href="/settings/company" className="underline">
-                  Open settings
+                  {t("dashboard.openSettings")}
                 </Link>
               </Alert.Description>
             </Alert.Content>
@@ -811,7 +822,7 @@ export default function DashboardPage() {
           <Card.Root className="border border-default-200">
             <Card.Content className="flex flex-col items-center justify-center gap-3 py-12">
               <Spinner size="lg" color="danger" />
-              <span className="text-sm text-default-500">Loading dashboard data…</span>
+              <span className="text-sm text-default-500">{t("dashboard.loadingData")}</span>
             </Card.Content>
           </Card.Root>
         ) : (
@@ -823,12 +834,12 @@ export default function DashboardPage() {
                   className="text-sm font-semibold uppercase tracking-wide"
                   style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
                 >
-                  Overview
+                  {t("dashboard.overview")}
                 </h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
-                    Total AED
+                    {t("dashboard.totalAed")}
                   </div>
                   <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatCurrency(totalAed || 0, "AED")}
@@ -836,7 +847,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
-                    Total DZD
+                    {t("dashboard.totalDzd")}
                   </div>
                   <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatCurrency(totalDzd || 0, "DZD")}
@@ -844,7 +855,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
-                    Realised Profit AED
+                    {t("dashboard.realisedProfit")}
                   </div>
                   <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatCurrency(realisedProfitAed || 0, "AED")}
@@ -852,7 +863,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
-                    Pending Revenue DZD
+                    {t("dashboard.pendingRevenue")}
                   </div>
                   <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatCurrency(pendingRevenueDzd || 0, "DZD")}
@@ -868,14 +879,14 @@ export default function DashboardPage() {
                   className="text-sm font-semibold uppercase tracking-wide"
                   style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
                 >
-                  Trends & Distribution
+                  {t("dashboard.trendsDistribution")}
                 </h2>
                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
                   <Card.Root className="border border-default-200 shadow-sm xl:col-span-2">
                     <Card.Content className="p-4">
                       <div className="mb-3 flex items-center justify-between gap-2">
-                        <h3 className="text-sm font-semibold">Revenue & Profit (6 months)</h3>
-                        <span className="text-xs text-default-500">DZD revenue / AED profit</span>
+                        <h3 className="text-sm font-semibold">{t("dashboard.revenueProfitSixMonths")}</h3>
+                        <span className="text-xs text-default-500">{t("dashboard.dzdRevenueAedProfitSubtitle")}</span>
                       </div>
                       <div className="h-[280px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -885,8 +896,8 @@ export default function DashboardPage() {
                             <YAxis tick={{ fontSize: 12 }} />
                             <Tooltip />
                             <Legend />
-                            <Line type="monotone" dataKey="revenue" stroke="#c41230" strokeWidth={2.5} dot={false} name="Revenue (DZD)" />
-                            <Line type="monotone" dataKey="profit" stroke="#222222" strokeWidth={2.5} dot={false} name="Profit (AED)" />
+                            <Line type="monotone" dataKey="revenue" stroke="#c41230" strokeWidth={2.5} dot={false} name={t("dashboard.chartRevenueDzd")} />
+                            <Line type="monotone" dataKey="profit" stroke="#222222" strokeWidth={2.5} dot={false} name={t("dashboard.chartProfitAed")} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
@@ -895,7 +906,7 @@ export default function DashboardPage() {
 
                   <Card.Root className="border border-default-200 shadow-sm">
                     <Card.Content className="p-4">
-                      <h3 className="mb-3 text-sm font-semibold">Inventory by Location</h3>
+                      <h3 className="mb-3 text-sm font-semibold">{t("dashboard.inventoryByLocation")}</h3>
                       <div className="h-[280px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={inventoryLocationData}>
@@ -917,7 +928,7 @@ export default function DashboardPage() {
 
                 <Card.Root className="border border-default-200 shadow-sm">
                   <Card.Content className="p-4">
-                    <h3 className="mb-3 text-sm font-semibold">Cash Distribution by Currency</h3>
+                    <h3 className="mb-3 text-sm font-semibold">{t("dashboard.cashDistributionByCurrency")}</h3>
                     <div className="h-[280px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -949,7 +960,7 @@ export default function DashboardPage() {
                   className="text-sm font-semibold uppercase tracking-wide"
                   style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
                 >
-                  Pending Items
+                  {t("dashboard.pendingItems")}
                 </h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {pendingClientPaymentsCount > 0 && (
@@ -959,13 +970,13 @@ export default function DashboardPage() {
                       style={{ borderColor: "rgba(196,18,48,0.25)", background: "rgba(196,18,48,0.05)" }}
                     >
                       <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
-                        Pending Client Payments
+                        {t("dashboard.pendingClientPayments")}
                       </div>
                       <div className="mt-2 text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
-                        {pendingClientPaymentsCount} deal{pendingClientPaymentsCount !== 1 ? "s" : ""}
+                        {t("dashboard.dealsCount", { count: pendingClientPaymentsCount })}
                       </div>
                       <div className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-                        {formatCurrency(pendingClientPaymentsTotal, "DZD")} total
+                        {t("dashboard.amountWithTotal", { amount: formatCurrency(pendingClientPaymentsTotal, "DZD") })}
                       </div>
                     </Link>
                   )}
@@ -976,10 +987,10 @@ export default function DashboardPage() {
                       style={{ borderColor: "rgba(196,18,48,0.25)", background: "rgba(196,18,48,0.05)" }}
                     >
                       <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
-                        Unpaid Shipping
+                        {t("dashboard.unpaidShipping")}
                       </div>
                       <div className="mt-2 text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
-                        {unpaidShippingCount} container{unpaidShippingCount !== 1 ? "s" : ""}
+                        {t("dashboard.containersCount", { count: unpaidShippingCount })}
                       </div>
                     </Link>
                   )}
@@ -990,7 +1001,7 @@ export default function DashboardPage() {
                       style={{ borderColor: "rgba(196,18,48,0.25)", background: "rgba(196,18,48,0.05)" }}
                     >
                       <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
-                        Supplier Debt
+                        {t("dashboard.supplierDebt")}
                       </div>
                       <div className="mt-2 text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
                         {formatCurrency(supplierDebtTotal, "AED")}
@@ -1004,13 +1015,13 @@ export default function DashboardPage() {
                       style={{ borderColor: "rgba(196,18,48,0.25)", background: "rgba(196,18,48,0.05)" }}
                     >
                       <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
-                        Unpaid Commissions
+                        {t("dashboard.unpaidCommissions")}
                       </div>
                       <div className="mt-2 text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
                         {formatCurrency(pendingCommissionTotal, "DZD")}
                       </div>
                       <div className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-                        View employees &amp; commissions
+                        {t("dashboard.viewEmployeesCommissions")}
                       </div>
                     </Link>
                   )}
@@ -1021,10 +1032,10 @@ export default function DashboardPage() {
                       style={{ borderColor: "rgba(196,18,48,0.25)", background: "rgba(196,18,48,0.05)" }}
                     >
                       <div className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--color-accent)" }}>
-                        Pending Conversions
+                        {t("dashboard.pendingConversions")}
                       </div>
                       <div className="mt-2 text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}>
-                        {pendingConversionsCount} conversion{pendingConversionsCount !== 1 ? "s" : ""}
+                        {t("dashboard.conversionsCount", { count: pendingConversionsCount })}
                       </div>
                     </Link>
                   )}
@@ -1047,21 +1058,27 @@ export default function DashboardPage() {
                         style={{ color: nextRentDue.paidThisYear ? "var(--color-text-muted)" : "var(--color-accent)" }}
                       >
                         {nextRentDue.paidThisYear
-                          ? "Rent – Paid"
-                          : "Next Rent Due"}
+                          ? t("dashboard.rentPaid")
+                          : t("dashboard.nextRentDue")}
                       </div>
                       <div
                         className="mt-2 text-xl font-semibold"
                         style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
                       >
                         {nextRentDue.paidThisYear
-                          ? `Next due: ${formatDate(nextRentDue.date.toISOString())}`
+                          ? t("dashboard.nextDueOn", { date: formatDate(nextRentDue.date.toISOString()) })
                           : formatCurrency(nextRentDue.amount, nextRentDue.currency)}
                       </div>
                       <div className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
                         {nextRentDue.paidThisYear
-                          ? `${nextRentDue.description} · ${formatCurrency(nextRentDue.amount, nextRentDue.currency)}/year`
-                          : `${nextRentDue.description} · ${formatDate(nextRentDue.date.toISOString())}`}
+                          ? t("dashboard.rentYearDetail", {
+                              description: nextRentDue.description,
+                              amount: formatCurrency(nextRentDue.amount, nextRentDue.currency),
+                            })
+                          : t("dashboard.rentDueDetail", {
+                              description: nextRentDue.description,
+                              date: formatDate(nextRentDue.date.toISOString()),
+                            })}
                       </div>
                     </Link>
                   )}
@@ -1078,19 +1095,19 @@ export default function DashboardPage() {
                     className="text-sm font-semibold uppercase tracking-wide"
                     style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
                   >
-                    Activity
+                    {t("dashboard.activity")}
                   </h2>
                   <Link
                     href={activityLogHref}
                     className="text-xs font-medium hover:underline"
                     style={{ color: "var(--color-accent)" }}
                   >
-                    View All
+                    {t("common.viewAll")}
                   </Link>
                 </div>
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   {recentActivity.length === 0 ? (
-                    <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>No recent activity.</div>
+                    <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>{t("dashboard.noActivity")}</div>
                   ) : (
                     <ul className="space-y-3 text-xs">
                       {recentActivity.map((a) => (
@@ -1132,13 +1149,13 @@ export default function DashboardPage() {
                     className="text-sm font-semibold uppercase tracking-wide"
                     style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
                   >
-                    Cash Positions
+                    {t("dashboard.cashPositions")}
                   </h2>
                 </div>
 
                 {cashPositions.length === 0 ? (
                   <div className="card rounded-lg border p-4 text-sm" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}>
-                    No cash positions yet.
+                    {t("dashboard.noCashPositions")}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -1149,7 +1166,7 @@ export default function DashboardPage() {
                           pocket.pocket_name ||
                           pocket.pocket ||
                           pocket.label ||
-                          "Pocket";
+                          t("dashboard.pocketFallback");
 
                         return (
                           <div
@@ -1188,10 +1205,10 @@ export default function DashboardPage() {
                                     onPress={handleSaveEdit}
                                     isDisabled={updatingPocketId === pocket.id}
                                   >
-                                    {updatingPocketId === pocket.id ? "Saving..." : "Save"}
+                                    {updatingPocketId === pocket.id ? t("dashboard.saving") : t("common.save")}
                                   </Button>
                                   <Button type="button" size="sm" variant="secondary" className="flex-1" onPress={handleCancelEdit}>
-                                    Cancel
+                                    {t("common.cancel")}
                                   </Button>
                                 </div>
                               </div>
@@ -1218,12 +1235,12 @@ export default function DashboardPage() {
                 className="text-sm font-semibold uppercase tracking-wide"
                 style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
               >
-                Inventory
+                {t("dashboard.inventory")}
               </h2>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
-                    {CAR_LOCATION.dubaiShowroom}
+                    {carLocationLabel(t, CAR_LOCATION.dubaiShowroom)}
                   </div>
                   <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatNumber(carsInDubai || 0)}
@@ -1231,7 +1248,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
-                    {CAR_LOCATION.axiraDzShowroom}
+                    {carLocationLabel(t, CAR_LOCATION.axiraDzShowroom)}
                   </div>
                   <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatNumber(carsInAlgeria || 0)}
@@ -1239,7 +1256,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
-                    {CAR_LOCATION.inTransit}
+                    {carLocationLabel(t, CAR_LOCATION.inTransit)}
                   </div>
                   <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatNumber(carsInTransit || 0)}
@@ -1247,7 +1264,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   <div className="text-xs font-medium uppercase tracking-wide" style={{ fontFamily: "var(--font-body)", color: "var(--color-text-muted)" }}>
-                    Total Cars
+                    {t("dashboard.totalCarsShort")}
                   </div>
                   <div className="mt-2 text-2xl font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--color-accent)" }}>
                     {formatNumber(totalAvailableCars || 0)}
@@ -1263,11 +1280,11 @@ export default function DashboardPage() {
                   className="text-sm font-semibold uppercase tracking-wide"
                   style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
                 >
-                  Recent Deals
+                  {t("dashboard.recentDeals")}
                 </h2>
                 <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                   {recentDeals.length === 0 ? (
-                    <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>No deals yet.</div>
+                    <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>{t("dashboard.noDeals")}</div>
                   ) : (
                     <div className="space-y-3 text-xs">
                       {recentDeals.map((deal) => (
@@ -1278,16 +1295,16 @@ export default function DashboardPage() {
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-medium" style={{ fontFamily: "var(--font-body)", color: "var(--color-text)" }}>
-                              {deal.client_name ?? "Unknown client"}
+                              {deal.client_name ?? t("dashboard.unknownClient")}
                             </span>
                             <span className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
                               {formatDate(deal.date ?? deal.created_at)}
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
-                            <span>{deal.car_label ?? "Car"}</span>
+                            <span>{deal.car_label ?? t("dashboard.car")}</span>
                             <span>
-                              Sale:{" "}
+                              {t("dashboard.saleLabel")}{" "}
                               <span className="font-semibold" style={{ color: "var(--color-text)" }}>
                                 {(() => {
                                   const dzd = dealListSaleDzd(deal);
@@ -1297,7 +1314,7 @@ export default function DashboardPage() {
                               </span>
                             </span>
                             <span>
-                              Profit:{" "}
+                              {t("dashboard.profitLabel")}{" "}
                               <span className="font-semibold" style={{ color: "var(--color-accent)" }}>
                                 {formatCurrency(deal.profit_aed ?? 0, "AED")}
                               </span>
@@ -1316,11 +1333,11 @@ export default function DashboardPage() {
                     className="text-sm font-semibold uppercase tracking-wide"
                     style={{ fontFamily: "var(--font-heading)", color: "var(--color-text-muted)" }}
                   >
-                    Recent Movements
+                    {t("dashboard.recentMovements")}
                   </h2>
                   <div className="card rounded-lg border p-4" style={{ borderColor: "var(--color-border)" }}>
                     {movements.length === 0 ? (
-                      <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>No movements yet.</div>
+                      <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>{t("dashboard.noMovements")}</div>
                     ) : (
                       <div className="space-y-3 text-xs">
                         {movements.map((movement) => (
@@ -1330,7 +1347,7 @@ export default function DashboardPage() {
                             style={{ borderColor: "var(--color-border)" }}
                           >
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium" style={{ color: "var(--color-text)" }}>{movement.category}</span>
+                              <span className="font-medium" style={{ color: "var(--color-text)" }}>{movementCategoryLabel(t, movement.category)}</span>
                               <span className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
                                 {formatDate(movement.date ?? movement.created_at)}
                               </span>

@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Button, Card, Spinner } from "@heroui/react";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activity";
 import { PageContainer } from "@/components/ui/page-container";
+import { formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
+import { pocketDetailLabel } from "@/lib/i18n/enumLabels";
 
 type Employee = {
   id: string;
@@ -33,20 +35,12 @@ type SalaryRow = {
 
 const DZD_POCKETS = ["Algeria Cash", "Algeria Bank"] as const;
 
-function formatNumber(value: number): string {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function formatMoney(value: number | null | undefined) {
-  const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
-  return `${formatNumber(v)} DZD`;
-}
-
 function monthFromDate(dateIso: string): string {
   return dateIso.slice(0, 7);
 }
 
 export default function PayrollPage() {
+  const { t, locale } = useI18n();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [salaryRows, setSalaryRows] = useState<SalaryRow[]>([]);
@@ -58,7 +52,12 @@ export default function PayrollPage() {
   const [error, setError] = useState<string | null>(null);
   const [payingEmployeeId, setPayingEmployeeId] = useState<string | null>(null);
 
-  const fetchAll = async () => {
+  const formatMoney = (value: number | null | undefined) => {
+    const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
+    return `${formatNumberForLocale(locale, v, { maximumFractionDigits: 0 })} DZD`;
+  };
+
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     setError(null);
     const [
@@ -75,13 +74,10 @@ export default function PayrollPage() {
         .from("commissions")
         .select("id, employee_id, amount, month, status, currency")
         .order("created_at", { ascending: false }),
-      supabase
-        .from("salaries")
-        .select("id, employee_id, month, total")
-        .order("date", { ascending: false }),
+      supabase.from("salaries").select("id, employee_id, month, total").order("date", { ascending: false }),
     ]);
     if (empErr || commErr || salaryErr) {
-      setError(empErr?.message || commErr?.message || salaryErr?.message || "Failed to load payroll.");
+      setError(empErr?.message || commErr?.message || salaryErr?.message || t("payroll.loadFailed"));
       setEmployees([]);
       setCommissions([]);
       setSalaryRows([]);
@@ -92,14 +88,11 @@ export default function PayrollPage() {
     setCommissions((commData as Commission[]) ?? []);
     setSalaryRows((salaryData as SalaryRow[]) ?? []);
     setLoading(false);
-  };
+  }, [t]);
 
   useEffect(() => {
-    const run = async () => {
-      await fetchAll();
-    };
-    run();
-  }, []);
+    void fetchAll();
+  }, [fetchAll]);
 
   const monthOptions = useMemo(() => {
     const set = new Set<string>();
@@ -123,12 +116,10 @@ export default function PayrollPage() {
             c.employee_id === e.id &&
             c.month === selectedMonth &&
             (c.status || "").toLowerCase() === "pending" &&
-            ((c.currency || "DZD").toUpperCase() === "DZD")
+            (c.currency || "DZD").toUpperCase() === "DZD"
         )
         .reduce((sum, c) => sum + Number(c.amount || 0), 0);
-      const isPaidForMonth = salaryRows.some(
-        (s) => s.employee_id === e.id && s.month === selectedMonth
-      );
+      const isPaidForMonth = salaryRows.some((s) => s.employee_id === e.id && s.month === selectedMonth);
       return {
         employee: e,
         salaryDzd,
@@ -172,11 +163,11 @@ export default function PayrollPage() {
   const handlePayEmployee = async (employee: Employee, salaryDzd: number, pendingCommissionDzd: number) => {
     const total = salaryDzd + pendingCommissionDzd;
     if (total <= 0) {
-      setError("Nothing payable for this employee in selected month.");
+      setError(t("payroll.nothingPayable"));
       return;
     }
     if (salaryRows.some((s) => s.employee_id === employee.id && s.month === selectedMonth)) {
-      setError("This employee is already marked paid for the selected month.");
+      setError(t("payroll.alreadyPaid"));
       return;
     }
     setPayingEmployeeId(employee.id);
@@ -236,83 +227,83 @@ export default function PayrollPage() {
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <PageContainer size="lg">
         <header className="mb-5">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Payroll</h1>
-          <p className="text-sm text-danger">Salary + commissions (DZD)</p>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("payroll.title")}</h1>
+          <p className="text-sm text-danger">{t("payroll.subtitle")}</p>
         </header>
 
         <Card.Root className="mb-4 border border-default-200 shadow-sm">
           <Card.Content className="grid gap-3 p-3 md:grid-cols-5">
-          <label className="text-xs text-muted">
-            Month
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-            >
-              {monthOptions.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs text-muted">
-            Pocket
-            <select
-              value={pocket}
-              onChange={(e) => setPocket(e.target.value as (typeof DZD_POCKETS)[number])}
-              className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-            >
-              {DZD_POCKETS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs text-muted">
-            Employee filter
-            <input
-              type="text"
-              value={employeeQuery}
-              onChange={(e) => setEmployeeQuery(e.target.value)}
-              placeholder="Search by code or name"
-              className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-            />
-          </label>
-          <label className="text-xs text-muted">
-            Payment date
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
-            />
-          </label>
-          <div className="rounded-md border border-app bg-white px-3 py-2">
-            <div className="text-xs text-muted">Total payable</div>
-            <div className="text-lg font-semibold text-app">{formatMoney(monthTotal)}</div>
-          </div>
+            <label className="text-xs text-muted">
+              {t("payroll.month")}
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+              >
+                {monthOptions.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs text-muted">
+              {t("payroll.pocket")}
+              <select
+                value={pocket}
+                onChange={(e) => setPocket(e.target.value as (typeof DZD_POCKETS)[number])}
+                className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+              >
+                {DZD_POCKETS.map((p) => (
+                  <option key={p} value={p}>
+                    {pocketDetailLabel(t, p)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs text-muted">
+              {t("payroll.employeeFilter")}
+              <input
+                type="text"
+                value={employeeQuery}
+                onChange={(e) => setEmployeeQuery(e.target.value)}
+                placeholder={t("payroll.searchPlaceholder")}
+                className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+              />
+            </label>
+            <label className="text-xs text-muted">
+              {t("payroll.paymentDate")}
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app"
+              />
+            </label>
+            <div className="rounded-md border border-app bg-white px-3 py-2">
+              <div className="text-xs text-muted">{t("payroll.totalPayable")}</div>
+              <div className="text-lg font-semibold text-app">{formatMoney(monthTotal)}</div>
+            </div>
           </Card.Content>
         </Card.Root>
 
         <div className="mb-4 grid gap-3 md:grid-cols-3">
           <Card.Root className="border border-default-200 shadow-sm">
             <Card.Content className="px-4 py-3">
-            <div className="text-xs text-default-500">Total payable (filtered)</div>
-            <div className="text-lg font-semibold text-foreground">{formatMoney(monthTotal)}</div>
+              <div className="text-xs text-default-500">{t("payroll.totalPayableFiltered")}</div>
+              <div className="text-lg font-semibold text-foreground">{formatMoney(monthTotal)}</div>
             </Card.Content>
           </Card.Root>
           <Card.Root className="border border-default-200 shadow-sm">
             <Card.Content className="px-4 py-3">
-            <div className="text-xs text-default-500">Due employees</div>
-            <div className="text-lg font-semibold text-warning">{dueEmployeesCount}</div>
+              <div className="text-xs text-default-500">{t("payroll.dueEmployees")}</div>
+              <div className="text-lg font-semibold text-warning">{dueEmployeesCount}</div>
             </Card.Content>
           </Card.Root>
           <Card.Root className="border border-default-200 shadow-sm">
             <Card.Content className="px-4 py-3">
-            <div className="text-xs text-default-500">Already paid</div>
-            <div className="text-lg font-semibold text-success">{paidEmployeesCount}</div>
+              <div className="text-xs text-default-500">{t("payroll.alreadyPaidCount")}</div>
+              <div className="text-lg font-semibold text-success">{paidEmployeesCount}</div>
             </Card.Content>
           </Card.Root>
         </div>
@@ -329,55 +320,59 @@ export default function PayrollPage() {
           <Card.Root className="border border-default-200 shadow-sm">
             <Card.Content className="flex flex-col items-center justify-center gap-3 py-10">
               <Spinner size="md" color="danger" />
-              <span className="text-sm text-default-500">Loading payroll…</span>
+              <span className="text-sm text-default-500">{t("payroll.loading")}</span>
             </Card.Content>
           </Card.Root>
         ) : (
           <Card.Root className="overflow-hidden border border-default-200 shadow-sm">
-          <Card.Content className="responsive-table-wrap p-0">
-            <table className="min-w-[620px] w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-app text-muted">
-                  <th className="px-4 py-3 font-semibold">Employee</th>
-                  <th className="px-4 py-3 font-semibold">Base Salary</th>
-                  <th className="px-4 py-3 font-semibold">Pending Commission</th>
-                  <th className="px-4 py-3 font-semibold">Total</th>
-                  <th className="px-4 py-3 font-semibold">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((r) => (
-                  <tr key={r.employee.id} className="border-b border-app last:border-0">
-                    <td className="px-4 py-3 text-app">
-                      <div className="font-medium">{r.employee.name ?? "—"}</div>
-                      <div className="text-xs text-muted">{r.employee.employee_code || "No ID"}</div>
-                    </td>
-                    <td className="px-4 py-3 text-app">{formatMoney(r.salaryDzd)}</td>
-                    <td className="px-4 py-3 text-app">{formatMoney(r.pendingCommissionDzd)}</td>
-                    <td className="px-4 py-3 font-semibold text-app">{formatMoney(r.totalDzd)}</td>
-                    <td className="px-4 py-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        isDisabled={payingEmployeeId === r.employee.id || r.isPaidForMonth}
-                        onPress={() => handlePayEmployee(r.employee, r.salaryDzd, r.pendingCommissionDzd)}
-                      >
-                        {payingEmployeeId === r.employee.id ? "Paying..." : r.isPaidForMonth ? "Paid" : "Pay Employee"}
-                      </Button>
-                    </td>
+            <Card.Content className="responsive-table-wrap p-0">
+              <table className="min-w-[620px] w-full text-left text-sm rtl:text-right">
+                <thead>
+                  <tr className="border-b border-app text-muted">
+                    <th className="px-4 py-3 font-semibold">{t("payroll.employee")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("payroll.baseSalary")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("payroll.pendingCommission")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("payroll.total")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("payroll.action")}</th>
                   </tr>
-                ))}
-                {filteredRows.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-muted">
-                      No active employees.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </Card.Content>
+                </thead>
+                <tbody>
+                  {filteredRows.map((r) => (
+                    <tr key={r.employee.id} className="border-b border-app last:border-0">
+                      <td className="px-4 py-3 text-app">
+                        <div className="font-medium">{r.employee.name ?? t("common.emiDash")}</div>
+                        <div className="text-xs text-muted">{r.employee.employee_code || t("payroll.noId")}</div>
+                      </td>
+                      <td className="px-4 py-3 text-app">{formatMoney(r.salaryDzd)}</td>
+                      <td className="px-4 py-3 text-app">{formatMoney(r.pendingCommissionDzd)}</td>
+                      <td className="px-4 py-3 font-semibold text-app">{formatMoney(r.totalDzd)}</td>
+                      <td className="px-4 py-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          isDisabled={payingEmployeeId === r.employee.id || r.isPaidForMonth}
+                          onPress={() => handlePayEmployee(r.employee, r.salaryDzd, r.pendingCommissionDzd)}
+                        >
+                          {payingEmployeeId === r.employee.id
+                            ? t("payroll.paying")
+                            : r.isPaidForMonth
+                              ? t("payroll.paid")
+                              : t("payroll.payEmployee")}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredRows.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-6 text-center text-muted">
+                        {t("payroll.noActiveEmployees")}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </Card.Content>
           </Card.Root>
         )}
       </PageContainer>

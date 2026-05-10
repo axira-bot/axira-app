@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/context/AuthContext";
+import { I18nProvider } from "@/lib/context/I18nContext";
 import AppShell from "@/components/AppShell";
 import { AIChat } from "@/components/AIChat";
 
@@ -17,10 +18,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <AuthProvider>
-          <AppShell>{children}</AppShell>
-          <AIChat />
-        </AuthProvider>
+        <I18nProvider>
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+            <AIChat />
+          </AuthProvider>
+        </I18nProvider>
       </body>
     </html>
   );

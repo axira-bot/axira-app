@@ -10,6 +10,7 @@ import type { FeatureKey, FeaturePermissions } from "@/lib/auth/featureKeys";
 import { getRates, type AppRates } from "@/lib/rates";
 import { displayFxFromAppRates } from "@/lib/finance/dealMoney";
 import { SalesNotesField, type SalesNotesSaveResult } from "@/components/cars/SalesNotesField";
+import { formatDateForLocale, formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
 
 type CarRow = Record<string, unknown>;
 type CatalogRow = Record<string, unknown>;
@@ -22,16 +23,6 @@ type CarDetailResponse = {
   status_timeline: Array<{ field_name: string; old_value: string | null; new_value: string; changed_at: string }>;
   sales_notes_updated_by_name: string | null;
 };
-
-const DEPOSIT_POLICY =
-  "Deposit secures the vehicle in the buyer’s name. Balance is due per the deal schedule. Deposits may be non-refundable once ordering begins — confirm with a manager for exceptions.";
-
-const BUYER_DEFAULT =
-  "Buyer is responsible for customs clearance, import duties, local registration, and inland transport unless otherwise agreed in writing.";
-
-function moneyDzd(n: number) {
-  return `${Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })} DZD`;
-}
 
 function vinLast6(vin: unknown): string | null {
   const s = String(vin || "").trim();
@@ -48,6 +39,7 @@ function firstPhotoUrl(row: CarRow | CatalogRow): string | null {
 
 export default function SalesListPage() {
   const router = useRouter();
+  const { t, locale } = useI18n();
   const { permissions, loading: authLoading, isStaff, isManager, isOwnerLike } = useAuth();
   const canAccess = hasFeature(permissions as FeaturePermissions, "sales_list" as FeatureKey);
   const canSeeInternal = isManager || isOwnerLike;
@@ -71,6 +63,9 @@ export default function SalesListPage() {
   const [carDetailLoading, setCarDetailLoading] = useState(false);
   const [carDetailError, setCarDetailError] = useState<string | null>(null);
 
+  const moneyDzd = (n: number) =>
+    `${formatNumberForLocale(locale, Number(n || 0), { maximumFractionDigits: 0 })} DZD`;
+
   const load = useCallback(async () => {
     if (!canAccess) return;
     setLoading(true);
@@ -85,14 +80,14 @@ export default function SalesListPage() {
     const data = await res.json().catch(() => ({}));
     setLoading(false);
     if (!res.ok) {
-      setError(data.error || "Failed to load sales list");
+      setError(data.error || t("salesList.loadFailed"));
       return;
     }
     setAvailableNow((data.availableNow as CarRow[]) || []);
     setComingSoon((data.comingSoon as CarRow[]) || []);
     setOrderOnDemand((data.orderOnDemand as CatalogRow[]) || []);
     setBrands((data.brands as string[]) || []);
-  }, [canAccess, search, brand, minPrice, maxPrice, sort]);
+  }, [canAccess, search, brand, minPrice, maxPrice, sort, t]);
 
   useEffect(() => {
     void getRates().then(setRates);
@@ -121,7 +116,7 @@ export default function SalesListPage() {
         const data = (await res.json().catch(() => ({}))) as CarDetailResponse & { error?: string };
         if (cancelled) return;
         if (!res.ok) {
-          setCarDetailError(data.error || "Failed to load details");
+          setCarDetailError(data.error || t("salesList.loadDetailFailed"));
           setCarDetail(null);
           return;
         }
@@ -129,7 +124,7 @@ export default function SalesListPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          setCarDetailError("Failed to load details");
+          setCarDetailError(t("salesList.loadDetailFailed"));
           setCarDetail(null);
         }
       })
@@ -139,7 +134,7 @@ export default function SalesListPage() {
     return () => {
       cancelled = true;
     };
-  }, [expand]);
+  }, [expand, t]);
 
   const fx = useMemo(() => displayFxFromAppRates(rates), [rates]);
 
@@ -160,11 +155,11 @@ export default function SalesListPage() {
 
   const badgeForCar = (row: CarRow) => {
     const life = String(row.inventory_lifecycle_status || "").toUpperCase();
-    if (life === "IN_STOCK") return "In stock";
-    if (life === "AT_PORT") return "At port";
-    if (life === "IN_TRANSIT") return "In transit";
-    if (life === "INCOMING") return "Incoming";
-    return life || "—";
+    if (life === "IN_STOCK") return t("salesList.lifecycleInStock");
+    if (life === "AT_PORT") return t("salesList.lifecycleAtPort");
+    if (life === "IN_TRANSIT") return t("salesList.lifecycleInTransit");
+    if (life === "INCOMING") return t("salesList.lifecycleIncoming");
+    return life || t("common.emiDash");
   };
 
   const primaryAction = (kind: "car" | "catalog", row: CarRow | CatalogRow) => {
@@ -184,16 +179,16 @@ export default function SalesListPage() {
   const primaryLabel = (kind: "car" | "catalog", row: CarRow | CatalogRow) => {
     if (kind === "car") {
       const life = String((row as CarRow).inventory_lifecycle_status || "").toUpperCase();
-      return life === "IN_STOCK" ? "Create deal" : "Create pre-order";
+      return life === "IN_STOCK" ? t("salesList.createDeal") : t("salesList.createPreorder");
     }
-    return "Create pre-order";
+    return t("salesList.createPreorder");
   };
 
   if (authLoading) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 p-8">
         <Spinner color="danger" />
-        <span className="text-sm text-default-500">Loading…</span>
+        <span className="text-sm text-default-500">{t("common.loadingEllipsis")}</span>
       </div>
     );
   }
@@ -203,8 +198,8 @@ export default function SalesListPage() {
       <main className="p-6">
         <Alert.Root status="warning">
           <Alert.Content>
-            <Alert.Title>No access</Alert.Title>
-            <Alert.Description>You do not have permission to view the sales list.</Alert.Description>
+            <Alert.Title>{t("salesList.noAccess")}</Alert.Title>
+            <Alert.Description>{t("salesList.noAccessDesc")}</Alert.Description>
           </Alert.Content>
         </Alert.Root>
       </main>
@@ -215,9 +210,9 @@ export default function SalesListPage() {
     <main className="min-h-full space-y-5 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold">Sales price list</h1>
+          <h1 className="text-xl font-bold">{t("salesList.pageTitle")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-default-500">
-            Algeria team: sellable cars with owner-set DZD pricing, lead times, and deposits. Use filters, then create a deal or pre-order in one click.
+            {t("salesList.pageBlurb")}
           </p>
         </div>
       </div>
@@ -225,22 +220,22 @@ export default function SalesListPage() {
       <section className="rounded-xl border border-app bg-panel p-4 space-y-3">
         <div className="grid gap-3 md:grid-cols-6">
           <label className="text-xs md:col-span-2">
-            <span className="text-default-500">Search</span>
+            <span className="text-default-500">{t("salesList.search")}</span>
             <input
               className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Brand, model, color…"
+              placeholder={t("salesList.searchPlaceholder")}
             />
           </label>
           <label className="text-xs">
-            <span className="text-default-500">Brand</span>
+            <span className="text-default-500">{t("salesList.brand")}</span>
             <select
               className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm"
               value={brand}
               onChange={(e) => setBrand(e.target.value)}
             >
-              <option value="">All</option>
+              <option value="">{t("salesList.all")}</option>
               {brands.map((b) => (
                 <option key={b} value={b}>
                   {b}
@@ -249,7 +244,7 @@ export default function SalesListPage() {
             </select>
           </label>
           <label className="text-xs">
-            <span className="text-default-500">Min DZD</span>
+            <span className="text-default-500">{t("salesList.minDzd")}</span>
             <input
               className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm"
               value={minPrice}
@@ -259,7 +254,7 @@ export default function SalesListPage() {
             />
           </label>
           <label className="text-xs">
-            <span className="text-default-500">Max DZD</span>
+            <span className="text-default-500">{t("salesList.maxDzd")}</span>
             <input
               className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm"
               value={maxPrice}
@@ -269,16 +264,16 @@ export default function SalesListPage() {
             />
           </label>
           <label className="text-xs">
-            <span className="text-default-500">Sort</span>
+            <span className="text-default-500">{t("salesList.sort")}</span>
             <select className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm" value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="price_asc">Price ↑</option>
-              <option value="price_desc">Price ↓</option>
-              <option value="lead_asc">Lead time ↑</option>
+              <option value="price_asc">{t("salesList.sortPriceAsc")}</option>
+              <option value="price_desc">{t("salesList.sortPriceDesc")}</option>
+              <option value="lead_asc">{t("salesList.sortLeadAsc")}</option>
             </select>
           </label>
         </div>
         <Button type="button" variant="primary" size="sm" onPress={() => void load()} isDisabled={loading}>
-          Apply filters
+          {t("salesList.applyFilters")}
         </Button>
       </section>
 
@@ -293,9 +288,9 @@ export default function SalesListPage() {
       <div className="flex flex-wrap gap-2 rounded-lg border border-app bg-panel p-1">
         {(
           [
-            ["now", `Available now (${availableNow.length})`],
-            ["soon", `Coming soon (${comingSoon.length})`],
-            ["demand", `Order on demand (${orderOnDemand.length})`],
+            ["now", t("salesList.tabAvailableNow", { count: availableNow.length })],
+            ["soon", t("salesList.tabComingSoon", { count: comingSoon.length })],
+            ["demand", t("salesList.tabOrderOnDemand", { count: orderOnDemand.length })],
           ] as const
         ).map(([key, label]) => (
           <Button
@@ -318,7 +313,7 @@ export default function SalesListPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {rowsForTab.length === 0 ? (
-            <p className="text-sm text-default-500">No vehicles match these filters.</p>
+            <p className="text-sm text-default-500">{t("salesList.noVehicles")}</p>
           ) : (
             rowsForTab.map((row) => {
               const isCatalog = tab === "demand";
@@ -344,16 +339,18 @@ export default function SalesListPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={photo} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-default-400">No photo</div>
+                      <div className="flex h-full items-center justify-center text-xs text-default-400">{t("salesList.noPhoto")}</div>
                     )}
                   </button>
                   <div className="flex flex-1 flex-col gap-2 p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-semibold uppercase text-default-600">
-                        {isCatalog ? "Catalog" : badgeForCar(row as CarRow)}
+                        {isCatalog ? t("salesList.badgeCatalog") : badgeForCar(row as CarRow)}
                       </span>
                       {!isCatalog && vinLast6((row as CarRow).vin) ? (
-                        <span className="text-[10px] text-default-500">VIN …{vinLast6((row as CarRow).vin)}</span>
+                        <span className="text-[10px] text-default-500">
+                          {t("salesList.vinTail", { tail: vinLast6((row as CarRow).vin) ?? "" })}
+                        </span>
                       ) : null}
                     </div>
                     <h3 className="text-sm font-semibold leading-snug">{title}</h3>
@@ -362,11 +359,14 @@ export default function SalesListPage() {
                     </p>
                     <p className="text-lg font-bold text-app">{moneyDzd(price)}</p>
                     <p className="text-xs text-default-600">
-                      Lead: {lead > 0 ? `${lead} days` : "—"} · Deposit: {dep > 0 ? moneyDzd(dep) : "—"}
+                      {t("salesList.leadDepositLine", {
+                        lead: lead > 0 ? t("salesList.leadDays", { n: lead }) : t("common.emiDash"),
+                        deposit: dep > 0 ? moneyDzd(dep) : t("common.emiDash"),
+                      })}
                     </p>
                     <div className="mt-auto flex flex-wrap gap-2 pt-2">
                       <Button type="button" size="sm" variant="outline" onPress={() => setExpand({ kind, row })}>
-                        Details
+                        {t("salesList.details")}
                       </Button>
                       <Button type="button" size="sm" variant="primary" onPress={() => primaryAction(kind, row)}>
                         {primaryLabel(kind, row)}
@@ -382,12 +382,12 @@ export default function SalesListPage() {
 
       {expand ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <button type="button" className="absolute inset-0 bg-black/60" aria-label="Close" onClick={() => setExpand(null)} />
+          <button type="button" className="absolute inset-0 bg-black/60" aria-label={t("catalog.closeAria")} onClick={() => setExpand(null)} />
           <div className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-xl border border-app bg-panel p-5 shadow-xl sm:rounded-xl">
             <div className="mb-3 flex items-start justify-between gap-2">
-              <h2 className="text-lg font-semibold">Vehicle details</h2>
+              <h2 className="text-lg font-semibold">{t("salesList.vehicleDetails")}</h2>
               <Button type="button" size="sm" variant="ghost" onPress={() => setExpand(null)}>
-                Close
+                {t("common.close")}
               </Button>
             </div>
             {expand.kind === "catalog" ? (
@@ -398,12 +398,12 @@ export default function SalesListPage() {
                 const lead = Number(row.lead_time_days ?? 0);
                 const dep = Number(row.deposit_amount_dzd ?? 0);
                 const photos = Array.isArray(row.photos) ? row.photos.filter((u) => typeof u === "string") : [];
-                const resp = String(row.buyer_responsibilities_note || "").trim() || BUYER_DEFAULT;
+                const resp =
+                  String(row.buyer_responsibilities_note || "").trim() || t("salesList.buyerDefault");
                 return (
                   <div className="space-y-5 text-sm">
                     <div className="rounded-lg border border-dashed border-default-300 bg-default-50 px-3 py-2 text-xs text-default-700">
-                      No inventory record yet — order on demand. Catalog-only listing; VIN and logistics appear once a car is
-                      received into stock.
+                      {t("salesList.catalogNoInventoryBlurb")}
                     </div>
                     {photos.length ? (
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -414,32 +414,44 @@ export default function SalesListPage() {
                       </div>
                     ) : null}
                     <div>
-                      <p className="text-xs font-semibold uppercase text-default-500">Pricing</p>
+                      <p className="text-xs font-semibold uppercase text-default-500">{t("salesList.pricing")}</p>
                       <p className="text-2xl font-bold text-app">{moneyDzd(price)}</p>
                       <p className="mt-1 text-xs text-default-500">
-                        Reference: ~{refs.usd.toLocaleString("en-US", { maximumFractionDigits: 0 })} USD · ~
-                        {refs.aed.toLocaleString("en-US", { maximumFractionDigits: 0 })} AED
+                        {t("salesList.referenceFx", {
+                          usd: formatNumberForLocale(locale, refs.usd, { maximumFractionDigits: 0 }),
+                          aed: formatNumberForLocale(locale, refs.aed, { maximumFractionDigits: 0 }),
+                        })}
                       </p>
                       <p className="mt-2 text-default-700">
-                        Lead: {lead > 0 ? `${lead} days` : "Contact manager"} · Deposit: {dep > 0 ? moneyDzd(dep) : "—"}
+                        {t("salesList.leadDepositLine", {
+                          lead:
+                            lead > 0 ? t("salesList.leadDays", { n: lead }) : t("salesList.contactManager"),
+                          deposit: dep > 0 ? moneyDzd(dep) : t("common.emiDash"),
+                        })}
                       </p>
-                      <p className="mt-1 text-xs text-default-600">{DEPOSIT_POLICY}</p>
+                      <p className="mt-1 text-xs text-default-600">{t("salesList.depositPolicy")}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold uppercase text-default-500">Buyer responsibilities</p>
+                      <p className="text-xs font-semibold uppercase text-default-500">{t("salesList.buyerResp")}</p>
                       <p className="text-default-700">{resp}</p>
                     </div>
                     {canSeeInternal ? (
                       <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
-                        <p className="font-semibold">Manager / owner</p>
+                        <p className="font-semibold">{t("salesList.managerOwner")}</p>
                         {row.cost_estimate_dzd != null ? (
-                          <p>Cost estimate (DZD): {moneyDzd(Number(row.cost_estimate_dzd))}</p>
+                          <p>{t("salesList.costEstimate", { amount: moneyDzd(Number(row.cost_estimate_dzd)) })}</p>
                         ) : null}
-                        {row.margin_note ? <p className="mt-1">Margin: {String(row.margin_note)}</p> : null}
+                        {row.margin_note ? (
+                          <p className="mt-1">{t("salesList.marginLine", { note: String(row.margin_note) })}</p>
+                        ) : null}
                         {row.internal_note ? (
-                          <p className="mt-1 whitespace-pre-wrap">Internal: {String(row.internal_note)}</p>
+                          <p className="mt-1 whitespace-pre-wrap">
+                            {t("salesList.internalLine", { note: String(row.internal_note) })}
+                          </p>
                         ) : null}
-                        {row.supplier_reference ? <p className="mt-1">Supplier ref: {String(row.supplier_reference)}</p> : null}
+                        {row.supplier_reference ? (
+                          <p className="mt-1">{t("salesList.supplierRef", { ref: String(row.supplier_reference) })}</p>
+                        ) : null}
                       </div>
                     ) : null}
                     <Button
@@ -501,9 +513,11 @@ export default function SalesListPage() {
                   <div className="space-y-5 text-sm">
                     <div className="flex flex-wrap items-start justify-between gap-2 border-b border-app pb-3">
                       <div>
-                        <h3 className="text-base font-semibold leading-snug">{title || "Vehicle"}</h3>
+                        <h3 className="text-base font-semibold leading-snug">{title || t("salesList.vehicleFallback")}</h3>
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-default-600">
-                          {car.grade ? <span>Grade: {String(car.grade)}</span> : null}
+                          {car.grade ? (
+                            <span>{t("salesList.gradeLabel", { grade: String(car.grade) })}</span>
+                          ) : null}
                           <span className="rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-semibold uppercase text-default-600">
                             {life}
                           </span>
@@ -514,7 +528,7 @@ export default function SalesListPage() {
 
                     {photos.length ? (
                       <div>
-                        <p className="mb-2 text-xs font-semibold uppercase text-default-500">Photos</p>
+                        <p className="mb-2 text-xs font-semibold uppercase text-default-500">{t("salesList.photos")}</p>
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                           {photos.map((url) => (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -525,44 +539,54 @@ export default function SalesListPage() {
                     ) : null}
 
                     <div>
-                      <p className="text-xs font-semibold uppercase text-default-500">Pricing</p>
+                      <p className="text-xs font-semibold uppercase text-default-500">{t("salesList.pricing")}</p>
                       <p className="text-2xl font-bold text-app">{moneyDzd(price)}</p>
                       <p className="mt-1 text-xs text-default-500">
-                        Reference: ~{refs.usd.toLocaleString("en-US", { maximumFractionDigits: 0 })} USD · ~
-                        {refs.aed.toLocaleString("en-US", { maximumFractionDigits: 0 })} AED
+                        {t("salesList.referenceFx", {
+                          usd: formatNumberForLocale(locale, refs.usd, { maximumFractionDigits: 0 }),
+                          aed: formatNumberForLocale(locale, refs.aed, { maximumFractionDigits: 0 }),
+                        })}
                       </p>
                       <p className="mt-2 text-default-700">
-                        Lead: {lead > 0 ? `${lead} days` : "—"} · Deposit: {dep > 0 ? moneyDzd(dep) : "—"}
+                        {t("salesList.leadDepositLine", {
+                          lead: lead > 0 ? t("salesList.leadDays", { n: lead }) : t("common.emiDash"),
+                          deposit: dep > 0 ? moneyDzd(dep) : t("common.emiDash"),
+                        })}
                       </p>
-                      <p className="mt-1 text-xs text-default-600">{DEPOSIT_POLICY}</p>
+                      <p className="mt-1 text-xs text-default-600">{t("salesList.depositPolicy")}</p>
                     </div>
 
                     <div>
-                      <p className="mb-2 text-xs font-semibold uppercase text-default-500">Vehicle specs</p>
+                      <p className="mb-2 text-xs font-semibold uppercase text-default-500">{t("salesList.vehicleSpecs")}</p>
                       <div className="space-y-1 rounded-md border border-app bg-white/50 p-3">
-                        {specLine("Color", car.color)}
-                        {specLine("Mileage", car.mileage != null ? `${car.mileage} km` : null)}
-                        {specLine("Body", car.body_type)}
-                        {specLine("Drive", car.drive_type)}
-                        {specLine("Doors", car.doors)}
-                        {specLine("Seats", car.seats)}
-                        {specLine("Transmission", car.transmission)}
-                        {specLine("Fuel", car.fuel_type)}
-                        {specLine("Engine", car.engine)}
-                        {specLine("Condition", car.condition)}
-                        {specLine("Origin", car.country_of_origin)}
-                        {specLine("Interior", car.interior_color)}
-                        {specLine("Body issues", car.body_issues)}
-                        {specLine("Features", car.features)}
+                        {specLine(t("salesList.specColor"), car.color)}
+                        {specLine(
+                          t("salesList.specMileage"),
+                          car.mileage != null
+                            ? t("salesList.kmSuffix", { n: Number(car.mileage) })
+                            : null
+                        )}
+                        {specLine(t("salesList.specBody"), car.body_type)}
+                        {specLine(t("salesList.specDrive"), car.drive_type)}
+                        {specLine(t("salesList.specDoors"), car.doors)}
+                        {specLine(t("salesList.specSeats"), car.seats)}
+                        {specLine(t("salesList.specTransmission"), car.transmission)}
+                        {specLine(t("salesList.specFuel"), car.fuel_type)}
+                        {specLine(t("salesList.specEngine"), car.engine)}
+                        {specLine(t("salesList.specCondition"), car.condition)}
+                        {specLine(t("salesList.specOrigin"), car.country_of_origin)}
+                        {specLine(t("salesList.specInterior"), car.interior_color)}
+                        {specLine(t("salesList.specBodyIssues"), car.body_issues)}
+                        {specLine(t("salesList.specFeatures"), car.features)}
                       </div>
                     </div>
 
                     <div>
-                      <p className="mb-2 text-xs font-semibold uppercase text-default-500">Logistics</p>
+                      <p className="mb-2 text-xs font-semibold uppercase text-default-500">{t("salesList.logistics")}</p>
                       <div className="space-y-2 rounded-md border border-app bg-white/50 p-3">
                         {po && typeof po.id === "string" ? (
                           <p>
-                            <span className="text-default-500">Purchase order: </span>
+                            <span className="text-default-500">{t("salesList.purchaseOrderPrefix")} </span>
                             <Link
                               href={`/purchase-orders/${encodeURIComponent(po.id)}`}
                               className="font-medium text-[var(--color-accent)] underline"
@@ -572,33 +596,37 @@ export default function SalesListPage() {
                             {po.status ? <span className="text-default-500"> · {String(po.status)}</span> : null}
                           </p>
                         ) : (
-                          <p className="text-default-600">No purchase order linked.</p>
+                          <p className="text-default-600">{t("salesList.noPurchaseOrderLinked")}</p>
                         )}
                         {cont ? (
                           <p>
-                            <span className="text-default-500">Container: </span>
+                            <span className="text-default-500">{t("salesList.containerPrefix")} </span>
                             <span className="font-medium">
-                              {String(cont.ref || cont.id || "—")}
+                              {String(cont.ref || cont.id || t("common.emiDash"))}
                               {cont.status ? ` · ${String(cont.status)}` : ""}
                             </span>
                           </p>
                         ) : (
-                          <p className="text-default-600">Not assigned to a container.</p>
+                          <p className="text-default-600">{t("salesList.notAssignedContainer")}</p>
                         )}
                         <p>
-                          <span className="text-default-500">Stock location: </span>
-                          <span className="font-medium">{car.location ? String(car.location) : "—"}</span>
+                          <span className="text-default-500">{t("salesList.stockLocation")} </span>
+                          <span className="font-medium">{car.location ? String(car.location) : t("common.emiDash")}</span>
                         </p>
                         {carDetail.status_timeline.length ? (
                           <div className="mt-2 border-t border-app pt-2">
-                            <p className="text-[11px] font-semibold text-default-500">Status timeline</p>
+                            <p className="text-[11px] font-semibold text-default-500">{t("salesList.statusTimeline")}</p>
                             <ul className="mt-1 max-h-40 space-y-1 overflow-y-auto text-[11px]">
                               {carDetail.status_timeline.map((e, i) => (
                                 <li key={`${e.changed_at}-${i}`} className="text-default-700">
                                   <span className="font-mono text-[10px] text-default-400">
-                                    {new Date(e.changed_at).toLocaleString()}
+                                    {formatDateForLocale(locale, e.changed_at, {
+                                      dateStyle: "short",
+                                      timeStyle: "short",
+                                    })}
                                   </span>{" "}
-                                  <span className="font-semibold">{e.field_name}</span>: {e.old_value ?? "—"} → {e.new_value}
+                                  <span className="font-semibold">{e.field_name}</span>: {e.old_value ?? t("common.emiDash")} →{" "}
+                                  {e.new_value}
                                 </li>
                               ))}
                             </ul>
@@ -625,7 +653,7 @@ export default function SalesListPage() {
                             body: JSON.stringify({ sales_notes: text }),
                           });
                           const data = (await res.json().catch(() => ({}))) as SalesNotesSaveResult & { error?: string };
-                          if (!res.ok) throw new Error(data.error || "Failed to save");
+                          if (!res.ok) throw new Error(data.error || t("salesList.failedSaveNotes"));
                           setCarDetail((prev) =>
                             prev
                               ? {
@@ -646,18 +674,21 @@ export default function SalesListPage() {
                     </div>
 
                     <div>
-                      <p className="mb-2 text-xs font-semibold uppercase text-default-500">Internal</p>
+                      <p className="mb-2 text-xs font-semibold uppercase text-default-500">{t("salesList.internalHeading")}</p>
                       <div className="space-y-2 rounded-md border border-app bg-white/50 p-3 text-sm">
-                        {daysInv != null ? <p>Days in inventory: {daysInv}</p> : null}
+                        {daysInv != null ? (
+                          <p>{t("salesList.daysInInventoryCount", { n: daysInv })}</p>
+                        ) : null}
                         {carDetail.linked_deals.length ? (
                           <div>
-                            <p className="text-default-500">Linked deals</p>
+                            <p className="text-default-500">{t("salesList.linkedDeals")}</p>
                             <ul className="mt-1 list-inside list-disc space-y-1 text-[13px]">
                               {carDetail.linked_deals.map((d) => (
                                 <li key={String(d.id)}>
-                                  {String(d.client_name || "Client")} · {String(d.status || "—")} ·{" "}
+                                  {String(d.client_name || t("salesList.clientFallback"))} ·{" "}
+                                  {String(d.status || t("common.emiDash"))} ·{" "}
                                   <Link href="/deals" className="text-[var(--color-accent)] underline">
-                                    Open deals
+                                    {t("salesList.openDeals")}
                                   </Link>
                                   <span className="ml-1 font-mono text-[10px] text-default-400">({String(d.id).slice(0, 8)}…)</span>
                                 </li>
@@ -665,18 +696,20 @@ export default function SalesListPage() {
                             </ul>
                           </div>
                         ) : (
-                          <p className="text-default-600">No linked deals.</p>
+                          <p className="text-default-600">{t("salesList.noLinkedDeals")}</p>
                         )}
                         {canSeeInternal ? (
                           <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-950">
-                            <p className="font-semibold">Margin / sourcing</p>
+                            <p className="font-semibold">{t("salesList.marginSourcing")}</p>
                             {car.sales_cost_estimate_dzd != null ? (
-                              <p>Cost estimate (DZD): {moneyDzd(Number(car.sales_cost_estimate_dzd))}</p>
+                              <p>{t("salesList.costEstimate", { amount: moneyDzd(Number(car.sales_cost_estimate_dzd)) })}</p>
                             ) : null}
                             {car.sales_internal_note ? (
                               <p className="mt-1 whitespace-pre-wrap">{String(car.sales_internal_note)}</p>
                             ) : null}
-                            {car.supplier_name ? <p className="mt-1">Supplier: {String(car.supplier_name)}</p> : null}
+                            {car.supplier_name ? (
+                              <p className="mt-1">{t("inventory.supplierPrefix", { name: String(car.supplier_name) })}</p>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>

@@ -3,61 +3,9 @@
 import { usePathname } from "next/navigation";
 import { Button, Separator } from "@heroui/react";
 import { useAuth } from "@/lib/context/AuthContext";
-
-const PAGE_TITLES: Record<string, string> = {
-  "/dashboard":   "Dashboard",
-  "/audit":       "Audit log",
-  "/activity":    "Activity",
-  "/inventory":   "Inventory",
-  "/deals":       "Deals",
-  "/sales-list":  "Sales list",
-  "/catalog":     "Sales catalog",
-  "/containers":  "Containers",
-  "/movements":   "Movements",
-  "/transfers":   "Transfers",
-  "/debts":       "Debts",
-  "/employees":   "Employees",
-  "/investors":   "Investors",
-  "/reports":     "Reports",
-  "/clients":     "Clients",
-  "/suppliers":   "Suppliers",
-  "/admin/users": "Users",
-  "/login":       "Login",
-};
-
-const PAGE_SUBTITLES: Record<string, string> = {
-  "/dashboard":   "Overview of your business",
-  "/audit":       "Who changed what — full trail",
-  "/activity":    "Recent transactions & events",
-  "/inventory":   "Cars in stock",
-  "/deals":       "Sales & purchases",
-  "/sales-list":  "Algeria pricing & lead times",
-  "/catalog":     "Order-on-demand retail SKUs",
-  "/containers":  "Shipment containers",
-  "/movements":   "Cash & expense tracking",
-  "/transfers":   "Currency conversions",
-  "/debts":       "Outstanding balances",
-  "/employees":   "Team management",
-  "/investors":   "Investor overview",
-  "/reports":     "Financial reports",
-  "/clients":     "Client directory",
-  "/suppliers":   "Procurement suppliers for POs",
-  "/admin/users": "User management",
-};
-
-function getPageTitle(pathname: string): string {
-  if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
-  const segment = pathname.split("/")[1];
-  if (segment && PAGE_TITLES[`/${segment}`]) return PAGE_TITLES[`/${segment}`];
-  return "Axira Trading FZE";
-}
-
-function getPageSubtitle(pathname: string): string {
-  if (PAGE_SUBTITLES[pathname]) return PAGE_SUBTITLES[pathname];
-  const segment = pathname.split("/")[1];
-  if (segment && PAGE_SUBTITLES[`/${segment}`]) return PAGE_SUBTITLES[`/${segment}`];
-  return "";
-}
+import { useI18n } from "@/lib/context/I18nContext";
+import { pageMetaKeysForPathname } from "@/lib/i18n/pageMeta";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 
 function getInitials(name: string | null): string {
   if (!name?.trim()) return "U";
@@ -71,8 +19,10 @@ function getInitials(name: string | null): string {
 export default function Header() {
   const pathname = usePathname();
   const { profile } = useAuth();
-  const title = getPageTitle(pathname);
-  const subtitle = getPageSubtitle(pathname);
+  const { t } = useI18n();
+  const { titleKey, subtitleKey } = pageMetaKeysForPathname(pathname);
+  const title = t(titleKey);
+  const subtitle = subtitleKey ? t(subtitleKey) : "";
 
   return (
     <header
@@ -97,12 +47,14 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-3">
+        <LocaleSwitcher />
+
         <Button
           type="button"
           variant="ghost"
           isIconOnly
           size="sm"
-          aria-label="Notifications"
+          aria-label={t("appShell.notifications")}
           className="text-default-500 hover:text-danger"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

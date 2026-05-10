@@ -6,6 +6,12 @@ import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
+import {
+  formatDateForLocale,
+  formatNumberForLocale,
+  useI18n,
+} from "@/lib/context/I18nContext";
+import { employeeRoleLabel, employeeStatusLabel, investorReturnStatusLabel, pocketDetailLabel } from "@/lib/i18n/enumLabels";
 
 const ROLES = ["Sales Staff", "Manager", "Accountant", "Operations"] as const;
 const STATUSES = ["Active", "Inactive"] as const;
@@ -76,29 +82,9 @@ const emptyForm = (): EmployeeFormState => ({
   status: "Active",
 });
 
-function formatNumber(value: number): string {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function formatMoney(value: number | null | undefined, currency: string) {
-  const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
-  return `${formatNumber(v)} ${currency}`;
-}
-
 function parseNum(s: string): number {
   const v = Number(s);
   return Number.isFinite(v) ? v : 0;
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 function monthFromDate(dateStr: string | null | undefined): string {
@@ -111,8 +97,31 @@ function monthFromDate(dateStr: string | null | undefined): string {
 }
 
 export default function EmployeesPage() {
+  const { locale, t } = useI18n();
+  const dash = t("common.emiDash");
   const { canDelete } = useAuth();
-  const [activeTab, setActiveTab] = useState<"Employees" | "Commissions">("Employees");
+  const fmtNum = (n: number) =>
+    formatNumberForLocale(locale, n, { maximumFractionDigits: 0 });
+  const fmtMoney = (value: number | null | undefined, currency: string) => {
+    const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
+    return `${fmtNum(v)} ${currency}`;
+  };
+  const fmtDate = (value: string | null | undefined) => {
+    if (!value) return dash;
+    const s = formatDateForLocale(locale, value, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    return s || dash;
+  };
+  const fmtMonth = (ym: string) => {
+    if (!ym || !/^\d{4}-\d{2}/.test(ym)) return ym;
+    const iso = ym.length >= 7 ? `${ym.slice(0, 7)}-01` : ym;
+    const s = formatDateForLocale(locale, iso, { month: "short", year: "numeric" });
+    return s || ym;
+  };
+  const [activeTab, setActiveTab] = useState<"employees" | "commissions">("employees");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -176,13 +185,13 @@ export default function EmployeesPage() {
       ]);
 
       if (empErr || commErr) {
-        setError(empErr?.message ?? commErr?.message ?? "Failed to load employees data");
+        setError(empErr?.message ?? commErr?.message ?? t("employees.loadFailedGeneric"));
         return;
       }
 
       if (dealsErr) {
         // Deals are only used as lookup context; keep employees screen usable if deals is restricted by RLS.
-        console.warn("Employees page: deals lookup unavailable", dealsErr.message);
+        console.warn(t("employees.loadDealsWarn"), dealsErr.message);
       }
 
       setEmployees((empData as Employee[]) ?? []);
@@ -280,7 +289,7 @@ export default function EmployeesPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      setError("Full name is required.");
+      setError(t("employees.fullNameRequired"));
       return;
     }
     const baseSalary = parseNum(form.baseSalary);
@@ -322,7 +331,7 @@ export default function EmployeesPage() {
       try {
         employeeCode = await generateEmployeeCode();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to generate employee code.");
+        setError(e instanceof Error ? e.message : t("employees.failedGenerateCode"));
         setIsSaving(false);
         return;
       }
@@ -352,7 +361,7 @@ export default function EmployeesPage() {
 
   const handleDelete = async (e: Employee) => {
     if (!canDelete) return;
-    if (!window.confirm(`Delete employee "${e.name}"? This cannot be undone.`)) return;
+    if (!window.confirm(t("employees.deleteConfirm", { name: e.name ?? dash }))) return;
     setDeletingId(e.id);
     const { error: delErr } = await supabase.from("employees").delete().eq("id", e.id);
     if (delErr) {
@@ -384,12 +393,12 @@ export default function EmployeesPage() {
       (c) => c.employee_id === payAllEmployeeId && (c.status || "").toLowerCase() === "pending"
     );
     if (!employee || pending.length === 0) {
-      setError("No pending commissions for this employee.");
+      setError(t("employees.noPendingForEmployee"));
       return;
     }
     const total = pending.reduce((s, c) => s + (c.amount ?? 0), 0);
     if (total <= 0) {
-      setError("Total pending is 0.");
+      setError(t("employees.totalPendingZero"));
       return;
     }
     setPayAllSaving(true);
@@ -452,7 +461,7 @@ export default function EmployeesPage() {
     setShowPayAllModal(false);
   };
 
-  const getEmployeeName = (id: string) => employees.find((e) => e.id === id)?.name ?? "—";
+  const getEmployeeName = (id: string) => employees.find((e) => e.id === id)?.name ?? dash;
 
   const monthsForSelect = useMemo(() => {
     const set = new Set<string>();
@@ -488,7 +497,7 @@ export default function EmployeesPage() {
     const commissionsThisMonth = pendingForSalary;
     const total = base + commissionsThisMonth;
     if (total <= 0) {
-      setError("Nothing to pay for this employee.");
+      setError(t("employees.nothingToPay"));
       return;
     }
     const currency = paySalaryEmployee.salary_currency || "DZD";
@@ -565,23 +574,28 @@ export default function EmployeesPage() {
   return (
     <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="border-b border-default-200 bg-content1 px-4 py-4">
-        <h1 className="text-xl font-semibold">Employee & Commission Management</h1>
-        <p className="mt-1 text-xs text-default-500">Manage staff and track commissions.</p>
+        <h1 className="text-xl font-semibold">{t("employees.pageTitle")}</h1>
+        <p className="mt-1 text-xs text-default-500">{t("employees.pageSubtitle")}</p>
       </div>
 
       <div className="flex border-b border-default-200 bg-content1 px-4">
-        {(["Employees", "Commissions"] as const).map((tab) => (
+        {(
+          [
+            { id: "employees" as const, labelKey: "employees.tabEmployees" },
+            { id: "commissions" as const, labelKey: "employees.tabCommissions" },
+          ] as const
+        ).map((tab) => (
           <Button
-            key={tab}
+            key={tab.id}
             type="button"
             variant="ghost"
             size="sm"
             className={`rounded-none border-b-2 px-4 py-3 ${
-              activeTab === tab ? "border-danger text-danger" : "border-transparent text-default-500"
+              activeTab === tab.id ? "border-danger text-danger" : "border-transparent text-default-500"
             }`}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => setActiveTab(tab.id)}
           >
-            {tab}
+            {t(tab.labelKey)}
           </Button>
         ))}
       </div>
@@ -595,44 +609,47 @@ export default function EmployeesPage() {
           </Alert.Root>
         ) : null}
 
-        {activeTab === "Employees" && (
+        {activeTab === "employees" && (
           <>
             <div className="mb-4 flex justify-end">
               <Button type="button" variant="primary" size="sm" onPress={openAdd}>
-                Add Employee
+                {t("employees.addEmployee")}
               </Button>
             </div>
             {isLoading ? (
               <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-default-200 bg-content1 p-10">
                 <Spinner size="md" color="danger" />
-                <span className="text-sm text-default-500">Loading…</span>
+                <span className="text-sm text-default-500">{t("employees.loading")}</span>
               </div>
             ) : (
               <div className="responsive-table-wrap rounded-lg border border-app surface">
                 <table className="min-w-[620px] w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-app text-muted">
-                      <th className="px-4 py-3 font-semibold">Name</th>
-                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Role</th>
-                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Salary</th>
-                      <th className="px-4 py-3 font-semibold">Commission</th>
-                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">Status</th>
-                      <th className="px-4 py-3 font-semibold">Actions</th>
+                      <th className="px-4 py-3 font-semibold">{t("employees.thName")}</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">{t("employees.thRole")}</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">{t("employees.thSalary")}</th>
+                      <th className="px-4 py-3 font-semibold">{t("employees.thCommission")}</th>
+                      <th className="px-4 py-3 font-semibold hidden sm:table-cell">{t("employees.thStatus")}</th>
+                      <th className="px-4 py-3 font-semibold">{t("employees.thActions")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {employees.map((e) => (
                       <tr key={e.id} className="border-b border-app last:border-0">
                         <td className="px-4 py-3 text-app">
-                          <div className="font-medium">{e.name ?? "—"}</div>
-                          <div className="text-[11px] text-muted">{e.employee_code || "No ID"}</div>
+                          <div className="font-medium">{e.name ?? dash}</div>
+                          <div className="text-[11px] text-muted">{e.employee_code || t("employees.noEmployeeId")}</div>
                         </td>
-                        <td className="px-4 py-3 text-app hidden sm:table-cell">{e.role ?? "—"}</td>
-                        <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(e.base_salary, e.salary_currency ?? "DZD")}</td>
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">{employeeRoleLabel(t, e.role)}</td>
+                        <td className="px-4 py-3 text-app hidden sm:table-cell">{fmtMoney(e.base_salary, e.salary_currency ?? "DZD")}</td>
                         <td className="px-4 py-3 text-app">
                           {e.role === "Manager" && e.commission_per_managed_deal != null
-                            ? `${formatMoney(e.commission_per_deal, "DZD")} / ${formatMoney(e.commission_per_managed_deal, "DZD")} (managed)`
-                            : formatMoney(e.commission_per_deal, "DZD") + " / deal"}
+                            ? t("employees.commissionStaffManaged", {
+                                staff: fmtMoney(e.commission_per_deal, "DZD"),
+                                managed: fmtMoney(e.commission_per_managed_deal, "DZD"),
+                              })
+                            : `${fmtMoney(e.commission_per_deal, "DZD")} ${t("employees.commissionPerDealShort")}`}
                         </td>
                         <td className="px-4 py-3 hidden sm:table-cell">
                           <span
@@ -642,25 +659,25 @@ export default function EmployeesPage() {
                                 : "text-gray-400"
                             }
                           >
-                            {e.status ?? "—"}
+                            {employeeStatusLabel(t, e.status) || dash}
                           </span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-2">
-                            <RowActionsMenu label="Employee actions">
+                            <RowActionsMenu label={t("employees.employeeActions")}>
                               <button
                                 type="button"
                                 onClick={() => openEdit(e)}
                                 className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                               >
-                                Edit
+                                {t("employees.edit")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setViewEmployee(e)}
                                 className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100"
                               >
-                                View
+                                {t("employees.view")}
                               </button>
                               {canDelete ? (
                                 <button
@@ -669,12 +686,12 @@ export default function EmployeesPage() {
                                   disabled={deletingId === e.id}
                                   className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
                                 >
-                                  {deletingId === e.id ? "Deleting..." : "Delete"}
+                                  {deletingId === e.id ? t("employees.deleting") : t("employees.delete")}
                                 </button>
                               ) : null}
                             </RowActionsMenu>
                             {(e.status || "").toLowerCase() === "active" && (
-                              <span className="text-[11px] text-muted">Use Payroll page for payouts</span>
+                              <span className="text-[11px] text-muted">{t("employees.usePayrollPayouts")}</span>
                             )}
                           </div>
                         </td>
@@ -683,14 +700,14 @@ export default function EmployeesPage() {
                   </tbody>
                 </table>
                 {employees.length === 0 && (
-                  <div className="p-6 text-center text-gray-400">No employees yet. Add one to get started.</div>
+                  <div className="p-6 text-center text-gray-400">{t("employees.emptyEmployeesLong")}</div>
                 )}
               </div>
             )}
           </>
         )}
 
-        {activeTab === "Commissions" && (
+        {activeTab === "commissions" && (
           <>
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <select
@@ -698,10 +715,10 @@ export default function EmployeesPage() {
                 onChange={(e) => setCommissionEmployeeFilter(e.target.value)}
                 className="rounded-md border border-app surface px-3 py-2 text-sm text-app"
               >
-                <option value="">All employees</option>
+                <option value="">{t("employees.filterAllEmployees")}</option>
                 {employees.map((e) => (
                   <option key={e.id} value={e.id}>
-                    {e.name ?? e.id}
+                    {((e.name ?? "").trim()) || e.id}
                   </option>
                 ))}
               </select>
@@ -710,32 +727,32 @@ export default function EmployeesPage() {
                 onChange={(e) => setCommissionMonthFilter(e.target.value)}
                 className="rounded-md border border-app surface px-3 py-2 text-sm text-app"
               >
-                <option value="">All months</option>
+                <option value="">{t("employees.filterAllMonths")}</option>
                 {monthsOptions.map((m) => (
                   <option key={m} value={m}>
-                    {m}
+                    {fmtMonth(m)}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="mb-4 rounded-lg border border-app surface p-4">
-              <h3 className="mb-2 text-sm font-semibold text-app">Monthly summary – Pending per employee</h3>
+              <h3 className="mb-2 text-sm font-semibold text-app">{t("employees.monthlySummaryHeading")}</h3>
               <ul className="space-y-1 text-sm">
                 {employees.map((e) => {
                   const pending = pendingByEmployee[e.id] ?? 0;
                   if (pending <= 0) return null;
                   return (
                     <li key={e.id} className="flex items-center justify-between gap-4">
-                      <span className="text-app">{e.name ?? "—"}</span>
-                      <span className="text-[var(--color-accent)]">{formatMoney(pending, "DZD")}</span>
-                      <div className="text-[11px] text-muted">Pay from Payroll page</div>
+                      <span className="text-app">{e.name ?? dash}</span>
+                      <span className="text-[var(--color-accent)]">{fmtMoney(pending, "DZD")}</span>
+                      <div className="text-[11px] text-muted">{t("employees.usePayrollPayCommissions")}</div>
                     </li>
                   );
                 })}
               </ul>
               {Object.keys(pendingByEmployee).filter((id) => (pendingByEmployee[id] ?? 0) > 0).length === 0 && (
-                <p className="text-gray-400">No pending commissions.</p>
+                <p className="text-gray-400">{t("employees.noPendingCommissions")}</p>
               )}
             </div>
 
@@ -743,12 +760,12 @@ export default function EmployeesPage() {
               <table className="min-w-[620px] w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-app text-muted">
-                    <th className="px-4 py-3 font-semibold">Employee</th>
-                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">Deal</th>
-                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">Date</th>
-                    <th className="px-4 py-3 font-semibold">Amount</th>
-                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">Currency</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">{t("employees.thEmployee")}</th>
+                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">{t("employees.thDeal")}</th>
+                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">{t("employees.thDate")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("employees.thAmount")}</th>
+                    <th className="px-4 py-3 font-semibold hidden sm:table-cell">{t("employees.thCurrency")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("employees.thStatus")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -757,11 +774,17 @@ export default function EmployeesPage() {
                       <td className="px-4 py-3 text-app">{getEmployeeName(c.employee_id)}</td>
                       <td className="px-4 py-3 text-app hidden sm:table-cell">
                         {c.deal
-                          ? `${c.deal.car_label ?? "—"} – ${c.deal.client_name ?? ""}`
+                          ? (() => {
+                              const car = (c.deal.car_label ?? "").trim() || dash;
+                              const client = (c.deal.client_name ?? "").trim();
+                              return client
+                                ? t("employees.dealWithClient", { car, client })
+                                : car;
+                            })()
                           : c.deal_id}
                       </td>
-                      <td className="px-4 py-3 text-app hidden sm:table-cell">{formatDate(c.deal?.date ?? null)}</td>
-                      <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{formatMoney(c.amount, "DZD")}</td>
+                      <td className="px-4 py-3 text-app hidden sm:table-cell">{fmtDate(c.deal?.date ?? null)}</td>
+                      <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">{fmtMoney(c.amount, "DZD")}</td>
                       <td className="px-4 py-3 text-app hidden sm:table-cell">DZD</td>
                       <td className="px-4 py-3">
                         <span
@@ -769,7 +792,7 @@ export default function EmployeesPage() {
                             (c.status || "").toLowerCase() === "paid" ? "text-emerald-400" : "text-amber-400"
                           }
                         >
-                          {c.status ?? "—"}
+                          {investorReturnStatusLabel(t, c.status) || dash}
                         </span>
                       </td>
                     </tr>
@@ -777,7 +800,7 @@ export default function EmployeesPage() {
                 </tbody>
               </table>
               {filteredCommissions.length === 0 && (
-                <div className="p-6 text-center text-gray-400">No commissions match the filters.</div>
+                <div className="p-6 text-center text-gray-400">{t("employees.noCommissionsFilter")}</div>
               )}
             </div>
           </>
@@ -789,20 +812,20 @@ export default function EmployeesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setViewEmployee(null)} />
           <div className="relative max-w-lg rounded-lg border border-app surface p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-app">Employee details</h2>
+            <h2 className="text-lg font-semibold text-app">{t("employees.detailsTitle")}</h2>
             <dl className="mt-4 space-y-2 text-sm">
-              <div><dt className="text-gray-400">Name</dt><dd className="text-app">{viewEmployee.name ?? "—"}</dd></div>
-              <div><dt className="text-gray-400">Role</dt><dd className="text-app">{viewEmployee.role ?? "—"}</dd></div>
-              <div><dt className="text-gray-400">Phone</dt><dd className="text-app">{viewEmployee.phone ?? "—"}</dd></div>
-              <div><dt className="text-gray-400">Email</dt><dd className="text-app">{viewEmployee.email ?? "—"}</dd></div>
-              <div><dt className="text-gray-400">Base salary</dt><dd className="text-app">{formatMoney(viewEmployee.base_salary, viewEmployee.salary_currency ?? "DZD")}</dd></div>
-              <div><dt className="text-gray-400">Commission per deal</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_deal, "DZD")}</dd></div>
+              <div><dt className="text-gray-400">{t("employees.dtName")}</dt><dd className="text-app">{viewEmployee.name ?? dash}</dd></div>
+              <div><dt className="text-gray-400">{t("employees.dtRole")}</dt><dd className="text-app">{employeeRoleLabel(t, viewEmployee.role)}</dd></div>
+              <div><dt className="text-gray-400">{t("employees.dtPhone")}</dt><dd className="text-app">{viewEmployee.phone ?? dash}</dd></div>
+              <div><dt className="text-gray-400">{t("employees.dtEmail")}</dt><dd className="text-app">{viewEmployee.email ?? dash}</dd></div>
+              <div><dt className="text-gray-400">{t("employees.dtBaseSalary")}</dt><dd className="text-app">{fmtMoney(viewEmployee.base_salary, viewEmployee.salary_currency ?? "DZD")}</dd></div>
+              <div><dt className="text-gray-400">{t("employees.dtCommissionPerDeal")}</dt><dd className="text-app">{fmtMoney(viewEmployee.commission_per_deal, "DZD")}</dd></div>
               {viewEmployee.role === "Manager" && (
-                <div><dt className="text-gray-400">Commission (managed)</dt><dd className="text-app">{formatMoney(viewEmployee.commission_per_managed_deal, "DZD")}</dd></div>
+                <div><dt className="text-gray-400">{t("employees.dtCommissionManaged")}</dt><dd className="text-app">{fmtMoney(viewEmployee.commission_per_managed_deal, "DZD")}</dd></div>
               )}
-              <div><dt className="text-gray-400">Start date</dt><dd className="text-app">{formatDate(viewEmployee.start_date)}</dd></div>
-              <div><dt className="text-gray-400">Status</dt><dd className="text-app">{viewEmployee.status ?? "—"}</dd></div>
-              {viewEmployee.notes && <div><dt className="text-gray-400">Notes</dt><dd className="text-app whitespace-pre-wrap">{viewEmployee.notes}</dd></div>}
+              <div><dt className="text-gray-400">{t("employees.dtStartDate")}</dt><dd className="text-app">{fmtDate(viewEmployee.start_date)}</dd></div>
+              <div><dt className="text-gray-400">{t("employees.dtStatus")}</dt><dd className="text-app">{employeeStatusLabel(t, viewEmployee.status) || dash}</dd></div>
+              {viewEmployee.notes && <div><dt className="text-gray-400">{t("employees.dtNotes")}</dt><dd className="text-app whitespace-pre-wrap">{viewEmployee.notes}</dd></div>}
             </dl>
             <div className="mt-4 flex justify-end">
               <button
@@ -810,7 +833,7 @@ export default function EmployeesPage() {
                 onClick={() => setViewEmployee(null)}
                 className="rounded-md border border-app px-4 py-2 text-sm font-medium text-app"
               >
-                Close
+                {t("employees.modalClose")}
               </button>
             </div>
           </div>
@@ -827,19 +850,19 @@ export default function EmployeesPage() {
             }}
           />
           <div className="relative max-w-lg w-full max-h-[90vh] overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-app">Pay Salary</h2>
+            <h2 className="text-lg font-semibold text-app">{t("employees.paySalaryTitle")}</h2>
             <p className="mt-1 text-xs text-muted">
-              Pay base salary and pending commissions for this employee.
+              {t("employees.paySalarySubtitle")}
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 text-xs text-app">
               <div className="sm:col-span-2">
-                <div className="font-semibold text-app">Employee</div>
+                <div className="font-semibold text-app">{t("employees.employeeLabel")}</div>
                 <div className="mt-1 text-sm text-app">
-                  {paySalaryEmployee.name ?? "—"}
+                  {paySalaryEmployee.name ?? dash}
                 </div>
               </div>
               <label className="space-y-1">
-                <span className="font-semibold">Month</span>
+                <span className="font-semibold">{t("employees.lblMonth")}</span>
                 <select
                   value={paySalaryMonth}
                   onChange={(e) => setPaySalaryMonth(e.target.value)}
@@ -847,40 +870,40 @@ export default function EmployeesPage() {
                 >
                   {monthsForSelect.map((m) => (
                     <option key={m} value={m}>
-                      {m}
+                      {fmtMonth(m)}
                     </option>
                   ))}
                 </select>
               </label>
               <div className="space-y-1">
-                <span className="font-semibold">Base salary</span>
+                <span className="font-semibold">{t("employees.lblBaseSalary")}</span>
                 <div className="mt-1 text-sm text-app">
-                  {formatMoney(paySalaryEmployee.base_salary ?? 0, paySalaryEmployee.salary_currency ?? "DZD")}
+                  {fmtMoney(paySalaryEmployee.base_salary ?? 0, paySalaryEmployee.salary_currency ?? "DZD")}
                 </div>
               </div>
               <div className="space-y-1">
-                <span className="font-semibold">Currency</span>
+                <span className="font-semibold">{t("employees.lblCurrency")}</span>
                 <div className="mt-1 text-sm text-app">
                   {paySalaryEmployee.salary_currency ?? "DZD"}
                 </div>
               </div>
               <div className="space-y-1 sm:col-span-2">
-                <span className="font-semibold">Pending commissions this month</span>
+                <span className="font-semibold">{t("employees.lblPendingCommissionsMonth")}</span>
                 <div className="mt-1 text-sm text-app">
-                  {formatMoney(pendingForSalary, "DZD")}
+                  {fmtMoney(pendingForSalary, "DZD")}
                 </div>
               </div>
               <div className="space-y-1 sm:col-span-2">
-                <span className="font-semibold">Total to pay</span>
+                <span className="font-semibold">{t("employees.lblTotalToPay")}</span>
                 <div className="mt-1 text-sm text-[var(--color-accent)] font-semibold">
-                  {formatMoney(
+                  {fmtMoney(
                     (paySalaryEmployee.base_salary ?? 0) + pendingForSalary,
                     paySalaryEmployee.salary_currency ?? "DZD"
                   )}
                 </div>
               </div>
               <label className="space-y-1">
-                <span className="font-semibold">Pocket</span>
+                <span className="font-semibold">{t("employees.lblPocket")}</span>
                 <select
                   value={paySalaryPocket}
                   onChange={(e) => setPaySalaryPocket(e.target.value)}
@@ -888,13 +911,13 @@ export default function EmployeesPage() {
                 >
                   {COMMISSION_POCKETS.map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {pocketDetailLabel(t, p)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1">
-                <span className="font-semibold">Date</span>
+                <span className="font-semibold">{t("employees.lblDate")}</span>
                 <input
                   type="date"
                   value={paySalaryDate}
@@ -903,7 +926,7 @@ export default function EmployeesPage() {
                 />
               </label>
               <label className="space-y-1 sm:col-span-2">
-                <span className="font-semibold">Notes</span>
+                <span className="font-semibold">{t("employees.lblNotes")}</span>
                 <textarea
                   value={paySalaryNotes}
                   onChange={(e) => setPaySalaryNotes(e.target.value)}
@@ -921,7 +944,7 @@ export default function EmployeesPage() {
                 disabled={isSavingSalary}
                 className="rounded-md border border-app px-4 py-2 text-xs font-medium text-app disabled:opacity-50"
               >
-                Cancel
+                {t("employees.cancel")}
               </button>
               <button
                 type="button"
@@ -929,7 +952,7 @@ export default function EmployeesPage() {
                 disabled={isSavingSalary}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
               >
-                {isSavingSalary ? "Paying..." : "Pay Salary"}
+                {isSavingSalary ? t("employees.paying") : t("employees.paySalaryButton")}
               </button>
             </div>
           </div>
@@ -948,9 +971,9 @@ export default function EmployeesPage() {
             }}
           />
           <div className="relative w-full max-w-sm rounded-lg border border-app surface p-4 shadow-xl">
-            <h2 className="text-sm font-semibold text-app">Confirm commission payment</h2>
+            <h2 className="text-sm font-semibold text-app">{t("employees.confirmTitle")}</h2>
             <p className="mt-1 text-xs text-muted">
-              This will mark all pending commissions for this employee as paid and create a DZD salary movement.
+              {t("employees.confirmCommissionBody")}
             </p>
             {(() => {
               const emp = employees.find((e) => e.id === payAllEmployeeId);
@@ -958,18 +981,18 @@ export default function EmployeesPage() {
               return (
                 <div className="mt-3 space-y-3 text-xs text-app">
                   <div>
-                    <div className="text-gray-400">Employee</div>
-                    <div className="text-app font-medium">{emp?.name ?? "—"}</div>
+                    <div className="text-gray-400">{t("employees.employeeLabel")}</div>
+                    <div className="text-app font-medium">{emp?.name ?? dash}</div>
                   </div>
                   <div>
-                    <div className="text-gray-400">Total pending commissions</div>
+                    <div className="text-gray-400">{t("employees.totalPendingCommissions")}</div>
                     <div className="text-[var(--color-accent)] font-semibold">
-                      {formatMoney(total, "DZD")}
+                      {fmtMoney(total, "DZD")}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <label className="space-y-1">
-                      <span className="text-gray-400">Date</span>
+                      <span className="text-gray-400">{t("employees.lblDate")}</span>
                       <input
                         type="date"
                         value={payAllDate}
@@ -978,7 +1001,7 @@ export default function EmployeesPage() {
                       />
                     </label>
                     <label className="space-y-1">
-                      <span className="text-gray-400">Pocket</span>
+                      <span className="text-gray-400">{t("employees.lblPocket")}</span>
                       <select
                         value={payAllPocket}
                         onChange={(e) => setPayAllPocket(e.target.value)}
@@ -986,7 +1009,7 @@ export default function EmployeesPage() {
                       >
                         {COMMISSION_POCKETS.map((p) => (
                           <option key={p} value={p}>
-                            {p}
+                            {pocketDetailLabel(t, p)}
                           </option>
                         ))}
                       </select>
@@ -1007,7 +1030,7 @@ export default function EmployeesPage() {
                 className="rounded-md border border-app px-4 py-2 text-xs font-medium text-app disabled:opacity-50"
                 disabled={payAllSaving}
               >
-                Cancel
+                {t("employees.cancel")}
               </button>
               <button
                 type="button"
@@ -1015,7 +1038,7 @@ export default function EmployeesPage() {
                 disabled={payAllSaving}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
               >
-                {payAllSaving ? "Paying..." : "Confirm payment"}
+                {payAllSaving ? t("employees.paying") : t("employees.confirmPayment")}
               </button>
             </div>
           </div>
@@ -1027,10 +1050,10 @@ export default function EmployeesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={closeModal} />
           <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-app">{editingId ? "Edit Employee" : "Add Employee"}</h2>
+            <h2 className="text-lg font-semibold text-app">{editingId ? t("employees.editEmployee") : t("employees.addEmployee")}</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Full name</span>
+                <span className="font-semibold">{t("employees.lblFullName")}</span>
                 <input
                   type="text"
                   value={form.name}
@@ -1039,7 +1062,7 @@ export default function EmployeesPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Role</span>
+                <span className="font-semibold">{t("employees.lblRole")}</span>
                 <select
                   value={form.role}
                   onChange={(e) => updateField("role", e.target.value as (typeof ROLES)[number])}
@@ -1047,13 +1070,13 @@ export default function EmployeesPage() {
                 >
                   {ROLES.map((r) => (
                     <option key={r} value={r}>
-                      {r}
+                      {employeeRoleLabel(t, r)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Status</span>
+                <span className="font-semibold">{t("employees.lblStatus")}</span>
                 <select
                   value={form.status}
                   onChange={(e) => updateField("status", e.target.value as (typeof STATUSES)[number])}
@@ -1061,13 +1084,13 @@ export default function EmployeesPage() {
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>
-                      {s}
+                      {employeeStatusLabel(t, s)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Phone</span>
+                <span className="font-semibold">{t("employees.lblPhone")}</span>
                 <input
                   type="text"
                   value={form.phone}
@@ -1076,7 +1099,7 @@ export default function EmployeesPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Email</span>
+                <span className="font-semibold">{t("employees.lblEmail")}</span>
                 <input
                   type="email"
                   value={form.email}
@@ -1085,7 +1108,7 @@ export default function EmployeesPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Base salary (monthly)</span>
+                <span className="font-semibold">{t("employees.lblBaseSalaryMonthly")}</span>
                 <div className="flex gap-2">
                   <input
                     type="number"
@@ -1107,7 +1130,7 @@ export default function EmployeesPage() {
                 </div>
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Commission per deal as staff (DZD)</span>
+                <span className="font-semibold">{t("employees.lblCommissionPerDealStaff")}</span>
                 <input
                   type="number"
                   min="0"
@@ -1119,7 +1142,7 @@ export default function EmployeesPage() {
               </label>
               {form.role === "Manager" && (
                 <label className="space-y-1 text-xs text-app sm:col-span-2">
-                  <span className="font-semibold">Commission per deal as manager/fully managed (DZD)</span>
+                  <span className="font-semibold">{t("employees.lblCommissionPerDealManager")}</span>
                   <input
                     type="number"
                     min="0"
@@ -1131,7 +1154,7 @@ export default function EmployeesPage() {
                 </label>
               )}
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Start date</span>
+                <span className="font-semibold">{t("employees.lblStartDate")}</span>
                 <input
                   type="date"
                   value={form.startDate}
@@ -1140,7 +1163,7 @@ export default function EmployeesPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Notes</span>
+                <span className="font-semibold">{t("employees.lblNotes")}</span>
                 <textarea
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
@@ -1156,7 +1179,7 @@ export default function EmployeesPage() {
                 disabled={isSaving}
                 className="rounded-md border border-app px-4 py-2 text-sm font-medium text-app disabled:opacity-50"
               >
-                Cancel
+                {t("employees.cancel")}
               </button>
               <button
                 type="button"
@@ -1164,7 +1187,7 @@ export default function EmployeesPage() {
                 disabled={isSaving}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : "Save"}
+                {isSaving ? t("employees.saving") : t("employees.save")}
               </button>
             </div>
           </div>

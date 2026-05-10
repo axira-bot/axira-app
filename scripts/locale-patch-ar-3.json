@@ -1,0 +1,97 @@
+{
+  "dashboard": {
+    "brandTitle": "شركة Axira Trading FZE",
+    "rentDueDetail": "{description} · التاريخ: {date}"
+  },
+  "inventory": {
+    "ownerAxira": "أكسيرا"
+  },
+  "deals": {
+    "drivePlaceholder": "مثال: https://drive.google.com/...",
+    "googleDrive": "جوجل درايف"
+  },
+  "sidebar": {
+    "axira": "أكسيرا"
+  },
+  "login": {
+    "title": "شركة Axira Trading FZE",
+    "emailPlaceholder": "بريدك@شركتك.com"
+  },
+  "home": {
+    "title": "شركة Axira Trading FZE"
+  },
+  "meta": {
+    "defaultTitle": "شركة Axira Trading FZE"
+  },
+  "pages": {
+    "fallback": {
+      "title": "شركة Axira Trading FZE"
+    },
+    "root": {
+      "title": "شركة Axira Trading FZE"
+    }
+  },
+  "clients": {
+    "driveLinkPlaceholder": "مثال: https://drive.google.com/..."
+  },
+  "salesList": {
+    "specCondition": "الحالة",
+    "specOrigin": "المنشأ",
+    "specInterior": "الداخلية",
+    "specBodyIssues": "عيوب الهيكل",
+    "specFeatures": "المزايا",
+    "logistics": "اللوجستيك",
+    "purchaseOrderPrefix": "أمر الشراء:",
+    "noPurchaseOrderLinked": "لا يوجد أمر شراء مرتبط.",
+    "containerPrefix": "الحاوية:",
+    "notAssignedContainer": "غير معيّن لحاوية.",
+    "stockLocation": "موقع المخزون:",
+    "statusTimeline": "مسار الحالة",
+    "internalHeading": "داخلي",
+    "daysInInventoryCount": "أيام في المخزون: {n}",
+    "linkedDeals": "صفقات مرتبطة",
+    "openDeals": "صفقات مفتوحة",
+    "noLinkedDeals": "لا صفقات مرتبطة.",
+    "marginSourcing": "الهامش / التوريد",
+    "failedSaveNotes": "فشل الحفظ",
+    "clientFallback": "عميل"
+  },
+  "purchaseOrders": {
+    "detail": {
+      "loadFailed": "تعذّر تحميل أمر الشراء",
+      "backToList": "العودة لأوامر الشراء",
+      "title": "أمر شراء",
+      "notFound": "أمر الشراء غير موجود."
+    }
+  },
+  "reports": {
+    "exportFileInventory": "مخزون_{date}.xlsx",
+    "exportFileDeals": "صفقات_{from}_{to}.xlsx",
+    "exportFileCashFlow": "تدفق_نقدي_{from}_{to}.xlsx",
+    "companyLegalName": "شركة AXIRA TRADING FZE",
+    "dealSourceStock": "مخزون",
+    "dealSourcePreOrderCatalog": "طلب_مسبق_كتالوج",
+    "dealSourcePreOrderCustom": "طلب_مسبق_مخصص"
+  },
+  "debts": {
+    "pockets": {
+      "DubaiCash": "نقد دبي",
+      "DubaiBank": "بنك دبي",
+      "AlgeriaCash": "نقد الجزائر",
+      "AlgeriaBank": "بنك الجزائر",
+      "Qatar": "قطر",
+      "EURCash": "نقد يورو",
+      "USDCash": "نقد دولار"
+    }
+  },
+  "employees": {
+    "dealWithClient": "صفقة: {car} – {client}"
+  },
+  "containers": {
+    "googleDrive": "جوجل درايف",
+    "drivePlaceholder": "مثال: https://drive.google.com/..."
+  },
+  "transfers": {
+    "receiptRateLine": "١ {toCurrency} = {rate} دج"
+  }
+}

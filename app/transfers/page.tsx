@@ -8,6 +8,8 @@ import type { ReceiptPDFData } from "@/lib/pdf/pdfTypes";
 import { logActivity } from "@/lib/activity";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
+import { formatDateForLocale, formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
+import { pocketDetailLabel } from "@/lib/i18n/enumLabels";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import { PageContainer } from "@/components/ui/page-container";
 
@@ -111,46 +113,9 @@ const emptyExchangeForm = (): ExchangeFormState => ({
   notes: "",
 });
 
-function formatNumber(value: number): string {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function formatMoney(
-  value: number | null | undefined,
-  currency: string | null | undefined
-) {
-  const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
-  const c = currency || "";
-  return `${formatNumber(v)}${c ? ` ${c}` : ""}`;
-}
-
 function parseNum(s: string): number {
   const v = Number(s);
   return Number.isFinite(v) ? v : 0;
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatDateTime(value: string | null | undefined, time?: string): string {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  const dateStr = d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-  if (time) return `${dateStr} ${time}`;
-  return dateStr;
 }
 
 function generateConversionId(date: string, time: string): string {
@@ -172,8 +137,39 @@ function generateExchangeId(): string {
 }
 
 export default function TransfersPage() {
+  const { locale, t } = useI18n();
+  const dash = t("common.emiDash");
+  const fmtNum = (n: number, options?: Intl.NumberFormatOptions) =>
+    formatNumberForLocale(locale, n, { maximumFractionDigits: 0, ...options });
+  const fmtMoney = (value: number | null | undefined, currency: string | null | undefined) => {
+    const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
+    const c = currency || "";
+    return `${fmtNum(v)}${c ? ` ${c}` : ""}`;
+  };
+  const fmtMoneyFine = (value: number, currency: string) =>
+    `${formatNumberForLocale(locale, value, { maximumFractionDigits: 2 })} ${currency}`;
+  const fmtDate = (value: string | null | undefined) => {
+    if (!value) return dash;
+    const s = formatDateForLocale(locale, value, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    return s || dash;
+  };
+  const fmtDateTime = (value: string | null | undefined, time?: string) => {
+    const base = fmtDate(value);
+    if (base === dash) return dash;
+    return time ? `${base} ${time}` : base;
+  };
+  const fmtRate4 = (n: number) =>
+    formatNumberForLocale(locale, n, {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    });
+
   const { canDelete } = useAuth();
-  const [activeTab, setActiveTab] = useState<"Conversions" | "Cash Exchange">("Conversions");
+  const [activeTab, setActiveTab] = useState<"conversions" | "exchange">("conversions");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -214,7 +210,7 @@ export default function TransfersPage() {
     ]);
     if (cashError || movesError) {
       setError(
-        ["Failed to load data.", cashError?.message, movesError?.message]
+        [t("transfers.loadFailed"), cashError?.message, movesError?.message]
           .filter(Boolean)
           .join(" ")
       );
@@ -336,15 +332,15 @@ export default function TransfersPage() {
     const amountDzd = parseNum(conversionForm.amountDzd);
     const rate = parseNum(conversionForm.rate);
     if (!conversionForm.date || !conversionForm.depositedBy.trim()) {
-      setError("Date and Deposited by are required.");
+      setError(t("transfers.dateDepositedByRequired"));
       return;
     }
     if (amountDzd <= 0) {
-      setError("Amount DZD is required and must be greater than 0.");
+      setError(t("transfers.amountDzdRequired"));
       return;
     }
     if (rate <= 0) {
-      setError("Rate is required and must be greater than 0.");
+      setError(t("transfers.rateRequired"));
       return;
     }
     const txId = generateConversionId(conversionForm.date, conversionForm.time);
@@ -378,7 +374,7 @@ export default function TransfersPage() {
 
     const { data: inserted, error: insertErr } = await supabase.from("movements").insert(payload).select("id").single();
     if (insertErr) {
-      setError(["Failed to create conversion.", insertErr.message].join(" "));
+      setError([t("transfers.createConversionFailed"), insertErr.message].join(" "));
       setIsSaving(false);
       return;
     }
@@ -420,15 +416,24 @@ export default function TransfersPage() {
       receiptNumber: receiptId,
       date: conversionForm.date,
       time: conversionForm.time,
-      type: "Currency Conversion",
+      type: t("transfers.receiptTypeConversion"),
       rows: [
-        { label: "From Pocket", value: conversionForm.fromPocket },
-        { label: "Amount Sent (DZD)", value: `${Number(conversionForm.amountDzd).toLocaleString("en-US")} DZD`, highlight: true },
-        { label: "Exchange Rate", value: `1 ${conversionForm.toCurrency} = ${conversionForm.rate} DZD` },
-        { label: "Expected Amount", value: `${Number(expectedAmount).toLocaleString("en-US", { maximumFractionDigits: 2 })} ${conversionForm.toCurrency}`, highlight: true },
-        { label: "Receiving Pocket", value: conversionForm.receivingPocket },
-        { label: "Status", value: "Pending Approval" },
-        ...(conversionForm.depositedBy ? [{ label: "Deposited By", value: conversionForm.depositedBy }] : []),
+        { label: t("transfers.receiptFromPocket"), value: pocketDetailLabel(t, conversionForm.fromPocket) },
+        { label: t("transfers.receiptAmountSentDzd"), value: `${fmtNum(amountDzd)} DZD`, highlight: true },
+        {
+          label: t("transfers.receiptExchangeRate"),
+          value: t("transfers.receiptRateLine", { toCurrency: conversionForm.toCurrency, rate: conversionForm.rate }),
+        },
+        {
+          label: t("transfers.receiptExpectedAmount"),
+          value: fmtMoneyFine(expectedAmount, conversionForm.toCurrency),
+          highlight: true,
+        },
+        { label: t("transfers.receiptReceivingPocket"), value: pocketDetailLabel(t, conversionForm.receivingPocket) },
+        { label: t("transfers.receiptStatus"), value: t("transfers.receiptPendingApproval") },
+        ...(conversionForm.depositedBy
+          ? [{ label: t("transfers.receiptDepositedBy"), value: conversionForm.depositedBy }]
+          : []),
       ],
       notes: conversionForm.notes || undefined,
     });
@@ -448,7 +453,7 @@ export default function TransfersPage() {
     if (!approvalModal) return;
     const actualAmount = parseNum(approvalModal.actualAmount);
     if (actualAmount <= 0 || !approvalModal.dateReceived) {
-      setError("Actual amount and date received are required.");
+      setError(t("transfers.actualAmountDateRequired"));
       return;
     }
 
@@ -560,15 +565,15 @@ export default function TransfersPage() {
     const fromAmount = parseNum(exchangeForm.fromAmount);
     const toAmount = parseNum(exchangeForm.toAmount);
     if (!exchangeForm.date || !exchangeForm.doneBy.trim()) {
-      setError("Date and Done by are required.");
+      setError(t("transfers.dateDoneByRequired"));
       return;
     }
     if (fromAmount <= 0 || toAmount <= 0) {
-      setError("From amount and To amount must be greater than 0.");
+      setError(t("transfers.exchangeAmountsRequired"));
       return;
     }
     if (exchangeForm.fromPocket === exchangeForm.toPocket) {
-      setError("From and To pockets must be different.");
+      setError(t("transfers.pocketsMustDiffer"));
       return;
     }
 
@@ -611,13 +616,13 @@ export default function TransfersPage() {
 
     const { error: outErr } = await supabase.from("movements").insert(outPayload);
     if (outErr) {
-      setError(["Failed to create exchange.", outErr.message].join(" "));
+      setError([t("transfers.createExchangeFailed"), outErr.message].join(" "));
       setIsSaving(false);
       return;
     }
     const { error: inErr } = await supabase.from("movements").insert(inPayload);
     if (inErr) {
-      setError(["Out leg saved but In failed.", inErr.message].join(" "));
+      setError([t("transfers.exchangeInLegFailed"), inErr.message].join(" "));
       setIsSaving(false);
       await fetchAll();
       return;
@@ -665,13 +670,21 @@ export default function TransfersPage() {
     setPendingReceipt({
       receiptNumber: capturedRef,
       date: capturedForm.date,
-      type: "Cash Exchange",
+      type: t("transfers.receiptTypeExchange"),
       rows: [
-        { label: "From Pocket", value: capturedForm.fromPocket },
-        { label: "Amount Given", value: `${Number(capturedForm.fromAmount).toLocaleString("en-US")} ${capturedForm.fromCurrency}`, highlight: true },
-        { label: "To Pocket", value: capturedForm.toPocket },
-        { label: "Amount Received", value: `${Number(capturedForm.toAmount).toLocaleString("en-US")} ${capturedForm.toCurrency}`, highlight: true },
-        ...(capturedForm.doneBy ? [{ label: "Done By", value: capturedForm.doneBy }] : []),
+        { label: t("transfers.receiptFromPocket"), value: pocketDetailLabel(t, capturedForm.fromPocket) },
+        {
+          label: t("transfers.receiptAmountGiven"),
+          value: `${fmtNum(fromAmount)} ${capturedForm.fromCurrency}`,
+          highlight: true,
+        },
+        { label: t("transfers.receiptToPocket"), value: pocketDetailLabel(t, capturedForm.toPocket) },
+        {
+          label: t("transfers.receiptAmountReceived"),
+          value: `${fmtNum(toAmount)} ${capturedForm.toCurrency}`,
+          highlight: true,
+        },
+        ...(capturedForm.doneBy ? [{ label: t("transfers.receiptDoneBy"), value: capturedForm.doneBy }] : []),
       ],
       notes: capturedForm.notes || undefined,
       doneBy: capturedForm.doneBy || undefined,
@@ -681,9 +694,7 @@ export default function TransfersPage() {
   const handleDeleteConversion = async (ref: string) => {
     if (!canDelete) return;
     if (
-      !window.confirm(
-        "Delete this conversion? This cannot be undone."
-      )
+      !window.confirm(t("transfers.deleteConversionConfirm"))
     )
       return;
     setDeletingRef(ref);
@@ -701,9 +712,7 @@ export default function TransfersPage() {
   const handleDeleteExchange = async (ref: string) => {
     if (!canDelete) return;
     if (
-      !window.confirm(
-        "Delete this exchange? Both movements will be removed."
-      )
+      !window.confirm(t("transfers.deleteExchangeConfirm"))
     )
       return;
     setDeletingRef(ref);
@@ -724,10 +733,10 @@ export default function TransfersPage() {
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              Transfers
+              {t("pages.transfers.title")}
             </h1>
             <p className="text-sm font-medium text-danger">
-              Conversions &amp; cash exchange
+              {t("pages.transfers.subtitle")}
             </p>
           </div>
         </header>
@@ -736,28 +745,32 @@ export default function TransfersPage() {
         {dashboardAlert.count > 0 && (
           <section className="rounded-lg border border-red-800 bg-red-50 p-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-red-300">
-              Dashboard alert
+              {t("transfers.dashboardAlertTitle")}
             </h2>
             <p className="mt-2 text-app">
-              <span className="font-semibold">{dashboardAlert.count}</span> pending
-              conversion{dashboardAlert.count !== 1 ? "s" : ""} — total expected:{" "}
-              <span className="font-semibold text-[var(--color-accent)]">
-                {formatMoney(dashboardAlert.totalExpected, dashboardAlert.toCurrency)}
-              </span>
+              {t("transfers.pendingAlert", {
+                count: dashboardAlert.count,
+                total: fmtMoney(dashboardAlert.totalExpected, dashboardAlert.toCurrency),
+              })}
             </p>
           </section>
         )}
 
         <div className="flex flex-wrap gap-2 border-b border-default-200 pb-2">
-          {(["Conversions", "Cash Exchange"] as const).map((tab) => (
+          {(
+            [
+              { key: "conversions" as const, label: t("transfers.tabConversions") },
+              { key: "exchange" as const, label: t("transfers.tabExchange") },
+            ] as const
+          ).map((tab) => (
             <Button
-              key={tab}
+              key={tab.key}
               type="button"
               size="sm"
-              variant={activeTab === tab ? "primary" : "outline"}
-              onPress={() => setActiveTab(tab)}
+              variant={activeTab === tab.key ? "primary" : "outline"}
+              onPress={() => setActiveTab(tab.key)}
             >
-              {tab}
+              {tab.label}
             </Button>
           ))}
         </div>
@@ -770,7 +783,7 @@ export default function TransfersPage() {
           </Alert.Root>
         ) : null}
 
-        {activeTab === "Conversions" && (
+        {activeTab === "conversions" && (
           <>
             <div className="flex justify-end">
               <Button
@@ -783,7 +796,7 @@ export default function TransfersPage() {
                   setError(null);
                 }}
               >
-                Add Conversion
+                {t("transfers.addConversion")}
               </Button>
             </div>
 
@@ -791,21 +804,29 @@ export default function TransfersPage() {
               {pendingConversions.length > 0 && (
                 <div className="rounded-lg border border-app surface">
                   <h3 className="border-b border-app px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                    Pending conversions
+                    {t("transfers.pendingConversions")}
                   </h3>
                   <div className="responsive-table-wrap">
                     <table className="min-w-[620px] w-full text-left text-xs">
                       <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                         <tr>
-                          <th className="px-4 py-3">Transaction ID</th>
-                          <th className="px-4 py-3">Date</th>
-                          <th className="px-4 py-3 hidden sm:table-cell">Deposited by</th>
-                          <th className="px-4 py-3">Amount DZD</th>
-                          <th className="px-4 py-3 hidden sm:table-cell">Rate</th>
-                          <th className="px-4 py-3">Expected</th>
-                          <th className="px-4 py-3 hidden sm:table-cell">Receiving pocket</th>
-                          <th className="px-4 py-3 hidden sm:table-cell">Status</th>
-                          <th className="px-4 py-3">Actions</th>
+                          <th className="px-4 py-3">{t("transfers.thTransactionId")}</th>
+                          <th className="px-4 py-3">{t("transfers.thDate")}</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">
+                            {t("transfers.thDepositedBy")}
+                          </th>
+                          <th className="px-4 py-3">{t("transfers.thAmountDzd")}</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">
+                            {t("transfers.thRate")}
+                          </th>
+                          <th className="px-4 py-3">{t("transfers.thExpected")}</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">
+                            {t("transfers.thReceivingPocket")}
+                          </th>
+                          <th className="px-4 py-3 hidden sm:table-cell">
+                            {t("transfers.thStatus")}
+                          </th>
+                          <th className="px-4 py-3">{t("transfers.thActions")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -818,37 +839,41 @@ export default function TransfersPage() {
                               {ref}
                             </td>
                             <td className="px-4 py-3 text-app">
-                              {formatDateTime(movement.date, meta.time)}
+                              {fmtDateTime(movement.date, meta.time)}
                             </td>
                             <td className="px-4 py-3 text-app hidden sm:table-cell">
                               {meta.depositedBy}
                             </td>
                             <td className="px-4 py-3 text-app">
-                              {formatMoney(movement.amount, "DZD")}
+                              {fmtMoney(movement.amount, "DZD")}
                             </td>
                             <td className="px-4 py-3 text-app hidden sm:table-cell">
-                              {movement.rate}
+                              {movement.rate != null
+                                ? formatNumberForLocale(locale, Number(movement.rate), {
+                                    maximumFractionDigits: 6,
+                                  })
+                                : dash}
                             </td>
                             <td className="px-4 py-3 text-app">
-                              {formatMoney(meta.expectedAmount, meta.toCurrency)}
+                              {fmtMoney(meta.expectedAmount, meta.toCurrency)}
                             </td>
                             <td className="px-4 py-3 text-app hidden sm:table-cell">
-                              {meta.receivingPocket}
+                              {pocketDetailLabel(t, meta.receivingPocket)}
                             </td>
                             <td className="px-4 py-3 hidden sm:table-cell">
                               <span className="inline-flex rounded-full bg-red-900/60 px-2 py-0.5 text-[11px] font-semibold text-red-700">
-                                PENDING
+                                {t("transfers.statusPending")}
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              <RowActionsMenu label="Pending conversion actions">
+                              <RowActionsMenu label={t("transfers.pendingConversionActions")}>
                                 <button
                                   type="button"
                                   onClick={() => openApprovalModal(movement, meta)}
                                   disabled={approvingRef === ref}
                                   className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-default-700 hover:bg-default-100 disabled:opacity-50"
                                 >
-                                  Approve
+                                  {t("transfers.approve")}
                                 </button>
                                 {canDelete ? (
                                   <button
@@ -857,7 +882,7 @@ export default function TransfersPage() {
                                     disabled={deletingRef === ref}
                                     className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
                                   >
-                                    {deletingRef === ref ? "Deleting..." : "Delete"}
+                                    {deletingRef === ref ? t("transfers.deleting") : t("transfers.delete")}
                                   </button>
                                 ) : null}
                               </RowActionsMenu>
@@ -872,27 +897,35 @@ export default function TransfersPage() {
 
               <div className="rounded-lg border border-app surface">
                 <h3 className="border-b border-app px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                  Approved conversions
+                  {t("transfers.approvedConversions")}
                 </h3>
                 {approvedConversions.length === 0 ? (
                   <div className="p-4 text-sm text-muted">
-                    No approved conversions yet.
+                    {t("transfers.noApprovedConversions")}
                   </div>
                 ) : (
                   <div className="responsive-table-wrap">
                     <table className="min-w-[620px] w-full text-left text-xs">
                       <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                         <tr>
-                          <th className="px-4 py-3">Transaction ID</th>
-                          <th className="px-4 py-3">Date</th>
-                          <th className="px-4 py-3 hidden sm:table-cell">Deposited by</th>
-                          <th className="px-4 py-3 hidden sm:table-cell">From</th>
-                          <th className="px-4 py-3">Amount DZD</th>
-                          <th className="px-4 py-3 hidden sm:table-cell">Rate</th>
-                          <th className="px-4 py-3">Received</th>
-                          <th className="px-4 py-3 hidden sm:table-cell">Receiving pocket</th>
-                          <th className="px-4 py-3 hidden sm:table-cell">Status</th>
-                          <th className="px-4 py-3">Actions</th>
+                          <th className="px-4 py-3">{t("transfers.thTransactionId")}</th>
+                          <th className="px-4 py-3">{t("transfers.thDate")}</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">
+                            {t("transfers.thDepositedBy")}
+                          </th>
+                          <th className="px-4 py-3 hidden sm:table-cell">{t("transfers.thFrom")}</th>
+                          <th className="px-4 py-3">{t("transfers.thAmountDzd")}</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">
+                            {t("transfers.thRate")}
+                          </th>
+                          <th className="px-4 py-3">{t("transfers.thReceived")}</th>
+                          <th className="px-4 py-3 hidden sm:table-cell">
+                            {t("transfers.thReceivingPocket")}
+                          </th>
+                          <th className="px-4 py-3 hidden sm:table-cell">
+                            {t("transfers.thStatus")}
+                          </th>
+                          <th className="px-4 py-3">{t("transfers.thActions")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -905,11 +938,12 @@ export default function TransfersPage() {
                               {ref}
                             </td>
                             <td className="px-4 py-3 text-app">
-                              {formatDateTime(movement.date, meta.time)}
+                              {fmtDateTime(movement.date, meta.time)}
                               {meta.approvedAt && (
                                 <span className="ml-1 text-gray-400">
-                                  (approved{" "}
-                                  {formatDate(meta.approvedAt)})
+                                  {t("transfers.approvedAt", {
+                                    date: fmtDate(meta.approvedAt),
+                                  })}
                                 </span>
                               )}
                             </td>
@@ -917,38 +951,42 @@ export default function TransfersPage() {
                               {meta.depositedBy}
                             </td>
                             <td className="px-4 py-3 text-app hidden sm:table-cell">
-                              {movement.pocket}
+                              {pocketDetailLabel(t, movement.pocket)}
                             </td>
                             <td className="px-4 py-3 text-app">
-                              {formatMoney(movement.amount, "DZD")}
+                              {fmtMoney(movement.amount, "DZD")}
                             </td>
                             <td className="px-4 py-3 text-app hidden sm:table-cell">
-                              {movement.rate}
+                              {movement.rate != null
+                                ? formatNumberForLocale(locale, Number(movement.rate), {
+                                    maximumFractionDigits: 6,
+                                  })
+                                : dash}
                             </td>
                             <td className="px-4 py-3 text-app">
-                              {formatMoney(
+                              {fmtMoney(
                                 meta.actualAmount ?? meta.expectedAmount,
                                 meta.toCurrency
                               )}
                             </td>
                             <td className="px-4 py-3 text-app hidden sm:table-cell">
-                              {meta.receivingPocket}
+                              {pocketDetailLabel(t, meta.receivingPocket)}
                             </td>
                             <td className="px-4 py-3 hidden sm:table-cell">
                               <span className="inline-flex rounded-full bg-emerald-900/40 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">
-                                APPROVED
+                                {t("transfers.statusApproved")}
                               </span>
                             </td>
                             <td className="px-4 py-3">
                               {canDelete ? (
-                                <RowActionsMenu label="Approved conversion actions">
+                                <RowActionsMenu label={t("transfers.approvedConversionActions")}>
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteConversion(ref)}
                                     disabled={deletingRef === ref}
                                     className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
                                   >
-                                    {deletingRef === ref ? "Deleting..." : "Delete"}
+                                    {deletingRef === ref ? t("transfers.deleting") : t("transfers.delete")}
                                   </button>
                                 </RowActionsMenu>
                               ) : null}
@@ -964,7 +1002,7 @@ export default function TransfersPage() {
           </>
         )}
 
-        {activeTab === "Cash Exchange" && (
+        {activeTab === "exchange" && (
           <>
             <div className="flex justify-end">
               <Button
@@ -978,31 +1016,35 @@ export default function TransfersPage() {
                   setError(null);
                 }}
               >
-                Add Exchange
+                {t("transfers.addExchange")}
               </Button>
             </div>
             <div className="rounded-lg border border-app surface">
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
                   <Spinner size="md" color="danger" />
-                  <span className="text-sm">Loading exchanges…</span>
+                  <span className="text-sm">{t("transfers.loadingExchanges")}</span>
                 </div>
               ) : exchanges.length === 0 ? (
                 <div className="p-4 text-sm text-muted">
-                  No cash exchanges yet.
+                  {t("transfers.noExchanges")}
                 </div>
               ) : (
                 <div className="responsive-table-wrap">
                   <table className="min-w-[620px] w-full text-left text-xs">
                     <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                       <tr>
-                        <th className="px-4 py-3">Reference ID</th>
-                        <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3 hidden sm:table-cell">Done by</th>
-                        <th className="px-4 py-3">From</th>
-                        <th className="px-4 py-3">To</th>
-                        <th className="px-4 py-3 hidden sm:table-cell">Rate</th>
-                        <th className="px-4 py-3">Actions</th>
+                        <th className="px-4 py-3">{t("transfers.thReferenceId")}</th>
+                        <th className="px-4 py-3">{t("transfers.thDate")}</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">
+                          {t("transfers.thDoneBy")}
+                        </th>
+                        <th className="px-4 py-3">{t("transfers.thFrom")}</th>
+                        <th className="px-4 py-3">{t("transfers.thTo")}</th>
+                        <th className="px-4 py-3 hidden sm:table-cell">
+                          {t("transfers.thRate")}
+                        </th>
+                        <th className="px-4 py-3">{t("transfers.thActions")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1013,21 +1055,21 @@ export default function TransfersPage() {
                         const inLeg = ex.movements.find(
                           (m) => (m.type || "").toLowerCase() === "in"
                         );
-                        let doneBy = "-";
+                        let doneBy = dash;
                         if (outLeg?.description) {
                           try {
                             const parsed = JSON.parse(outLeg.description) as { doneBy?: string };
-                            doneBy = parsed.doneBy ?? "-";
+                            doneBy = parsed.doneBy?.trim() ? parsed.doneBy : dash;
                           } catch {
                             doneBy = outLeg.description;
                           }
                         }
                         const fromStr = outLeg
-                          ? `${formatMoney(outLeg.amount, outLeg.currency)} (${outLeg.pocket})`
-                          : "-";
+                          ? `${fmtMoney(outLeg.amount, outLeg.currency)} (${pocketDetailLabel(t, outLeg.pocket)})`
+                          : dash;
                         const toStr = inLeg
-                          ? `${formatMoney(inLeg.amount, inLeg.currency)} (${inLeg.pocket})`
-                          : "-";
+                          ? `${fmtMoney(inLeg.amount, inLeg.currency)} (${pocketDetailLabel(t, inLeg.pocket)})`
+                          : dash;
                         const rate = inLeg?.rate ?? 0;
                         return (
                           <tr
@@ -1038,7 +1080,7 @@ export default function TransfersPage() {
                               {ex.ref}
                             </td>
                             <td className="px-4 py-3 text-app">
-                              {formatDate(ex.date)}
+                              {fmtDate(ex.date)}
                             </td>
                             <td className="px-4 py-3 text-app hidden sm:table-cell">
                               {doneBy}
@@ -1050,18 +1092,18 @@ export default function TransfersPage() {
                               {toStr}
                             </td>
                             <td className="px-4 py-3 text-app hidden sm:table-cell">
-                              {rate.toFixed(4)}
+                              {rate > 0 ? fmtRate4(rate) : dash}
                             </td>
                             <td className="px-4 py-3">
                               {canDelete ? (
-                                <RowActionsMenu label="Exchange actions">
+                                <RowActionsMenu label={t("transfers.exchangeActions")}>
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteExchange(ex.ref)}
                                     disabled={deletingRef === ex.ref}
                                     className="w-full rounded-md px-2 py-1 text-left text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
                                   >
-                                    {deletingRef === ex.ref ? "Deleting..." : "Delete"}
+                                    {deletingRef === ex.ref ? t("transfers.deleting") : t("transfers.delete")}
                                   </button>
                                 </RowActionsMenu>
                               ) : null}
@@ -1089,10 +1131,10 @@ export default function TransfersPage() {
             <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
                 <div className="text-lg font-semibold text-app">
-                  Add Conversion
+                  {t("transfers.modalAddConversionTitle")}
                 </div>
                 <div className="text-xs text-muted">
-                  Cross-border: DZD deposited in Algeria, received in UAE.
+                  {t("transfers.modalAddConversionBlurb")}
                 </div>
               </div>
               <button
@@ -1101,12 +1143,12 @@ export default function TransfersPage() {
                 disabled={isSaving}
                 className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app disabled:opacity-50"
               >
-                Close
+                {t("transfers.close")}
               </button>
             </div>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Transaction ID (auto)</span>
+                <span className="font-semibold">{t("transfers.txIdAuto")}</span>
                 <input
                   type="text"
                   readOnly
@@ -1118,7 +1160,7 @@ export default function TransfersPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Date</span>
+                <span className="font-semibold">{t("transfers.date")}</span>
                 <input
                   type="date"
                   value={conversionForm.date}
@@ -1129,7 +1171,7 @@ export default function TransfersPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Time</span>
+                <span className="font-semibold">{t("transfers.time")}</span>
                 <input
                   type="time"
                   value={conversionForm.time}
@@ -1140,19 +1182,19 @@ export default function TransfersPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Deposited by (mandatory)</span>
+                <span className="font-semibold">{t("transfers.depositedByMandatory")}</span>
                 <input
                   type="text"
                   value={conversionForm.depositedBy}
                   onChange={(e) =>
                     updateConversionField("depositedBy", e.target.value)
                   }
-                  placeholder="Who gave the cash to the dealer"
+                  placeholder={t("transfers.depositedByPlaceholder")}
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">From pocket</span>
+                <span className="font-semibold">{t("transfers.fromPocket")}</span>
                 <select
                   value={conversionForm.fromPocket}
                   onChange={(e) =>
@@ -1165,13 +1207,13 @@ export default function TransfersPage() {
                 >
                   {CONVERSION_FROM_POCKETS.map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {pocketDetailLabel(t, p)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">From currency</span>
+                <span className="font-semibold">{t("transfers.fromCurrency")}</span>
                 <input
                   type="text"
                   readOnly
@@ -1180,7 +1222,7 @@ export default function TransfersPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Amount DZD (mandatory)</span>
+                <span className="font-semibold">{t("transfers.amountDzdMandatory")}</span>
                 <input
                   type="number"
                   value={conversionForm.amountDzd}
@@ -1191,7 +1233,7 @@ export default function TransfersPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">To currency</span>
+                <span className="font-semibold">{t("transfers.toCurrency")}</span>
                 <select
                   value={conversionForm.toCurrency}
                   onChange={(e) =>
@@ -1210,7 +1252,7 @@ export default function TransfersPage() {
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Rate (mandatory)</span>
+                <span className="font-semibold">{t("transfers.rateMandatory")}</span>
                 <input
                   type="number"
                   step="any"
@@ -1222,20 +1264,20 @@ export default function TransfersPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Expected amount to receive</span>
+                <span className="font-semibold">{t("transfers.expectedAmountReceive")}</span>
                 <input
                   type="text"
                   readOnly
                   value={
                     expectedAmount > 0
-                      ? formatMoney(expectedAmount, conversionForm.toCurrency)
-                      : "-"
+                      ? fmtMoney(expectedAmount, conversionForm.toCurrency)
+                      : dash
                   }
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-muted"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Receiving pocket</span>
+                <span className="font-semibold">{t("transfers.receivingPocket")}</span>
                 <select
                   value={conversionForm.receivingPocket}
                   onChange={(e) =>
@@ -1248,13 +1290,13 @@ export default function TransfersPage() {
                 >
                   {CONVERSION_RECEIVING_POCKETS.map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {pocketDetailLabel(t, p)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Notes</span>
+                <span className="font-semibold">{t("transfers.notes")}</span>
                 <input
                   type="text"
                   value={conversionForm.notes}
@@ -1272,7 +1314,7 @@ export default function TransfersPage() {
                 disabled={isSaving}
                 className="rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
-                Cancel
+                {t("transfers.cancel")}
               </button>
               <button
                 type="button"
@@ -1280,7 +1322,7 @@ export default function TransfersPage() {
                 disabled={isSaving}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : "Save"}
+                {isSaving ? t("transfers.saving") : t("transfers.save")}
               </button>
             </div>
           </div>
@@ -1295,7 +1337,9 @@ export default function TransfersPage() {
             {/* Header */}
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-brand-red">Receipt Ready</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-brand-red">
+                  {t("transfers.receiptReady")}
+                </p>
                 <p className="mt-0.5 text-sm font-bold text-primary">#{pendingReceipt.receiptNumber}</p>
               </div>
               <button
@@ -1315,19 +1359,19 @@ export default function TransfersPage() {
               ))}
             </div>
             {/* Saved confirmation */}
-            <p className="mb-4 text-center text-xs text-green-400">✓ Saved successfully</p>
+            <p className="mb-4 text-center text-xs text-green-400">{t("transfers.receiptSaved")}</p>
             {/* Buttons */}
             <div className="flex gap-2">
               <ReceiptDownloadButton
                 data={pendingReceipt}
-                label="⬇ Download Receipt"
+                label={t("transfers.downloadReceipt")}
                 className="flex-1 rounded border border-brand-red/50 bg-brand-red/10 py-2.5 text-xs font-semibold text-brand-red hover:bg-brand-red/20 transition-colors"
               />
               <button
                 onClick={() => setPendingReceipt(null)}
                 className="flex-1 rounded border border-app py-2.5 text-xs font-semibold text-secondary hover:bg-app transition-colors"
               >
-                Close
+                {t("transfers.close")}
               </button>
             </div>
           </div>
@@ -1343,24 +1387,23 @@ export default function TransfersPage() {
           />
           <div className="relative flex w-full max-w-md flex-col rounded-lg border border-app surface p-4 shadow-xl">
             <div className="border-b border-app pb-3 text-lg font-semibold text-app">
-              Approve conversion
+              {t("transfers.approveConversionTitle")}
             </div>
             <p className="mt-2 text-xs text-muted">
-              Confirm actual amount received and date. DZD will be deducted from
-              source pocket; received amount will be added to destination.
+              {t("transfers.approveConversionBlurb")}
             </p>
             <div className="mt-4 space-y-3">
               <label className="block text-xs text-app">
-                <span className="font-semibold">Receiving pocket (confirm)</span>
+                <span className="font-semibold">{t("transfers.receivingPocketConfirm")}</span>
                 <input
                   type="text"
                   readOnly
-                  value={approvalModal.meta.receivingPocket}
+                  value={pocketDetailLabel(t, approvalModal.meta.receivingPocket)}
                   className="mt-1 w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-muted"
                 />
               </label>
               <label className="block text-xs text-app">
-                <span className="font-semibold">Actual amount received</span>
+                <span className="font-semibold">{t("transfers.actualAmountReceived")}</span>
                 <input
                   type="number"
                   step="any"
@@ -1374,7 +1417,7 @@ export default function TransfersPage() {
                 />
               </label>
               <label className="block text-xs text-app">
-                <span className="font-semibold">Date received</span>
+                <span className="font-semibold">{t("transfers.dateReceived")}</span>
                 <input
                   type="date"
                   value={approvalModal.dateReceived}
@@ -1394,7 +1437,7 @@ export default function TransfersPage() {
                 disabled={isApprovalSaving}
                 className="rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
-                Cancel
+                {t("transfers.cancel")}
               </button>
               <button
                 type="button"
@@ -1402,7 +1445,7 @@ export default function TransfersPage() {
                 disabled={isApprovalSaving}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {isApprovalSaving ? "Confirming..." : "Confirm"}
+                {isApprovalSaving ? t("transfers.confirming") : t("transfers.confirm")}
               </button>
             </div>
           </div>
@@ -1420,10 +1463,10 @@ export default function TransfersPage() {
             <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
                 <div className="text-lg font-semibold text-app">
-                  Add Cash Exchange
+                  {t("transfers.modalAddExchangeTitle")}
                 </div>
                 <div className="text-xs text-muted">
-                  Physical cash exchange, single step.
+                  {t("transfers.modalAddExchangeBlurb")}
                 </div>
               </div>
               <button
@@ -1432,12 +1475,12 @@ export default function TransfersPage() {
                 disabled={isSaving}
                 className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app disabled:opacity-50"
               >
-                Close
+                {t("transfers.close")}
               </button>
             </div>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Reference ID (auto)</span>
+                <span className="font-semibold">{t("transfers.refIdAuto")}</span>
                 <input
                   type="text"
                   readOnly
@@ -1446,7 +1489,7 @@ export default function TransfersPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Date</span>
+                <span className="font-semibold">{t("transfers.date")}</span>
                 <input
                   type="date"
                   value={exchangeForm.date}
@@ -1457,19 +1500,19 @@ export default function TransfersPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Done by (mandatory)</span>
+                <span className="font-semibold">{t("transfers.doneByMandatory")}</span>
                 <input
                   type="text"
                   value={exchangeForm.doneBy}
                   onChange={(e) =>
                     updateExchangeField("doneBy", e.target.value)
                   }
-                  placeholder="Who did the exchange"
+                  placeholder={t("transfers.doneByPlaceholder")}
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">From currency</span>
+                <span className="font-semibold">{t("transfers.fromCurrency")}</span>
                 <select
                   value={exchangeForm.fromCurrency}
                   onChange={(e) =>
@@ -1488,7 +1531,7 @@ export default function TransfersPage() {
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">From amount</span>
+                <span className="font-semibold">{t("transfers.fromAmount")}</span>
                 <input
                   type="number"
                   value={exchangeForm.fromAmount}
@@ -1499,7 +1542,7 @@ export default function TransfersPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">From pocket</span>
+                <span className="font-semibold">{t("transfers.fromPocket")}</span>
                 <select
                   value={exchangeForm.fromPocket}
                   onChange={(e) =>
@@ -1512,13 +1555,13 @@ export default function TransfersPage() {
                 >
                   {POCKETS_ALL.map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {pocketDetailLabel(t, p)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">To currency</span>
+                <span className="font-semibold">{t("transfers.toCurrency")}</span>
                 <select
                   value={exchangeForm.toCurrency}
                   onChange={(e) =>
@@ -1539,7 +1582,7 @@ export default function TransfersPage() {
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">To amount</span>
+                <span className="font-semibold">{t("transfers.toAmount")}</span>
                 <input
                   type="number"
                   value={exchangeForm.toAmount}
@@ -1550,18 +1593,18 @@ export default function TransfersPage() {
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Rate (auto)</span>
+                <span className="font-semibold">{t("transfers.rateAuto")}</span>
                 <input
                   type="text"
                   readOnly
                   value={
-                    exchangeRate > 0 ? exchangeRate.toFixed(4) : "-"
+                    exchangeRate > 0 ? fmtRate4(exchangeRate) : dash
                   }
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-muted"
                 />
               </label>
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">To pocket</span>
+                <span className="font-semibold">{t("transfers.toPocket")}</span>
                 <select
                   value={exchangeForm.toPocket}
                   onChange={(e) =>
@@ -1575,14 +1618,14 @@ export default function TransfersPage() {
                   {POCKETS_ALL.filter((p) => p !== exchangeForm.fromPocket).map(
                     (p) => (
                       <option key={p} value={p}>
-                        {p}
+                        {pocketDetailLabel(t, p)}
                       </option>
                     )
                   )}
                 </select>
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Notes</span>
+                <span className="font-semibold">{t("transfers.notes")}</span>
                 <input
                   type="text"
                   value={exchangeForm.notes}
@@ -1600,7 +1643,7 @@ export default function TransfersPage() {
                 disabled={isSaving}
                 className="rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
-                Cancel
+                {t("transfers.cancel")}
               </button>
               <button
                 type="button"
@@ -1608,7 +1651,7 @@ export default function TransfersPage() {
                 disabled={isSaving}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : "Save"}
+                {isSaving ? t("transfers.saving") : t("transfers.save")}
               </button>
             </div>
           </div>

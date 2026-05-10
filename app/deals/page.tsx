@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Button, Chip, Spinner } from "@heroui/react";
 import type { Car, Deal } from "@/lib/types";
@@ -41,6 +41,8 @@ import {
   type PrefillMeta,
 } from "@/lib/contracts/modalFields";
 import { displayCarLifecycle } from "@/lib/cars/carLifecycleStatus";
+import { dealLifecycleLabel } from "@/lib/i18n/enumLabels";
+import { formatDateForLocale, formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
 
 const InvoiceDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.InvoiceDownloadButton),
@@ -172,14 +174,14 @@ const emptyForm = (): DealFormState => ({
   saleUsd: "",
 });
 
-function DriveLinkIcon({ href }: { href: string }) {
+function DriveLinkIcon({ href, title }: { href: string; title: string }) {
   if (!href?.trim()) return null;
   return (
     <a
       href={href.startsWith("http") ? href : `https://${href}`}
       target="_blank"
       rel="noopener noreferrer"
-      title="Open Google Drive folder"
+      title={title}
       className="inline-flex items-center justify-center rounded border border-app bg-white p-1.5 text-muted transition hover:border-[var(--color-accent)]/70 hover:text-app"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -193,29 +195,9 @@ function DriveLinkIcon({ href }: { href: string }) {
 
 type FilterTab = "All" | "Pending" | "Closed";
 
-function formatNumber(value: number): string {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function formatMoney(value: number | null | undefined, currency: string) {
-  const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
-  return `${formatNumber(v)} ${currency}`;
-}
-
 function parseNum(s: string): number {
   const v = Number(s);
   return Number.isFinite(v) ? v : 0;
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 function truncateMarker(s: string, max: number): string {
@@ -237,13 +219,6 @@ function carLabel(c: Car) {
   if (color) extras.push(color);
   if (!extras.length) return base;
   return `${base} · ${extras.join(" · ")}`;
-}
-
-function formatVinShort(vin: string | null | undefined): string {
-  const value = (vin || "").trim();
-  if (!value) return "VIN: pending";
-  const tail = value.slice(-6);
-  return `...${tail}`;
 }
 
 export default function DealsPage() {
@@ -341,6 +316,41 @@ export default function DealsPage() {
   const [copiedVinDealId, setCopiedVinDealId] = useState<string | null>(null);
   const isPrivilegedRole = ["owner", "manager", "admin", "super_admin"].includes((role || "").toLowerCase());
 
+  const { t, locale } = useI18n();
+  const fmtNum = useCallback(
+    (n: number, o?: Intl.NumberFormatOptions) =>
+      formatNumberForLocale(locale, n, { maximumFractionDigits: 0, ...o }),
+    [locale]
+  );
+  const fmtMoney = useCallback(
+    (v: number | null | undefined, currency: string) =>
+      `${fmtNum(typeof v === "number" && !Number.isNaN(v) ? v : 0)} ${currency}`,
+    [fmtNum]
+  );
+  const fmtDate = useCallback(
+    (value: string | null | undefined) => {
+      if (!value) return t("common.emiDash");
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return t("common.emiDash");
+      return formatDateForLocale(locale, value, { day: "2-digit", month: "short", year: "numeric" });
+    },
+    [locale, t]
+  );
+  const vinShortUi = useCallback(
+    (vin: string | null | undefined) => {
+      const value = (vin || "").trim();
+      if (!value) return t("deals.vinPending");
+      const tail = value.slice(-6);
+      return t("deals.vinShort", { tail });
+    },
+    [t]
+  );
+  const filterTabLabel = useCallback(
+    (tab: FilterTab) =>
+      tab === "All" ? t("deals.filterTabAll") : tab === "Pending" ? t("deals.filterTabPending") : t("deals.filterTabClosed"),
+    [t]
+  );
+
   const fetchAll = async () => {
     setIsLoading(true);
     setError(null);
@@ -363,7 +373,7 @@ export default function DealsPage() {
     if (carsError || dealsError) {
       setError(
         [
-          "Failed to load deals data.",
+          t("deals.loadFailed"),
           carsError?.message,
           dealsError?.message,
         ]
@@ -417,8 +427,8 @@ export default function DealsPage() {
       setError((prev) =>
         [
           prev,
-          clientsError?.message ? `Clients: ${clientsError.message}` : null,
-          employeesError?.message ? `Employees: ${employeesError.message}` : null,
+          clientsError?.message ? t("deals.loadClientsErr", { message: clientsError.message }) : null,
+          employeesError?.message ? t("deals.loadEmployeesErr", { message: employeesError.message }) : null,
         ]
           .filter(Boolean)
           .join(" ")
@@ -434,16 +444,16 @@ export default function DealsPage() {
 
   const saveDummyDoc = async () => {
     if (!dummyForm.clientName.trim()) {
-      setDummyError("Client name is required.");
+      setDummyError(t("deals.dummyClientNameRequired"));
       return;
     }
     if (!dummyForm.carBrand.trim() || !dummyForm.carModel.trim()) {
-      setDummyError("Car brand and model are required.");
+      setDummyError(t("deals.dummyCarRequired"));
       return;
     }
     const amountUsd = parseNum(dummyForm.amountUsd);
     if (amountUsd <= 0) {
-      setDummyError("Amount USD must be greater than zero.");
+      setDummyError(t("deals.dummyAmountRequired"));
       return;
     }
     setDummySaving(true);
@@ -472,7 +482,7 @@ export default function DealsPage() {
     });
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setDummyError(payload.error || `Failed to ${editing ? "update" : "save"} dummy document.`);
+      setDummyError(payload.error || (editing ? t("deals.dummyUpdateFailed") : t("deals.dummyCreateFailed")));
       setDummySaving(false);
       return;
     }
@@ -545,12 +555,12 @@ export default function DealsPage() {
 
   const deleteDummyDoc = async (id: string) => {
     if (!canDelete) return;
-    if (!window.confirm("Delete this dummy document?")) return;
+    if (!window.confirm(t("deals.dummyDeleteConfirm"))) return;
     setDummyError(null);
     const res = await fetch(`/api/deals/dummy-docs?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setDummyError(payload.error || "Failed to delete dummy document.");
+      setDummyError(payload.error || t("deals.dummyDeleteFailed"));
       return;
     }
     setDummyDocs((prev) => prev.filter((x) => x.id !== id));
@@ -695,21 +705,19 @@ export default function DealsPage() {
 
     const car = cars.find((c) => c.id === carIdParam);
     if (!car) {
-      setError("Car not found or unavailable.");
+      setError(t("deals.carNotFound"));
       return;
     }
     if (car.stock_type === "supplier" && !car.purchase_order_id) {
-      setError(
-        "Supplier listings cannot be used for deals. Convert the car to AXIRA Stock in Inventory first, then create the deal."
-      );
+      setError(t("deals.supplierListingNoDeal"));
       return;
     }
     if (!isPoCarEligibleForDeal(car)) {
-      setError("This purchase-order car is not eligible for deals under current PO setting.");
+      setError(t("deals.poCarNotEligible"));
       return;
     }
     if (usedCarIds.has(car.id)) {
-      setError("This car already has a deal. Open the existing deal or choose another car.");
+      setError(t("deals.carAlreadyHasDeal"));
       return;
     }
 
@@ -727,7 +735,7 @@ export default function DealsPage() {
     );
     setIsModalOpen(true);
     setError(null);
-  }, [isLoading, cars, searchParams, router, usedCarIds, poDealEligibility]);
+  }, [isLoading, cars, searchParams, router, usedCarIds, poDealEligibility, t]);
 
   useEffect(() => {
     if (searchParams.get("preorder") !== "1") {
@@ -758,7 +766,7 @@ export default function DealsPage() {
         if (invId) {
           const car = cars.find((c) => c.id === invId);
           if (!car) {
-            setError("Car not found for pre-order.");
+            setError(t("deals.carNotFoundPreorder"));
             return;
           }
           const cost = carPurchaseToCostFact(car, rt);
@@ -809,7 +817,7 @@ export default function DealsPage() {
           const res = await fetch(`/api/sales-list/catalog/${encodeURIComponent(catId)}`, { cache: "no-store" });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            setError(data.error || "Catalog entry not found.");
+            setError(data.error || t("deals.catalogNotFound"));
             return;
           }
           const row = data.row as Record<string, unknown>;
@@ -842,10 +850,10 @@ export default function DealsPage() {
           setError(null);
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to open pre-order");
+        setError(e instanceof Error ? e.message : t("deals.preorderOpenFailed"));
       }
     })();
-  }, [isLoading, cars, searchParams, router, rates, isStaff]);
+  }, [isLoading, cars, searchParams, router, rates, isStaff, t]);
 
   const availableCars = useMemo(() => {
     return cars.filter((c) => {
@@ -998,7 +1006,7 @@ export default function DealsPage() {
     const name = quickAddName.trim();
     const phone = quickAddPhone.trim();
     if (!name || !phone) {
-      setError("Name and phone are required for new client.");
+      setError(t("deals.quickClientRequired"));
       return;
     }
     setQuickAddSaving(true);
@@ -1028,16 +1036,16 @@ export default function DealsPage() {
   };
 
   const validate = () => {
-    if (!form.clientId.trim()) return "Client is required.";
+    if (!form.clientId.trim()) return t("deals.valClientRequired");
     if (!clients.some((c) => c.id === form.clientId)) {
-      return "Select a valid client from the list, or add a new client before saving.";
+      return t("deals.valClientValid");
     }
-    if (!form.date) return "Date is required.";
-    if (!form.carId) return "Car is required.";
-    if (!form.saleDzd.trim()) return "Sale Price DZD is required.";
+    if (!form.date) return t("deals.valDateRequired");
+    if (!form.carId) return t("deals.valCarRequired");
+    if (!form.saleDzd.trim()) return t("deals.valSaleDzdRequired");
     if (!isStaff) {
-      if (!form.rate.trim()) return "Rate at Deal is required.";
-      if (dealRateDzdPerUsd <= 0) return "Rate at Deal must be > 0.";
+      if (!form.rate.trim()) return t("deals.valRateRequired");
+      if (dealRateDzdPerUsd <= 0) return t("deals.valRatePositive");
     }
     return null;
   };
@@ -1049,9 +1057,7 @@ export default function DealsPage() {
       return;
     }
     if (amountReceivedDzd > saleDzd) {
-      setError(
-        `Collected amount cannot exceed sale price of ${formatNumber(saleDzd)} DZD`
-      );
+      setError(t("deals.collectedExceedsSale", { amount: fmtNum(saleDzd) }));
       return;
     }
 
@@ -1124,7 +1130,7 @@ export default function DealsPage() {
           })
         : null;
       const updateError = isStaff
-        ? (!staffRes || !staffRes.ok ? new Error((await staffRes?.json().catch(() => ({})))?.error || "Failed to update deal") : null)
+        ? (!staffRes || !staffRes.ok ? new Error((await staffRes?.json().catch(() => ({})))?.error || t("deals.failedUpdateDeal")) : null)
         : (await supabase.from("deals").update(payload).eq("id", editingDealId)).error;
       if (updateError) {
         const updateDetails =
@@ -1139,7 +1145,7 @@ export default function DealsPage() {
         console.log("Supabase deal update error:", updateError);
         setError(
           [
-            "Failed to update deal.",
+            t("deals.failedUpdateDealSave"),
             updateError.message,
             updateDetails,
             updateHint,
@@ -1161,7 +1167,7 @@ export default function DealsPage() {
         })) as DealExpenseRow[];
         setDealExpensesByDealId((p) => ({ ...p, [editingDealId]: localRows }));
       } catch (syncErr) {
-        setError(syncErr instanceof Error ? syncErr.message : "Deal saved but expenses failed to sync.");
+        setError(syncErr instanceof Error ? syncErr.message : t("deals.dealSavedExpensesSyncFailed"));
         setIsSaving(false);
         return;
       }
@@ -1302,7 +1308,7 @@ export default function DealsPage() {
         : null;
       const inserted = isStaff ? insertedPayload?.row : directInsert?.data;
       const insertError = isStaff
-        ? (!insertedRes || !insertedRes.ok ? new Error(insertedPayload?.error || "Failed to create deal") : null)
+        ? (!insertedRes || !insertedRes.ok ? new Error(insertedPayload?.error || t("deals.failedCreateDeal")) : null)
         : directInsert?.error ?? null;
       if (insertError) {
         const insertDetails =
@@ -1317,7 +1323,7 @@ export default function DealsPage() {
         console.log("Supabase deal insert error:", insertError);
         setError(
           [
-            "Failed to add deal.",
+            t("deals.failedAddDeal"),
             insertError.message,
             insertDetails,
             insertHint,
@@ -1342,7 +1348,7 @@ export default function DealsPage() {
         })) as DealExpenseRow[];
         setDealExpensesByDealId((p) => ({ ...p, [dealId]: localRows }));
       } catch (syncErr) {
-        setError(syncErr instanceof Error ? syncErr.message : "Deal created but expenses failed to sync.");
+        setError(syncErr instanceof Error ? syncErr.message : t("deals.dealCreatedExpensesSyncFailed"));
         setIsSaving(false);
         return;
       }
@@ -1381,7 +1387,7 @@ export default function DealsPage() {
         console.log("Supabase car status update error:", carUpdateError);
         setError(
           [
-            "Deal saved, but failed to mark car as sold.",
+            t("deals.dealSavedCarSoldFailed"),
             carUpdateError.message,
             carUpdateError.details,
             carUpdateError.hint,
@@ -1517,7 +1523,7 @@ export default function DealsPage() {
 
   const handleDelete = async (deal: Deal) => {
     if (!canDelete) return;
-    if (!window.confirm("Delete this deal? This cannot be undone.")) return;
+    if (!window.confirm(t("deals.deleteDealConfirm"))) return;
     setIsDeletingId(deal.id);
     setError(null);
 
@@ -1527,7 +1533,7 @@ export default function DealsPage() {
       .select("id, type, amount, currency, pocket")
       .eq("deal_id", deal.id);
     if (movementsErr) {
-      setError(["Failed to fetch deal movements.", movementsErr.message].filter(Boolean).join(" "));
+      setError([t("deals.failedFetchMovementsPrefix"), movementsErr.message].filter(Boolean).join(" "));
       setIsDeletingId(null);
       return;
     }
@@ -1547,7 +1553,7 @@ export default function DealsPage() {
         .eq("currency", currency)
         .maybeSingle();
       if (posErr) {
-        setError(["Failed to fetch cash position for reversal.", posErr.message].filter(Boolean).join(" "));
+        setError([t("deals.failedFetchCashReversal"), posErr.message].filter(Boolean).join(" "));
         setIsDeletingId(null);
         return;
       }
@@ -1563,7 +1569,7 @@ export default function DealsPage() {
         .update({ amount: newAmount })
         .eq("id", (pos as { id: string }).id);
       if (updateErr) {
-        setError(["Failed to reverse movement on cash position.", updateErr.message].filter(Boolean).join(" "));
+        setError([t("deals.failedReverseMovement"), updateErr.message].filter(Boolean).join(" "));
         setIsDeletingId(null);
         return;
       }
@@ -1572,13 +1578,13 @@ export default function DealsPage() {
     // Step 3: Only after all reversals succeeded — delete movements, payments, then deal
     const { error: delMovErr } = await supabase.from("movements").delete().eq("deal_id", deal.id);
     if (delMovErr) {
-      setError(["Failed to delete deal movements.", delMovErr.message].filter(Boolean).join(" "));
+      setError([t("deals.failedDeleteMovements"), delMovErr.message].filter(Boolean).join(" "));
       setIsDeletingId(null);
       return;
     }
     const { error: delPayErr } = await supabase.from("payments").delete().eq("deal_id", deal.id);
     if (delPayErr) {
-      setError(["Failed to delete deal payments.", delPayErr.message].filter(Boolean).join(" "));
+      setError([t("deals.failedDeletePayments"), delPayErr.message].filter(Boolean).join(" "));
       setIsDeletingId(null);
       return;
     }
@@ -1588,7 +1594,7 @@ export default function DealsPage() {
       // eslint-disable-next-line no-console
       console.log("Supabase deal delete error:", deleteError);
       setError(
-        ["Failed to delete deal.", deleteError.message, deleteError.details, deleteError.hint]
+        [t("deals.failedDeleteDeal"), deleteError.message, deleteError.details, deleteError.hint]
           .filter(Boolean)
           .join(" ")
       );
@@ -1639,7 +1645,7 @@ export default function DealsPage() {
     if (pError) {
       setPaymentsError(
         [
-          "Could not load payment history (table might not exist yet).",
+          t("deals.paymentsTableMissing"),
           pError.message,
         ]
           .filter(Boolean)
@@ -1744,7 +1750,7 @@ export default function DealsPage() {
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || "Failed to load prefill data");
+      if (!res.ok) throw new Error(json?.error || t("deals.failedPrefill"));
       setPreGenMode(mode);
       setPreGenValues({ ...DEFAULT_MODAL_VALUES, ...(json.values || {}) });
       setPreGenMeta(
@@ -1753,7 +1759,7 @@ export default function DealsPage() {
       setPreGenErrors({});
       setShowPreGenModal(true);
     } catch (e) {
-      setPaymentsError(e instanceof Error ? e.message : "Failed to open pre-generation modal");
+      setPaymentsError(e instanceof Error ? e.message : t("deals.failedOpenPreGen"));
     } finally {
       setPreGenLoading(false);
     }
@@ -1789,15 +1795,15 @@ export default function DealsPage() {
           );
           setPreGenErrors(serverErrors);
         }
-        throw new Error(j?.error || "Failed to generate document");
+        throw new Error(j?.error || t("deals.failedGenerateDoc"));
       }
       await downloadBlobResponse(res);
       await refetchGeneratedDocuments(viewDeal.id);
       await fetchAll();
       setShowPreGenModal(false);
-      setSuccessMessage(preGenMode === "agreement" ? "Contract generated and data saved" : "Receipt generated and data saved");
+      setSuccessMessage(preGenMode === "agreement" ? t("deals.successAgreement") : t("deals.successReceipt"));
     } catch (e) {
-      setPaymentsError(e instanceof Error ? e.message : "Failed to generate document");
+      setPaymentsError(e instanceof Error ? e.message : t("deals.failedGenerateDoc"));
     } finally {
       setIsGeneratingAgreement(false);
       setIsGeneratingReceipt(false);
@@ -1814,10 +1820,10 @@ export default function DealsPage() {
         body: JSON.stringify({ generated_document_id: id }),
       });
       const j = await res.json().catch(() => ({}));
-      if (!res.ok || !j?.url) throw new Error(j?.error || "Failed to get download URL");
+      if (!res.ok || !j?.url) throw new Error(j?.error || t("deals.failedDownloadDoc"));
       window.open(j.url as string, "_blank", "noopener,noreferrer");
     } catch (e) {
-      setPaymentsError(e instanceof Error ? e.message : "Failed to download document");
+      setPaymentsError(e instanceof Error ? e.message : t("deals.failedDownloadDocGeneric"));
     } finally {
       setDownloadingDocId(null);
     }
@@ -1828,14 +1834,12 @@ export default function DealsPage() {
 
     const amount = parseNum(newPaymentAmount);
     if (amount <= 0) {
-      setPaymentsError("Payment amount must be greater than 0.");
+      setPaymentsError(t("deals.paymentAmountPositive"));
       return;
     }
     const pendingDzd = viewDeal.pending_dzd ?? 0;
     if (amount > pendingDzd) {
-      setPaymentsError(
-        `Payment exceeds remaining balance. Maximum: ${formatNumber(pendingDzd)} DZD`
-      );
+      setPaymentsError(t("deals.paymentExceedsPending", { amount: fmtNum(pendingDzd) }));
       return;
     }
 
@@ -1882,7 +1886,7 @@ export default function DealsPage() {
       console.log("Supabase add payment error:", paymentError);
       setPaymentsError(
         [
-          "Failed to add payment.",
+          t("deals.failedAddPayment"),
           paymentError.message,
           paymentError.details,
           paymentError.hint,
@@ -1913,7 +1917,7 @@ export default function DealsPage() {
       console.log("Supabase update deal collected/pending error:", dealUpdateError);
       setPaymentsError(
         [
-          "Payment recorded, but failed to update deal balances.",
+          t("deals.dealBalancesUpdateFailed"),
           dealUpdateError.message,
           dealUpdateError.details,
           dealUpdateError.hint,
@@ -1946,7 +1950,7 @@ export default function DealsPage() {
       console.log("Supabase client payment movement insert error:", movementError);
       setPaymentsError(
         [
-          "Payment saved, but failed to create client payment movement.",
+          t("deals.paymentMovementFailed"),
           movementError.message,
           movementError.details,
           movementError.hint,
@@ -1959,7 +1963,7 @@ export default function DealsPage() {
         action: "paid",
         entity: "payment",
         entity_id: (insertedPayment as DealPayment).id,
-        description: `Payment added – ${formatNumber(amount)} DZD – ${viewDeal.client_name ?? ""} – ${viewDeal.car_label ?? ""}`.trim(),
+        description: `Payment added – ${fmtNum(amount)} DZD – ${viewDeal.client_name ?? ""} – ${viewDeal.car_label ?? ""}`.trim(),
         amount,
         currency: "DZD",
       });
@@ -1981,7 +1985,7 @@ export default function DealsPage() {
       console.log("Supabase fetch Algeria Cash pocket error:", pocketFetchError);
       setPaymentsError(
         [
-          "Payment saved, but failed to fetch Algeria Cash pocket.",
+          t("deals.paymentSavedPocketFetchFailed"),
           pocketFetchError.message,
           pocketFetchError.details,
           pocketFetchError.hint,
@@ -2003,7 +2007,7 @@ export default function DealsPage() {
         console.log("Supabase update Algeria Cash pocket error:", pocketUpdateError);
         setPaymentsError(
           [
-            "Payment saved, but failed to update Algeria Cash balance.",
+            t("deals.paymentSavedPocketUpdateFailed"),
             pocketUpdateError.message,
             pocketUpdateError.details,
             pocketUpdateError.hint,
@@ -2036,7 +2040,7 @@ export default function DealsPage() {
     if (!viewDeal) return;
     const amount = paymentAmountDzd(payment);
     if (amount <= 0) return;
-    if (!window.confirm("Remove this payment? Deal balances will be updated and the payment movement reversed.")) return;
+    if (!window.confirm(t("deals.removePaymentConfirm"))) return;
     setDeletingPaymentId(payment.id);
     setPaymentsError(null);
 
@@ -2057,7 +2061,7 @@ export default function DealsPage() {
       .eq("currency", "DZD")
       .maybeSingle();
     if (pocketErr || !algeriaPocket) {
-      setPaymentsError("Could not load Algeria Cash position to reverse payment.");
+      setPaymentsError(t("deals.reversePaymentCashFailed"));
       setDeletingPaymentId(null);
       return;
     }
@@ -2116,7 +2120,7 @@ export default function DealsPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setPaymentsError(data.error || "Failed to update lifecycle.");
+      setPaymentsError(data.error || t("deals.lifecycleUpdateFailed"));
       setLifecycleSaving(false);
       return;
     }
@@ -2137,11 +2141,11 @@ export default function DealsPage() {
       <PageContainer size="xl">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Deals</h1>
-            <p className="text-sm font-medium text-danger">Sales & Profit</p>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("deals.title")}</h1>
+            <p className="text-sm font-medium text-danger">{t("deals.headerSubtitle")}</p>
           </div>
           {isInvestorReadOnly ? (
-            <p className="text-sm text-default-500">You have view-only access to deals.</p>
+            <p className="text-sm text-default-500">{t("deals.viewOnlyDeals")}</p>
           ) : (
           <div className="flex flex-wrap gap-2">
             <Button
@@ -2155,7 +2159,7 @@ export default function DealsPage() {
                 setIsPreorderModalOpen(true);
               }}
             >
-              Add Pre-Order
+              {t("deals.addPreorder")}
             </Button>
             <Button
               type="button"
@@ -2166,10 +2170,10 @@ export default function DealsPage() {
                 setIsDummyDocsOpen(true);
               }}
             >
-              Dummy Docs
+              {t("deals.dummyDocs")}
             </Button>
             <Button type="button" variant="primary" size="sm" onPress={openAddModal}>
-              Add Deal
+              {t("deals.addDeal")}
             </Button>
           </div>
           )}
@@ -2184,15 +2188,15 @@ export default function DealsPage() {
               variant={activeTab === tab ? "primary" : "outline"}
               onPress={() => setActiveTab(tab)}
             >
-              {tab}
+              {filterTabLabel(tab)}
             </Button>
           ))}
         </div>
         {(searchParams.get("clientId") || searchParams.get("clientName")) && (
           <div className="flex items-center gap-2 text-xs text-muted">
-            <span>Filtered by client</span>
+            <span>{t("deals.filteredByClient")}</span>
             <Button type="button" variant="outline" size="sm" onPress={() => router.replace("/deals")}>
-              Clear filter
+              {t("deals.clearFilter")}
             </Button>
           </div>
         )}
@@ -2203,18 +2207,18 @@ export default function DealsPage() {
               type="text"
               value={customerSearchInput}
               onChange={(e) => setCustomerSearchInput(e.target.value)}
-              placeholder="Search customer name, passport, or phone"
+              placeholder={t("deals.searchPlaceholder")}
               className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app md:col-span-9"
             />
             <div className="text-xs font-semibold text-muted md:col-span-3 md:text-right">
-              Results: <span className="text-app">{filteredDeals.length}</span>
+              {t("deals.resultsWithCount", { count: filteredDeals.length })}
             </div>
           </div>
         </div>
 
         {!isStaff && pendingCompletionCount > 0 && (
           <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            Pending Completion queue: <strong>{pendingCompletionCount}</strong> deal(s) need manager internal completion.
+            {t("deals.pendingCompletionBanner", { count: pendingCompletionCount })}
           </div>
         )}
 
@@ -2237,30 +2241,30 @@ export default function DealsPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
               <Spinner size="md" color="danger" />
-              <span className="text-sm">Loading deals…</span>
+              <span className="text-sm">{t("deals.loadingDeals")}</span>
             </div>
           ) : filteredDeals.length === 0 ? (
-            <div className="p-4 text-sm text-muted">No deals found.</div>
+            <div className="p-4 text-sm text-muted">{t("deals.noDealsFound")}</div>
           ) : (
             <>
             <div className="responsive-table-wrap">
               <table className="min-w-[620px] w-full text-left text-xs">
                 <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
-                    <th className="px-4 py-3">Client</th>
-                    <th className="px-4 py-3">Car</th>
-                    <th className="px-4 py-3">VIN</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Sale DZD</th>
-                    {!isStaff && <th className="px-4 py-3 hidden sm:table-cell">Rate (DZD/USD)</th>}
-                    {!isStaff && <th className="px-4 py-3">Sale USD</th>}
-                    {!isStaff && <th className="px-4 py-3 hidden sm:table-cell">Total Expenses</th>}
-                    {!isStaff && <th className="px-4 py-3">Profit</th>}
-                    {!isStaff && <th className="px-4 py-3 hidden md:table-cell">Source</th>}
-                    {!isStaff && <th className="px-4 py-3 hidden md:table-cell">Lifecycle</th>}
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 w-10">Drive</th>
-                    <th className="px-4 py-3">Actions</th>
+                    <th className="px-4 py-3">{t("deals.colClient")}</th>
+                    <th className="px-4 py-3">{t("deals.colCar")}</th>
+                    <th className="px-4 py-3">{t("deals.colVin")}</th>
+                    <th className="px-4 py-3">{t("deals.colDate")}</th>
+                    <th className="px-4 py-3">{t("deals.colSaleDzd")}</th>
+                    {!isStaff && <th className="px-4 py-3 hidden sm:table-cell">{t("deals.colRateDzdUsd")}</th>}
+                    {!isStaff && <th className="px-4 py-3">{t("deals.colSaleUsd")}</th>}
+                    {!isStaff && <th className="px-4 py-3 hidden sm:table-cell">{t("deals.colTotalExpenses")}</th>}
+                    {!isStaff && <th className="px-4 py-3">{t("deals.colProfit")}</th>}
+                    {!isStaff && <th className="px-4 py-3 hidden md:table-cell">{t("deals.colSource")}</th>}
+                    {!isStaff && <th className="px-4 py-3 hidden md:table-cell">{t("deals.colLifecycle")}</th>}
+                    <th className="px-4 py-3">{t("deals.colStatus")}</th>
+                    <th className="px-4 py-3 w-10">{t("deals.colDrive")}</th>
+                    <th className="px-4 py-3">{t("deals.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2271,22 +2275,22 @@ export default function DealsPage() {
                     const saleDzdVal = dealListSaleDzd(d) || d.sale_amount || 0;
                     const rateDzdPerUsdCell =
                       d.sale_rate_to_aed != null && d.sale_rate_to_aed > 0 && usdPerAed > 0
-                        ? formatNumber(1 / (d.sale_rate_to_aed * usdPerAed))
-                        : "-";
+                        ? fmtNum(1 / (d.sale_rate_to_aed * usdPerAed))
+                        : t("deals.rateCellDash");
                     return (
                       <tr key={d.id} className="border-b border-app last:border-b-0">
                         <td className="px-4 py-3 font-semibold text-app">
-                          {d.client_name || "-"}
+                          {d.client_name || t("deals.clientDash")}
                         </td>
                         <td className="px-4 py-3 text-app">
-                          {d.car_label || "-"}
+                          {d.car_label || t("deals.clientDash")}
                         </td>
                         <td className="px-4 py-3 text-app">
                           {(() => {
                             const dealCar = resolveDealLinkedCar(d, cars);
                             const fullVin = (dealCar?.vin || "").trim();
-                            const shortVin = formatVinShort(fullVin);
-                            if (!fullVin) return <span className="text-muted">VIN: pending</span>;
+                            const shortVin = vinShortUi(fullVin);
+                            if (!fullVin) return <span className="text-muted">{t("deals.vinPending")}</span>;
                             return (
                               <button
                                 type="button"
@@ -2297,28 +2301,28 @@ export default function DealsPage() {
                                     setCopiedVinDealId(d.id);
                                     setTimeout(() => setCopiedVinDealId((prev) => (prev === d.id ? null : prev)), 1200);
                                   } catch {
-                                    setError("Failed to copy VIN.");
+                                    setError(t("deals.failedCopyVin"));
                                   }
                                 }}
                                 className="rounded border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:bg-gray-50"
                               >
-                                {copiedVinDealId === d.id ? "Copied" : shortVin}
+                                {copiedVinDealId === d.id ? t("deals.copied") : shortVin}
                               </button>
                             );
                           })()}
                         </td>
-                        <td className="px-4 py-3 text-app">{formatDate(d.date ?? d.created_at)}</td>
-                        <td className="px-4 py-3 text-app">{formatMoney(saleDzdVal, "DZD")}</td>
+                        <td className="px-4 py-3 text-app">{fmtDate(d.date ?? d.created_at)}</td>
+                        <td className="px-4 py-3 text-app">{fmtMoney(saleDzdVal, "DZD")}</td>
                         {!isStaff && (
                           <td className="px-4 py-3 text-app hidden sm:table-cell">
                             {rateDzdPerUsdCell}
                           </td>
                         )}
-                        {!isStaff && <td className="px-4 py-3 text-app">{formatMoney(derived.saleUsd, "USD")}</td>}
-                        {!isStaff && <td className="px-4 py-3 text-app hidden sm:table-cell">{formatMoney(total, "AED")}</td>}
+                        {!isStaff && <td className="px-4 py-3 text-app">{fmtMoney(derived.saleUsd, "USD")}</td>}
+                        {!isStaff && <td className="px-4 py-3 text-app hidden sm:table-cell">{fmtMoney(total, "AED")}</td>}
                         {!isStaff && (
                           <td className="px-4 py-3 font-semibold text-[var(--color-accent)]">
-                            {formatMoney(derived.profitAed, "AED")}
+                            {fmtMoney(derived.profitAed, "AED")}
                           </td>
                         )}
                         {!isStaff && <td className="px-4 py-3 text-app hidden md:table-cell">{((d as Deal & { source?: string | null }).source || "STOCK").toString()}</td>}
@@ -2332,21 +2336,21 @@ export default function DealsPage() {
                                 : "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 text-white",
                             ].join(" ")}
                           >
-                            {status === "closed" ? "closed" : "pending"}
+                            {status === "closed" ? t("deals.statusChipClosed") : t("deals.statusChipPending")}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <DriveLinkIcon href={(d as Deal & { drive_link?: string | null }).drive_link ?? ""} />
+                          <DriveLinkIcon href={(d as Deal & { drive_link?: string | null }).drive_link ?? ""} title={t("deals.openDriveFolder")} />
                         </td>
                         <td className="px-4 py-3">
-                          <RowActionsMenu label="Deal actions">
+                          <RowActionsMenu label={t("deals.rowActionsDeal")}>
                             <button
                               type="button"
                               onClick={() => openEditModal(d)}
                               disabled={(isStaff && !isPrivilegedRole) || isInvestorReadOnly}
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
-                              Edit
+                              {t("common.edit")}
                             </button>
                             {canDelete ? (
                             <button
@@ -2355,7 +2359,7 @@ export default function DealsPage() {
                               disabled={isStaff || isDeletingId === d.id}
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
                             >
-                              {isDeletingId === d.id ? "Deleting..." : "Delete"}
+                              {isDeletingId === d.id ? t("deals.deleting") : t("common.delete")}
                             </button>
                             ) : null}
                             <button
@@ -2363,7 +2367,7 @@ export default function DealsPage() {
                               onClick={() => openView(d)}
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
-                              View
+                              {t("common.view")}
                             </button>
                             {(() => {
                               const invUsd =
@@ -2438,7 +2442,7 @@ export default function DealsPage() {
             {filteredDeals.length > 0 && (
               <div className="flex flex-col gap-2 border-t border-app px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 text-xs text-muted">
-                  <span>Rows per page</span>
+                  <span>{t("inventory.rowsPerPage")}</span>
                   <select
                     value={dealsPageSize}
                     onChange={(e) => setDealsPageSize(Number(e.target.value))}
@@ -2451,16 +2455,20 @@ export default function DealsPage() {
                     ))}
                   </select>
                   <span>
-                    {(dealsPage - 1) * dealsPageSize + 1}-{Math.min(dealsPage * dealsPageSize, filteredDeals.length)} of {filteredDeals.length}
+                    {t("inventory.paginationOf", {
+                      start: (dealsPage - 1) * dealsPageSize + 1,
+                      end: Math.min(dealsPage * dealsPageSize, filteredDeals.length),
+                      total: filteredDeals.length,
+                    })}
                   </span>
                 </div>
                 <div className="flex items-center justify-end gap-2">
-                <span className="text-xs text-muted">Page {dealsPage} / {dealsPages}</span>
+                <span className="text-xs text-muted">{t("inventory.pageOf", { page: dealsPage, pages: dealsPages })}</span>
                 <Button type="button" size="sm" variant="outline" isDisabled={dealsPage <= 1} onPress={() => setDealsPage((p) => Math.max(1, p - 1))}>
-                  Previous
+                  {t("inventory.pagerPrevious")}
                 </Button>
                 <Button type="button" size="sm" variant="outline" isDisabled={dealsPage >= dealsPages} onPress={() => setDealsPage((p) => Math.min(dealsPages, p + 1))}>
-                  Next
+                  {t("inventory.pagerNext")}
                 </Button>
                 </div>
               </div>
@@ -2478,10 +2486,10 @@ export default function DealsPage() {
             <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
                 <div className="text-lg font-semibold text-app">
-                  {editingDealId ? "Edit Deal" : "Add Deal"}
+                  {editingDealId ? t("deals.editDeal") : t("deals.addDeal")}
                 </div>
                 <div className="text-xs text-muted">
-                  Sale USD and Profit update automatically as you type.
+                  {t("deals.modalSaleUsdProfitHint")}
                 </div>
               </div>
               <button
@@ -2490,13 +2498,13 @@ export default function DealsPage() {
                 disabled={isSaving}
                 className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app disabled:opacity-50"
               >
-                Close
+                {t("common.close")}
               </button>
             </div>
 
             <div className="mt-4 grid max-h-[70vh] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Date</span>
+                <span className="font-semibold">{t("deals.date")}</span>
                 <input
                   type="date"
                   value={form.date}
@@ -2506,7 +2514,7 @@ export default function DealsPage() {
               </label>
 
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Client</span>
+                <span className="font-semibold">{t("deals.client")}</span>
                 <div className="relative">
                   <input
                     type="text"
@@ -2517,13 +2525,13 @@ export default function DealsPage() {
                     }}
                     onFocus={() => setClientDropdownOpen(true)}
                     onBlur={() => setTimeout(() => setClientDropdownOpen(false), 200)}
-                    placeholder="Search or select client..."
+                    placeholder={t("deals.selectClientPlaceholder")}
                     className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   />
                   {clientDropdownOpen && (
                     <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-48 overflow-y-auto rounded-md border border-app surface py-1 shadow-lg">
                       {filteredClientsForDropdown.length === 0 ? (
-                        <div className="px-3 py-2 text-xs text-gray-400">No clients match</div>
+                        <div className="px-3 py-2 text-xs text-gray-400">{t("deals.noClientsMatch")}</div>
                       ) : (
                         filteredClientsForDropdown.map((c) => (
                           <button
@@ -2553,7 +2561,7 @@ export default function DealsPage() {
                         }}
                         className="flex w-full items-center gap-2 border-t border-app px-3 py-2 text-left text-sm text-[var(--color-accent)] hover:bg-[#222222]"
                       >
-                        + Add new client
+                        {t("deals.addNewClient")}
                       </button>
                     </div>
                   )}
@@ -2561,13 +2569,13 @@ export default function DealsPage() {
               </label>
 
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Car</span>
+                <span className="font-semibold">{t("deals.car")}</span>
                 <select
                   value={form.carId}
                   onChange={(e) => updateField("carId", e.target.value)}
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
-                  <option value="">Select a car (available)</option>
+                  <option value="">{t("deals.selectCarAvailable")}</option>
                   {availableCars.map((c) => (
                     <option key={c.id} value={c.id}>
                       {carLabel(c)}
@@ -2577,13 +2585,13 @@ export default function DealsPage() {
               </label>
 
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Handled by</span>
+                <span className="font-semibold">{t("deals.handledBy")}</span>
                 <select
                   value={form.employeeId}
                   onChange={(e) => updateField("employeeId", e.target.value)}
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
-                  <option value="">No employee</option>
+                  <option value="">{t("deals.noEmployee")}</option>
                   {employees.map((e) => (
                     <option key={e.id} value={e.id}>
                       {e.name ?? "—"} ({e.role ?? "—"})
@@ -2598,13 +2606,13 @@ export default function DealsPage() {
                       onChange={(e) => updateField("isManagedDeal", e.target.checked)}
                       className="rounded border-app bg-white text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                     />
-                    <span>Fully managed (use manager commission rate)</span>
+                    <span>{t("deals.managedDealCheckbox")}</span>
                   </label>
                 )}
               </label>
 
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Sale Price DZD</span>
+                <span className="font-semibold">{t("deals.colSaleDzd")}</span>
                 <input
                   type="number"
                   value={form.saleDzd}
@@ -2614,7 +2622,7 @@ export default function DealsPage() {
               </label>
 
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Amount Received DZD</span>
+                <span className="font-semibold">{t("deals.amountReceived")} DZD</span>
                 <input
                   type="number"
                   value={form.amountReceivedDzd}
@@ -2625,15 +2633,15 @@ export default function DealsPage() {
 
               <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-app">Pending DZD</span>
-                  <span className="text-app">{formatMoney(pendingDzd, "DZD")}</span>
+                  <span className="font-semibold text-app">{t("deals.pendingDzdLabel")}</span>
+                  <span className="text-app">{fmtMoney(pendingDzd, "DZD")}</span>
                 </div>
               </div>
 
               {!isStaff && (
                 <>
                   <label className="space-y-1 text-xs text-app">
-                    <span className="font-semibold">Rate at Deal (DZD/USD)</span>
+                    <span className="font-semibold">{t("deals.rateAtDeal")}</span>
                     <input
                       type="number"
                       value={form.rate}
@@ -2641,17 +2649,14 @@ export default function DealsPage() {
                       className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                     />
                     <p className="text-[11px] leading-snug text-muted">
-                      How many Algerian dinars (DZD) equaled one US dollar when this deal priced the car. Used to
-                      convert the DZD list price into AED/USD for profit. If this row was migrated without a saved
-                      rate, we pre-fill from your current dashboard FX — adjust to the real historical rate if needed,
-                      then save.
+                      {t("deals.rateAtDealHelp")}
                     </p>
                     {editingDealId
                       ? (() => {
                           const ed = deals.find((x) => x.id === editingDealId);
                           return ed?.financial_migration_status === "needs_review" ? (
                             <p className="text-[11px] text-amber-800">
-                              Flagged: missing FX snapshot — confirm the rate and save to lock it in the database.
+                              {t("deals.rateMigrationFlag")}
                             </p>
                           ) : null;
                         })()
@@ -2661,8 +2666,8 @@ export default function DealsPage() {
                   {isAedSourcedCar && (
                     <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <span className="font-semibold text-app">Derived Sale AED</span>
-                        <span className="text-app">{formatMoney(saleAed, "AED")}</span>
+                        <span className="font-semibold text-app">{t("deals.derivedSaleAed")}</span>
+                        <span className="text-app">{fmtMoney(saleAed, "AED")}</span>
                       </div>
                     </div>
                   )}
@@ -2670,12 +2675,12 @@ export default function DealsPage() {
                   {!isAedSourcedCar && (
                     <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <span className="font-semibold text-app">Sale USD</span>
-                        <span className="text-app">{formatMoney(derivedSaleUsd, "USD")}</span>
+                        <span className="font-semibold text-app">{t("deals.saleUsdLabel")}</span>
+                        <span className="text-app">{fmtMoney(derivedSaleUsd, "USD")}</span>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-500">
-                        <span>Derived Sale AED</span>
-                        <span>{formatMoney(saleAed, "AED")}</span>
+                        <span>{t("deals.derivedSaleAedSmall")}</span>
+                        <span>{fmtMoney(saleAed, "AED")}</span>
                       </div>
                     </div>
                   )}
@@ -2683,12 +2688,12 @@ export default function DealsPage() {
               )}
 
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Sale Price USD <span className="text-[10px] font-normal text-zinc-400">(for invoice &amp; agreement)</span></span>
+                <span className="font-semibold">{t("deals.salePriceUsdInvoice")}{" "}<span className="text-[10px] font-normal text-zinc-400">{t("deals.salePriceUsdInvoiceSuffix")}</span></span>
                 <input
                   type="number"
                   value={form.saleUsd}
                   onChange={(e) => updateField("saleUsd", e.target.value)}
-                  placeholder="e.g. 6450"
+                  placeholder={t("deals.ratePlaceholder")}
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
@@ -2697,30 +2702,30 @@ export default function DealsPage() {
                 <>
                   <div className="sm:col-span-2">
                     <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                      Expenses
+                      {t("deals.expenses")}
                     </div>
                   </div>
 
                   <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="font-semibold text-app">Car Cost (source)</span>
-                      <span className="text-app">{formatMoney(sourceCost, sourceCurrency)}</span>
+                      <span className="font-semibold text-app">{t("deals.carCostSource")}</span>
+                      <span className="text-app">{fmtMoney(sourceCost, sourceCurrency)}</span>
                     </div>
                     {!isAedSourcedCar && (
                       <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-                        <span className="font-semibold text-app">Car Cost (converted USD)</span>
-                        <span className="text-app">{formatMoney(carCostUsd, "USD")}</span>
+                        <span className="font-semibold text-app">{t("deals.carCostConvertedUsd")}</span>
+                        <span className="text-app">{fmtMoney(carCostUsd, "USD")}</span>
                       </div>
                     )}
                     <div className="mt-1 text-[11px] text-gray-400">
                       {isAedSourcedCar
-                        ? "AED-sourced car: cost is kept in AED only."
-                        : "From the car purchase price: cost in AED uses the inventory rate snapshot; USD is that AED amount at the operational USD/AED snapshot."}
+                        ? t("deals.carCostHintAedSourced")
+                        : t("deals.carCostHintFromPurchase")}
                     </div>
                   </div>
 
                   <label className="space-y-1 text-xs text-app">
-                    <span className="font-semibold">Shipping AED</span>
+                    <span className="font-semibold">{t("deals.shippingAed")}</span>
                     <input
                       type="number"
                       value={form.shippingAed}
@@ -2730,9 +2735,9 @@ export default function DealsPage() {
                   </label>
 
                   <label className="space-y-1 text-xs text-app">
-                    <span className="font-semibold">Shipping USD</span>
+                    <span className="font-semibold">{t("deals.shippingUsd")}</span>
                     <span className="mb-0.5 block text-[10px] font-normal text-gray-400">
-                      Uses dashboard USD→AED snapshot as rate_to_aed when saved. Leave empty if shipping is only in AED.
+                      {t("deals.shippingUsdHint")}
                     </span>
                     <input
                       type="number"
@@ -2743,7 +2748,7 @@ export default function DealsPage() {
                   </label>
 
                   <label className="space-y-1 text-xs text-app">
-                    <span className="font-semibold">Inspection AED</span>
+                    <span className="font-semibold">{t("deals.inspectionAedLabel")}</span>
                     <input
                       type="number"
                       value={form.inspectionAed}
@@ -2753,7 +2758,7 @@ export default function DealsPage() {
                   </label>
 
                   <label className="space-y-1 text-xs text-app">
-                    <span className="font-semibold">Recovery AED</span>
+                    <span className="font-semibold">{t("deals.recoveryAedLabel")}</span>
                     <input
                       type="number"
                       value={form.recoveryAed}
@@ -2763,7 +2768,7 @@ export default function DealsPage() {
                   </label>
 
                   <label className="space-y-1 text-xs text-app">
-                    <span className="font-semibold">Maintenance AED</span>
+                    <span className="font-semibold">{t("deals.maintenanceAedLabel")}</span>
                     <input
                       type="number"
                       value={form.maintenanceAed}
@@ -2773,7 +2778,7 @@ export default function DealsPage() {
                   </label>
 
                   <label className="space-y-1 text-xs text-app">
-                    <span className="font-semibold">Other AED</span>
+                    <span className="font-semibold">{t("deals.otherAedLabel")}</span>
                     <input
                       type="number"
                       value={form.otherAed}
@@ -2783,7 +2788,7 @@ export default function DealsPage() {
                   </label>
 
                   <label className="flex items-center justify-between gap-3 rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
-                    <span className="font-semibold">Shipping Paid</span>
+                    <span className="font-semibold">{t("deals.shippingPaidLabel")}</span>
                     <button
                       type="button"
                       onClick={() => updateField("shippingPaid", !form.shippingPaid)}
@@ -2794,73 +2799,77 @@ export default function DealsPage() {
                           : "border-app surface text-app",
                       ].join(" ")}
                     >
-                      {form.shippingPaid ? "Yes" : "No"}
+                      {form.shippingPaid ? t("common.yes") : t("common.no")}
                     </button>
                   </label>
 
                   <div className="rounded-md border border-app bg-white px-3 py-2 text-xs text-app sm:col-span-2">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="font-semibold text-app">Live Profit Preview</span>
+                      <span className="font-semibold text-app">{t("deals.liveProfitPreview")}</span>
                       <span className="text-[var(--color-accent)]">
                         {isAedSourcedCar
-                          ? formatMoney(profitPreviewAed, "AED")
-                          : formatMoney(profitPreviewUsd, "USD")}
+                          ? fmtMoney(profitPreviewAed, "AED")
+                          : fmtMoney(profitPreviewUsd, "USD")}
                       </span>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-500">
                       <span>
-                        {isAedSourcedCar ? `Profit (DZD${dealRateDzdPerAed > 0 ? ", deal DZD/AED" : ""})` : "Profit (DZD)"}
+                        {isAedSourcedCar
+                          ? dealRateDzdPerAed > 0
+                            ? t("deals.profitPreviewDzdDealRate")
+                            : t("deals.profitPreviewDzdPlain")
+                          : t("deals.profitPreviewDzdPlain")}
                       </span>
-                      <span>{formatMoney(profitPreviewDzd, "DZD")}</span>
+                      <span>{fmtMoney(profitPreviewDzd, "DZD")}</span>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-500">
-                      <span>Profit (AED)</span>
-                      <span>{formatMoney(profitPreviewAed, "AED")}</span>
+                      <span>{t("deals.profitPreviewAedLabel")}</span>
+                      <span>{fmtMoney(profitPreviewAed, "AED")}</span>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
-                      <span>Cost + expenses (AED)</span>
-                      <span>{formatMoney(costPlusExpensesAed, "AED")}</span>
+                      <span>{t("deals.costPlusExpAed")}</span>
+                      <span>{fmtMoney(costPlusExpensesAed, "AED")}</span>
                     </div>
                     {!isAedSourcedCar && (
                       <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
-                        <span>Cost + expenses (USD)</span>
-                        <span>{formatMoney(costPlusExpensesUsd, "USD")}</span>
+                        <span>{t("deals.costPlusExpUsd")}</span>
+                        <span>{fmtMoney(costPlusExpensesUsd, "USD")}</span>
                       </div>
                     )}
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
-                      <span>Cost + expenses (DZD)</span>
-                      <span>{formatMoney(costPlusExpensesDzd, "DZD")}</span>
+                      <span>{t("deals.costPlusExpDzd")}</span>
+                      <span>{fmtMoney(costPlusExpensesDzd, "DZD")}</span>
                     </div>
                   </div>
                 </>
               )}
 
               <label className="space-y-1 text-xs text-app">
-                <span className="font-semibold">Status</span>
+                <span className="font-semibold">{t("deals.status")}</span>
                 <select
                   value={form.status}
                   onChange={(e) => updateField("status", e.target.value as "pending" | "closed")}
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 >
-                  <option value="pending">pending</option>
-                  <option value="closed">closed</option>
+                  <option value="pending">{t("status.pending")}</option>
+                  <option value="closed">{t("status.closed")}</option>
                 </select>
               </label>
 
               <div className="hidden sm:block" />
 
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Google Drive Folder Link</span>
+                <span className="font-semibold">{t("deals.driveFolderLink")}</span>
                 <input
                   type="text"
                   value={form.driveLink}
                   onChange={(e) => updateField("driveLink", e.target.value)}
-                  placeholder="https://drive.google.com/..."
+                  placeholder={t("deals.drivePlaceholder")}
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
-                <span className="font-semibold">Notes</span>
+                <span className="font-semibold">{t("deals.notes")}</span>
                 <textarea
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
@@ -2877,7 +2886,7 @@ export default function DealsPage() {
                 disabled={isSaving}
                 className="rounded-md border border-app bg-white px-4 py-2 text-sm font-semibold text-app disabled:opacity-50"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -2885,7 +2894,7 @@ export default function DealsPage() {
                 disabled={isSaving}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : "Save"}
+                {isSaving ? t("deals.savingModalEllipsis") : t("common.save")}
               </button>
             </div>
           </div>
@@ -2899,10 +2908,10 @@ export default function DealsPage() {
           <div className="relative w-full max-w-3xl rounded-lg border border-app surface p-4 shadow-xl">
             <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
-                <div className="text-lg font-semibold text-app">Deal Details</div>
+                <div className="text-lg font-semibold text-app">{t("deals.dealDetails")}</div>
                 <div className="text-xs text-muted">
                   {viewDeal.client_name || "-"} • {viewDeal.car_label || "-"} •{" "}
-                  {formatDate(viewDeal.date ?? viewDeal.created_at)}
+                  {fmtDate(viewDeal.date ?? viewDeal.created_at)}
                 </div>
                 <div className="mt-2 space-y-2 text-xs text-app">
                   {(() => {
@@ -2912,7 +2921,7 @@ export default function DealsPage() {
                       <>
                         <div>
                           {!fullVin ? (
-                            <span className="text-muted">VIN: pending</span>
+                            <span className="text-muted">{t("deals.vinPendingView")}</span>
                           ) : (
                             <button
                               type="button"
@@ -2926,23 +2935,23 @@ export default function DealsPage() {
                                     1200
                                   );
                                 } catch {
-                                  setError("Failed to copy VIN.");
+                                  setError(t("deals.failedCopyVin"));
                                 }
                               }}
                               className="rounded border border-app bg-white px-2 py-1 text-[11px] font-semibold text-app hover:bg-gray-50"
                             >
-                              {copiedVinDealId === viewDeal.id ? "Copied" : formatVinShort(fullVin)}
+                              {copiedVinDealId === viewDeal.id ? t("deals.copied") : vinShortUi(fullVin)}
                             </button>
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-muted">Physical lifecycle</span>
+                          <span className="text-muted">{t("deals.physicalLifecycle")}</span>
                           {dealCar ? (
                             <Chip size="sm" variant="soft" className="h-6 px-2 text-[10px] uppercase">
                               {displayCarLifecycle(dealCar.lifecycle_status)}
                             </Chip>
                           ) : (
-                            <span className="text-muted italic">No inventory row linked</span>
+                            <span className="text-muted italic">{t("deals.noInventoryLinked")}</span>
                           )}
                         </div>
                       </>
@@ -2955,16 +2964,16 @@ export default function DealsPage() {
                 onClick={closeView}
                 className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app"
               >
-                Close
+                {t("common.close")}
               </button>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-md border border-app bg-white p-3 text-xs text-app">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-app">Sale</span>
+                  <span className="font-semibold text-app">{t("deals.detailSale")}</span>
                   <span className="text-app">
-                    {formatMoney(
+                    {fmtMoney(
                       viewDeal.sale_amount,
                       (viewDeal.sale_currency || "AED") as "AED" | "USD" | "DZD" | "EUR"
                     )}
@@ -2973,24 +2982,24 @@ export default function DealsPage() {
                 {!isStaff && (
                   <>
                     <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                      <span>Rate (DZD/USD)</span>
+                      <span>{t("deals.rateDzdUsdShort")}</span>
                       <span>
                         {String(viewDeal.sale_currency || "").toUpperCase() === "DZD" &&
                         viewDeal.sale_rate_to_aed != null &&
                         viewDeal.sale_rate_to_aed > 0 &&
                         usdPerAed > 0
-                          ? formatNumber(1 / (viewDeal.sale_rate_to_aed * usdPerAed))
+                          ? fmtNum(1 / (viewDeal.sale_rate_to_aed * usdPerAed))
                           : "-"}
                       </span>
                     </div>
                     <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                      <span>Sale USD (display FX)</span>
-                      <span>{formatMoney(viewDealDerived?.derived.saleUsd ?? 0, "USD")}</span>
+                      <span>{t("deals.saleUsdDisplayFx")}</span>
+                      <span>{fmtMoney(viewDealDerived?.derived.saleUsd ?? 0, "USD")}</span>
                     </div>
                     {viewDeal.invoice_declared_usd != null && viewDeal.invoice_declared_usd > 0 ? (
                       <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                        <span>Invoice declared USD</span>
-                        <span>{formatMoney(viewDeal.invoice_declared_usd, "USD")}</span>
+                        <span>{t("deals.invoiceDeclaredUsd")}</span>
+                        <span>{fmtMoney(viewDeal.invoice_declared_usd, "USD")}</span>
                       </div>
                     ) : null}
                   </>
@@ -3000,35 +3009,35 @@ export default function DealsPage() {
               {!isStaff ? (
                 <div className="rounded-md border border-app bg-white p-3 text-xs text-app">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-app">Profit</span>
+                    <span className="font-semibold text-app">{t("deals.profit")}</span>
                     <span className="text-[var(--color-accent)]">
-                      {formatMoney(viewDealDerived?.derived.profitAed ?? 0, "AED")}
+                      {fmtMoney(viewDealDerived?.derived.profitAed ?? 0, "AED")}
                     </span>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                    <span>Profit (DZD, display FX)</span>
+                    <span>{t("deals.profitDzdDisplayFx")}</span>
                     <span className="text-app">
-                      {formatMoney(viewDealDerived?.derived.profitDzd ?? 0, "DZD")}
+                      {fmtMoney(viewDealDerived?.derived.profitDzd ?? 0, "DZD")}
                     </span>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                    <span>Status</span>
-                    <span className="text-app">{(viewDeal.status || "pending").toLowerCase()}</span>
+                    <span>{t("deals.status")}</span>
+                    <span className="text-app">{(viewDeal.status || "pending").toLowerCase() === "closed" ? t("status.closed") : t("status.pending")}</span>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                    <span>Shipping Paid</span>
-                    <span className="text-app">{viewDeal.shipping_paid ? "Yes" : "No"}</span>
+                    <span>{t("deals.shippingPaidLabel")}</span>
+                    <span className="text-app">{viewDeal.shipping_paid ? t("common.yes") : t("common.no")}</span>
                   </div>
                 </div>
               ) : (
                 <div className="rounded-md border border-app bg-white p-3 text-xs text-app">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-app">Status</span>
-                    <span className="text-app">{(viewDeal.status || "pending").toLowerCase()}</span>
+                    <span className="font-semibold text-app">{t("deals.status")}</span>
+                    <span className="text-app">{(viewDeal.status || "pending").toLowerCase() === "closed" ? t("status.closed") : t("status.pending")}</span>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
-                    <span>Shipping Paid</span>
-                    <span className="text-app">{viewDeal.shipping_paid ? "Yes" : "No"}</span>
+                    <span>{t("deals.shippingPaidLabel")}</span>
+                    <span className="text-app">{viewDeal.shipping_paid ? t("common.yes") : t("common.no")}</span>
                   </div>
                 </div>
               )}
@@ -3036,7 +3045,7 @@ export default function DealsPage() {
               {!isStaff && (
               <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                  Cost &amp; expenses
+                  {t("deals.costExpenses")}
                 </div>
                 {(() => {
                   const dealCar = resolveDealLinkedCar(viewDeal, cars);
@@ -3045,21 +3054,21 @@ export default function DealsPage() {
                   if (!dealCar || !srcAmount || srcCurrency === "AED") return null;
                   return (
                     <div className="mt-2 rounded border border-app bg-[#fafafa] px-2 py-1 text-[11px] text-app">
-                      Car source cost: {formatMoney(srcAmount, srcCurrency)}
+                      {t("deals.carSourceCostPrefix")} {fmtMoney(srcAmount, srcCurrency)}
                     </div>
                   );
                 })()}
                 <div className="mt-2 space-y-1 text-[11px]">
                   <div className="flex items-center justify-between gap-2 text-app">
-                    <span className="text-muted">Car cost (deal)</span>
+                    <span className="text-muted">{t("deals.carCostDeal")}</span>
                     <span>
-                      {formatMoney(
+                      {fmtMoney(
                         viewDeal.cost_amount,
                         (viewDeal.cost_currency || "AED") as "AED" | "USD" | "DZD" | "EUR"
                       )}
                       <span className="ml-2 text-muted">
                         (
-                        {formatMoney(
+                        {fmtMoney(
                           toAed(viewDeal.cost_amount, viewDeal.cost_currency, viewDeal.cost_rate_to_aed),
                           "AED"
                         )}
@@ -3076,13 +3085,13 @@ export default function DealsPage() {
                         {(ex.expense_type || "").replace(/_/g, " ")}
                       </span>
                       <span>
-                        {formatMoney(
+                        {fmtMoney(
                           ex.amount,
                           (ex.currency || "AED") as "AED" | "USD" | "DZD" | "EUR"
                         )}
                         <span className="ml-2 text-muted">
                           (
-                          {formatMoney(toAed(ex.amount, ex.currency, ex.rate_to_aed), "AED")}
+                          {fmtMoney(toAed(ex.amount, ex.currency, ex.rate_to_aed), "AED")}
                           )
                         </span>
                       </span>
@@ -3095,7 +3104,7 @@ export default function DealsPage() {
               <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                 {!isStaff ? (
                   <div className="mb-3 rounded-md border border-app bg-[#fafafa] p-2">
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Contract documents</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{t("deals.contractDocuments")}</div>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <button
                         type="button"
@@ -3103,21 +3112,21 @@ export default function DealsPage() {
                         disabled={isGeneratingAgreement || preGenLoading}
                         className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
                       >
-                        {isGeneratingAgreement ? "Generating..." : "Generate Contract"}
+                        {isGeneratingAgreement ? t("deals.generatingEllipsis") : t("deals.generateContract")}
                       </button>
                       <select
                         value={selectedReceiptPaymentId}
                         onChange={(e) => setSelectedReceiptPaymentId(e.target.value)}
                         className="rounded-md border border-app bg-white px-2 py-1 text-[11px] text-app"
                         disabled={payments.length === 0}
-                        title={payments.length === 0 ? "Cannot generate receipt before payment is recorded." : "Choose payment for receipt"}
+                        title={payments.length === 0 ? t("deals.receiptBlockedNoPayment") : t("deals.receiptSelectPayment")}
                       >
                         {payments.length === 0 ? (
-                          <option value="">No payments</option>
+                          <option value="">{t("deals.noPayments")}</option>
                         ) : (
                           payments.map((p) => (
                             <option key={p.id} value={p.id}>
-                              {formatDate(p.date ?? p.created_at)} - {formatMoney(paymentAmountDzd(p), "DZD")}
+                              {fmtDate(p.date ?? p.created_at)} - {fmtMoney(paymentAmountDzd(p), "DZD")}
                             </option>
                           ))
                         )}
@@ -3126,27 +3135,27 @@ export default function DealsPage() {
                         type="button"
                         onClick={() => openPreGenerationModal("receipt")}
                         disabled={payments.length === 0 || !selectedReceiptPaymentId || isGeneratingReceipt || preGenLoading}
-                        title={payments.length === 0 ? "Cannot generate receipt before payment is recorded." : ""}
+                        title={payments.length === 0 ? t("deals.receiptBlockedNoPayment") : ""}
                         className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
                       >
-                        {isGeneratingReceipt ? "Generating..." : "Generate Receipt"}
+                        {isGeneratingReceipt ? t("deals.generatingEllipsis") : t("deals.generateReceipt")}
                       </button>
                     </div>
 
                     <div className="mt-3">
-                      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Generated Documents</div>
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{t("deals.generatedDocuments")}</div>
                       {generatedDocsLoading ? (
-                        <div className="mt-1 text-[11px] text-muted">Loading generated documents...</div>
+                        <div className="mt-1 text-[11px] text-muted">{t("deals.loadingGeneratedDocuments")}</div>
                       ) : generatedDocuments.length === 0 ? (
-                        <div className="mt-1 text-[11px] text-muted">No generated documents yet.</div>
+                        <div className="mt-1 text-[11px] text-muted">{t("deals.noGeneratedDocumentsYet")}</div>
                       ) : (
                         <div className="mt-2 space-y-2">
                           {generatedDocuments.map((doc) => (
                             <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-app pb-2 text-[11px] last:border-b-0 last:pb-0">
                               <div className="text-app">
                                 <span className="font-semibold">{doc.document_type}</span>{" "}
-                                <span className="text-muted">- {formatDate(doc.generated_at)}</span>{" "}
-                                <span className="text-muted">by {doc.generated_by_name || "Unknown"}</span>
+                                <span className="text-muted">- {fmtDate(doc.generated_at)}</span>{" "}
+                                <span className="text-muted">{t("deals.docByAuthor", { name: doc.generated_by_name || t("deals.unknown") })}</span>
                               </div>
                               <button
                                 type="button"
@@ -3154,7 +3163,7 @@ export default function DealsPage() {
                                 disabled={downloadingDocId === doc.id}
                                 className="rounded border border-app bg-white px-2 py-0.5 text-[10px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
                               >
-                                {downloadingDocId === doc.id ? "Preparing..." : "Download Again"}
+                                {downloadingDocId === doc.id ? t("deals.preparingEllipsis") : t("deals.downloadAgain")}
                               </button>
                             </div>
                           ))}
@@ -3165,11 +3174,11 @@ export default function DealsPage() {
                 ) : null}
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                    Payment history
+                    {t("deals.paymentHistory")}
                   </div>
                   {(viewDeal.pending_dzd ?? 0) <= 0 ? (
                     <span className="text-[11px] text-gray-400">
-                      This deal has no pending payments
+                      {t("deals.dealNoPendingPayments")}
                     </span>
                   ) : (
                     <button
@@ -3177,22 +3186,22 @@ export default function DealsPage() {
                       onClick={() => setIsPaymentFormOpen((prev) => !prev)}
                       className="rounded-md border border-app surface px-3 py-1 text-[11px] font-semibold text-app hover:border-[var(--color-accent)]/70"
                     >
-                      {isPaymentFormOpen ? "Cancel" : "Add Payment"}
+                      {isPaymentFormOpen ? t("common.cancel") : t("deals.addPayment")}
                     </button>
                   )}
                 </div>
                 <div className="mt-2 rounded-md border border-app bg-white p-2 text-[11px] text-app">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex flex-col">
-                      <span className="text-xs font-semibold text-app">Collected DZD</span>
+                      <span className="text-xs font-semibold text-app">{t("deals.collected")} DZD</span>
                       <span className="mt-0.5 text-sm text-app">
-                        {formatMoney(viewDeal.collected_dzd, "DZD")}
+                        {fmtMoney(viewDeal.collected_dzd, "DZD")}
                       </span>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-xs font-semibold text-app">Pending DZD</span>
+                      <span className="text-xs font-semibold text-app">{t("deals.pendingDzdLabel")}</span>
                       <span className="mt-0.5 text-sm text-[var(--color-accent)]">
-                        {formatMoney(viewDeal.pending_dzd, "DZD")}
+                        {fmtMoney(viewDeal.pending_dzd, "DZD")}
                       </span>
                     </div>
                   </div>
@@ -3211,7 +3220,7 @@ export default function DealsPage() {
                         <>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                       <label className="flex-1 space-y-1">
-                        <span className="font-semibold text-app">Amount DZD</span>
+                        <span className="font-semibold text-app">{t("deals.amountDzdPayment")}</span>
                         <input
                           type="number"
                           value={newPaymentAmount}
@@ -3220,13 +3229,12 @@ export default function DealsPage() {
                         />
                         {exceedsPending && (
                           <p className="mt-1 text-red-300">
-                            Payment exceeds remaining balance. Maximum:{" "}
-                            {formatNumber(pendingDzd)} DZD
+                            {t("deals.paymentExceedsPending", { amount: fmtNum(pendingDzd) })}
                           </p>
                         )}
                       </label>
                       <label className="space-y-1">
-                        <span className="font-semibold text-app">Date</span>
+                        <span className="font-semibold text-app">{t("deals.date")}</span>
                         <input
                           type="date"
                           value={newPaymentDate}
@@ -3236,7 +3244,7 @@ export default function DealsPage() {
                       </label>
                     </div>
                     <label className="space-y-1">
-                      <span className="font-semibold text-app">Notes</span>
+                      <span className="font-semibold text-app">{t("deals.notes")}</span>
                       <input
                         value={newPaymentNote}
                         onChange={(e) => setNewPaymentNote(e.target.value)}
@@ -3250,7 +3258,7 @@ export default function DealsPage() {
                         disabled={saveDisabled}
                         className="rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
                       >
-                        {isAddingPayment ? "Saving..." : "Save Payment"}
+                        {isAddingPayment ? t("deals.savingModalEllipsis") : t("deals.savePayment")}
                       </button>
                     </div>
                         </>
@@ -3259,11 +3267,11 @@ export default function DealsPage() {
                   </div>
                 )}
                 {paymentsLoading ? (
-                  <div className="mt-2 text-sm text-muted">Loading payments...</div>
+                  <div className="mt-2 text-sm text-muted">{t("deals.loadingPayments")}</div>
                 ) : paymentsError ? (
                   <div className="mt-2 text-xs text-red-300">{paymentsError}</div>
                 ) : payments.length === 0 ? (
-                  <div className="mt-2 text-sm text-muted">No payments yet.</div>
+                  <div className="mt-2 text-sm text-muted">{t("deals.noPaymentsYet")}</div>
                 ) : (
                   <div className="mt-2 space-y-2">
                     {payments.map((p) => (
@@ -3272,9 +3280,9 @@ export default function DealsPage() {
                         className="flex flex-wrap items-center justify-between gap-2 border-b border-app pb-2 text-[11px] last:border-b-0 last:pb-0"
                       >
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-app">{formatDate(p.date ?? p.created_at)}</span>
+                          <span className="font-semibold text-app">{fmtDate(p.date ?? p.created_at)}</span>
                           <span className="text-app">
-                            {formatMoney(paymentAmountDzd(p), "DZD")}
+                            {fmtMoney(paymentAmountDzd(p), "DZD")}
                           </span>
                           {p.notes ? <span className="text-gray-400">{p.notes}</span> : null}
                         </div>
@@ -3285,7 +3293,7 @@ export default function DealsPage() {
                           disabled={deletingPaymentId === p.id}
                           className="rounded border border-app bg-white px-2 py-0.5 text-[10px] font-semibold text-red-400 hover:border-red-700 disabled:opacity-50"
                         >
-                          {deletingPaymentId === p.id ? "Removing..." : "Delete"}
+                          {deletingPaymentId === p.id ? t("deals.removingEllipsis") : t("common.delete")}
                         </button>
                         ) : null}
                       </div>
@@ -3296,7 +3304,7 @@ export default function DealsPage() {
 
               {(viewDeal.source === "PRE_ORDER_CATALOG" || viewDeal.source === "PRE_ORDER_CUSTOM") && (
                 <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Pre-order lifecycle</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">{t("deals.preorderLifecycle")}</div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {(["ORDERED", "SHIPPED", "ARRIVED", "CLOSED", "CANCELLED"] as const).map((status) => (
                       <button
@@ -3306,12 +3314,12 @@ export default function DealsPage() {
                         disabled={lifecycleSaving || isInvestorReadOnly}
                         className="rounded border border-app bg-white px-2 py-1 text-[10px] font-semibold text-app hover:border-[var(--color-accent)] disabled:opacity-50"
                       >
-                        {status}
+                        {dealLifecycleLabel(t, status)}
                       </button>
                     ))}
                   </div>
                   <div className="mt-2 text-[11px] text-muted">
-                    Current: {(viewDeal.lifecycle_status || "PRE_ORDER").toUpperCase()}
+                    {t("deals.lifecycleCurrent")} {dealLifecycleLabel(t, viewDeal.lifecycle_status || "PRE_ORDER")}
                   </div>
                 </div>
               )}
@@ -3319,17 +3327,17 @@ export default function DealsPage() {
               {(viewDeal as Deal & { drive_link?: string | null }).drive_link ? (
                 <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                    Google Drive
+                    {t("deals.googleDrive")}
                   </div>
                   <div className="mt-2">
-                    <DriveLinkIcon href={(viewDeal as Deal & { drive_link?: string | null }).drive_link ?? ""} />
+                    <DriveLinkIcon href={(viewDeal as Deal & { drive_link?: string | null }).drive_link ?? ""} title={t("deals.openDriveFolder")} />
                   </div>
                 </div>
               ) : null}
               {viewDeal.notes ? (
                 <div className="rounded-md border border-app bg-white p-3 text-xs text-app sm:col-span-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-                    Notes
+                    {t("deals.notes")}
                   </div>
                   <div className="mt-2 text-sm text-app whitespace-pre-wrap">
                     {viewDeal.notes}
@@ -3346,11 +3354,11 @@ export default function DealsPage() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => !quickAddSaving && setQuickAddClientOpen(false)} />
           <div className="relative w-full max-w-sm rounded-lg border border-app surface p-4 shadow-xl">
-            <h3 className="text-sm font-semibold text-app">Add new client</h3>
-            <p className="mt-1 text-xs text-muted">Name and phone only. You can add more details later in Clients.</p>
+            <h3 className="text-sm font-semibold text-app">{t("deals.quickAddClientTitle")}</h3>
+            <p className="mt-1 text-xs text-muted">{t("deals.quickAddClientHint")}</p>
             <div className="mt-4 space-y-3">
               <label className="block space-y-1 text-xs text-app">
-                <span className="font-semibold">Name</span>
+                <span className="font-semibold">{t("clients.nameCol")}</span>
                 <input
                   type="text"
                   value={quickAddName}
@@ -3359,7 +3367,7 @@ export default function DealsPage() {
                 />
               </label>
               <label className="block space-y-1 text-xs text-app">
-                <span className="font-semibold">Phone</span>
+                <span className="font-semibold">{t("clients.phoneCol")}</span>
                 <input
                   type="text"
                   value={quickAddPhone}
@@ -3374,7 +3382,7 @@ export default function DealsPage() {
                 onClick={() => !quickAddSaving && setQuickAddClientOpen(false)}
                 className="rounded-md border border-app px-3 py-1.5 text-xs font-semibold text-app disabled:opacity-50"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -3382,7 +3390,7 @@ export default function DealsPage() {
                 disabled={quickAddSaving}
                 className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
               >
-                {quickAddSaving ? "Saving..." : "Save"}
+                {quickAddSaving ? t("deals.savingModalEllipsis") : t("common.save")}
               </button>
             </div>
           </div>
@@ -3433,62 +3441,62 @@ export default function DealsPage() {
           <div className="relative flex w-full max-w-4xl max-h-screen flex-col overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
             <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
-                <div className="text-lg font-semibold text-app">Dummy Invoice + Agreement</div>
-                <div className="text-xs text-muted">For client-loaded cars without creating full sale deals.</div>
+                <div className="text-lg font-semibold text-app">{t("deals.dummyModalTitle")}</div>
+                <div className="text-xs text-muted">{t("deals.dummyModalSubtitle")}</div>
               </div>
-              <button type="button" onClick={() => setIsDummyDocsOpen(false)} className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app">Close</button>
+              <button type="button" onClick={() => setIsDummyDocsOpen(false)} className="rounded-md border border-app px-3 py-1 text-xs font-semibold text-app">{t("common.close")}</button>
             </div>
             {dummyError ? <div className="mt-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">{dummyError}</div> : null}
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <input placeholder="Client name" value={dummyForm.clientName} onChange={(e) => setDummyForm((p) => ({ ...p, clientName: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              <input placeholder="Client phone" value={dummyForm.clientPhone} onChange={(e) => setDummyForm((p) => ({ ...p, clientPhone: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              <input placeholder="Passport / ID" value={dummyForm.clientPassport} onChange={(e) => setDummyForm((p) => ({ ...p, clientPassport: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              <input placeholder="Car brand" value={dummyForm.carBrand} onChange={(e) => setDummyForm((p) => ({ ...p, carBrand: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              <input placeholder="Car model" value={dummyForm.carModel} onChange={(e) => setDummyForm((p) => ({ ...p, carModel: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              <input placeholder="Year" value={dummyForm.carYear} onChange={(e) => setDummyForm((p) => ({ ...p, carYear: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              <input placeholder="Color" value={dummyForm.carColor} onChange={(e) => setDummyForm((p) => ({ ...p, carColor: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              <input placeholder="VIN" value={dummyForm.carVin} onChange={(e) => setDummyForm((p) => ({ ...p, carVin: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              <input placeholder="Country of origin" value={dummyForm.countryOfOrigin} onChange={(e) => setDummyForm((p) => ({ ...p, countryOfOrigin: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder={t("deals.dummyClientName")} value={dummyForm.clientName} onChange={(e) => setDummyForm((p) => ({ ...p, clientName: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder={t("deals.dummyClientPhone")} value={dummyForm.clientPhone} onChange={(e) => setDummyForm((p) => ({ ...p, clientPhone: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder={t("deals.dummyPassport")} value={dummyForm.clientPassport} onChange={(e) => setDummyForm((p) => ({ ...p, clientPassport: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder={t("deals.dummyCarBrand")} value={dummyForm.carBrand} onChange={(e) => setDummyForm((p) => ({ ...p, carBrand: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder={t("deals.dummyCarModel")} value={dummyForm.carModel} onChange={(e) => setDummyForm((p) => ({ ...p, carModel: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder={t("deals.dummyYear")} value={dummyForm.carYear} onChange={(e) => setDummyForm((p) => ({ ...p, carYear: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder={t("deals.dummyColor")} value={dummyForm.carColor} onChange={(e) => setDummyForm((p) => ({ ...p, carColor: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder={t("deals.dummyVin")} value={dummyForm.carVin} onChange={(e) => setDummyForm((p) => ({ ...p, carVin: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder={t("deals.dummyCountryOrigin")} value={dummyForm.countryOfOrigin} onChange={(e) => setDummyForm((p) => ({ ...p, countryOfOrigin: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
               <label className="space-y-1">
-                <span className="text-[11px] text-muted">Invoice date</span>
+                <span className="text-[11px] text-muted">{t("deals.dummyInvoiceDate")}</span>
                 <input type="date" value={dummyForm.invoiceDate} onChange={(e) => setDummyForm((p) => ({ ...p, invoiceDate: e.target.value }))} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
               </label>
               <label className="space-y-1">
-                <span className="text-[11px] text-muted">Agreement date</span>
+                <span className="text-[11px] text-muted">{t("deals.dummyAgreementDate")}</span>
                 <input type="date" value={dummyForm.agreementDate} onChange={(e) => setDummyForm((p) => ({ ...p, agreementDate: e.target.value }))} className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
               </label>
-              <input placeholder="Amount USD" value={dummyForm.amountUsd} onChange={(e) => setDummyForm((p) => ({ ...p, amountUsd: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
-              <input placeholder="Export to" value={dummyForm.exportTo} onChange={(e) => setDummyForm((p) => ({ ...p, exportTo: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app sm:col-span-2" />
-              <textarea placeholder="Notes" value={dummyForm.notes} onChange={(e) => setDummyForm((p) => ({ ...p, notes: e.target.value }))} rows={2} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app sm:col-span-2" />
+              <input placeholder={t("deals.dummyAmountUsd")} value={dummyForm.amountUsd} onChange={(e) => setDummyForm((p) => ({ ...p, amountUsd: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app" />
+              <input placeholder={t("deals.dummyExportTo")} value={dummyForm.exportTo} onChange={(e) => setDummyForm((p) => ({ ...p, exportTo: e.target.value }))} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app sm:col-span-2" />
+              <textarea placeholder={t("deals.dummyNotes")} value={dummyForm.notes} onChange={(e) => setDummyForm((p) => ({ ...p, notes: e.target.value }))} rows={2} className="rounded-md border border-app bg-white px-3 py-2 text-sm text-app sm:col-span-2" />
             </div>
             <div className="mt-3 flex justify-end">
               {dummyForm.id ? (
                 <button type="button" onClick={cancelEditDummyDoc} className="mr-2 rounded-md border border-app px-4 py-2 text-sm font-semibold text-app">
-                  Cancel edit
+                  {t("deals.cancelEditDummy")}
                 </button>
               ) : null}
               <button type="button" onClick={saveDummyDoc} disabled={dummySaving} className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-                {dummySaving ? "Saving..." : dummyForm.id ? "Update Dummy Doc" : "Save Dummy Doc"}
+                {dummySaving ? t("deals.savingDummyEllipsis") : dummyForm.id ? t("deals.updateDummyDoc") : t("deals.saveDummyDoc")}
               </button>
             </div>
             <div className="mt-4 space-y-2">
               {dummyDocs.slice(0, 12).map((doc) => {
-                const date = formatDate(doc.created_at);
+                const date = fmtDate(doc.created_at);
                 const invoiceNumber = `DINV-${doc.id.slice(0, 8).toUpperCase()}`;
-                const invoiceDate = formatDate(doc.invoice_date || doc.created_at);
-                const agreementDate = formatDate(doc.agreement_date || doc.created_at);
+                const invoiceDate = fmtDate(doc.invoice_date || doc.created_at);
+                const agreementDate = fmtDate(doc.agreement_date || doc.created_at);
                 return (
                   <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-app bg-white px-3 py-2 text-xs text-app">
                     <div>
                       {doc.client_name} - {doc.car_brand} {doc.car_model} ({date})
-                      <div className="text-[10px] text-muted">Invoice: {invoiceDate} · Agreement: {agreementDate}</div>
+                      <div className="text-[10px] text-muted">{t("deals.invoiceAgreementMeta", { invoiceDate, agreementDate })}</div>
                     </div>
                     <div className="flex gap-2">
                       <button type="button" onClick={() => startEditDummyDoc(doc)} className="rounded border border-app px-2 py-1 text-[11px] font-semibold text-app hover:bg-gray-50">
-                        Edit
+                        {t("common.edit")}
                       </button>
                       <button type="button" onClick={() => deleteDummyDoc(doc.id)} className="rounded border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50">
-                        Delete
+                        {t("common.delete")}
                       </button>
                       <InvoiceDownloadButton
                         filename={`Dummy-Invoice-${doc.client_name}-${invoiceDate}.pdf`}

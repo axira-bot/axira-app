@@ -4,6 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { Alert, Button, Chip, Spinner } from "@heroui/react";
 import { useAuth } from "@/lib/context/AuthContext";
+import { formatDateForLocale, formatNumberForLocale, useI18n, type TranslateFn } from "@/lib/context/I18nContext";
+import {
+  carLifecycleLabel,
+  carLocationLabel,
+  dealLifecycleLabel,
+  inventoryLifecycleLabel,
+  pocketDetailLabel,
+  poStatusLabel,
+} from "@/lib/i18n/enumLabels";
 import { CAR_LIFECYCLE_STATUSES, isCarLifecycleStatus, type CarLifecycleStatus } from "@/lib/cars/carLifecycleStatus";
 import { cashPocketOptionsForCurrency, validatePocketForCurrency } from "@/lib/finance/cashPockets";
 import { isValidIsoVin, normalizeVin } from "@/lib/vin/isoVin";
@@ -73,8 +82,21 @@ type LinkedCar = {
 const inputCls =
   "w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]";
 
-function money(v: number, c: string) {
-  return `${Number(v || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} ${c}`;
+function sourceMarketLabel(t: TranslateFn, value: string | null | undefined): string {
+  const v = String(value || "").toLowerCase();
+  if (v === "china") return t("purchaseOrders.marketChina");
+  if (v === "dubai") return t("purchaseOrders.marketDubai");
+  if (v === "other") return t("purchaseOrders.marketOther");
+  return value?.trim() || t("common.emiDash");
+}
+
+function paymentMethodLabelForPo(t: TranslateFn, method: string | null | undefined): string {
+  const raw = String(method ?? "").trim();
+  if (!raw) return "";
+  const slug = raw.toLowerCase().replace(/\s+/g, "_");
+  const key = `purchaseOrders.detail.paymentMethod.${slug}`;
+  const translated = t(key);
+  return translated === key ? raw : translated;
 }
 
 function coerceLifecycle(s: string | null | undefined): CarLifecycleStatus {
@@ -85,7 +107,21 @@ function coerceLifecycle(s: string | null | undefined): CarLifecycleStatus {
 export default function PurchaseOrderDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
+  const { locale, t } = useI18n();
   const { isOwnerLike: isOwner, isManager } = useAuth();
+  const fmtMoney = (v: number, c: string) =>
+    `${formatNumberForLocale(locale, Number(v || 0), { maximumFractionDigits: 2 })} ${c}`;
+  const dash = t("common.emiDash");
+  const fmtDate = (value: string | null | undefined) => {
+    if (!value) return dash;
+    const d = value.includes("T") ? value.slice(0, 10) : value;
+    return formatDateForLocale(locale, d, { day: "2-digit", month: "short", year: "numeric" }) || dash;
+  };
+  const fmtDateTime = (value: string | null | undefined) => {
+    if (!value) return "";
+    const s = formatDateForLocale(locale, value, { dateStyle: "short", timeStyle: "short" });
+    return s || "";
+  };
   const canValidateVin = isOwner || isManager;
   const canEditLifecycle = canValidateVin;
   const [row, setRow] = useState<PurchaseOrder | null>(null);
@@ -143,7 +179,7 @@ export default function PurchaseOrderDetailPage() {
     const res = await fetch(`/api/purchase-orders/${id}`, { cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(data.error || "Failed to load PO");
+      setError(data.error || t("purchaseOrders.detail.loadFailed"));
       setRow(null);
       setItems([]);
       setPayments([]);
@@ -166,8 +202,8 @@ export default function PurchaseOrderDetailPage() {
 
   useEffect(() => {
     if (!successMessage) return;
-    const t = window.setTimeout(() => setSuccessMessage(null), 5000);
-    return () => window.clearTimeout(t);
+    const timerId = window.setTimeout(() => setSuccessMessage(null), 5000);
+    return () => window.clearTimeout(timerId);
   }, [successMessage]);
 
   useEffect(() => {
@@ -208,11 +244,13 @@ export default function PurchaseOrderDetailPage() {
     const data = await res.json().catch(() => ({}));
     setLifecycleSaving(false);
     if (!res.ok) {
-      setError((data.error as string) || "Failed to update lifecycle");
+      setError((data.error as string) || t("purchaseOrders.detail.failedLifecycleUpdate"));
       return;
     }
     const n = typeof data.updated_count === "number" ? data.updated_count : unique.length;
-    setSuccessMessage(n > 1 ? `Updated lifecycle for ${n} cars.` : "Lifecycle updated.");
+    setSuccessMessage(
+      n > 1 ? t("purchaseOrders.detail.lifecycleUpdatedMany", { count: n }) : t("purchaseOrders.detail.lifecycleUpdatedOne")
+    );
     setSelectedLifecycleCarIds((prev) => prev.filter((x) => !unique.includes(x)));
     await load();
   };
@@ -243,7 +281,7 @@ export default function PurchaseOrderDetailPage() {
     const data = await res.json().catch(() => ({}));
     setSavingItem(false);
     if (!res.ok) {
-      setError(data.error || "Failed to add item");
+      setError(data.error || t("purchaseOrders.detail.addItemFailed"));
       return;
     }
     setItemForm({ brand: "", model: "", year: "", color: "", vin: "", quantity: "1", unit_cost: "0", notes: "" });
@@ -293,7 +331,7 @@ export default function PurchaseOrderDetailPage() {
     const data = await res.json().catch(() => ({}));
     setSavingPayment(false);
     if (!res.ok) {
-      setError(data.error || "Failed to save payment");
+      setError(data.error || t("purchaseOrders.detail.savePaymentFailed"));
       return;
     }
     resetPaymentFormAfterSave();
@@ -330,7 +368,7 @@ export default function PurchaseOrderDetailPage() {
 
   const deletePayment = async (paymentId: string) => {
     if (!id || !isOwner) return;
-    if (!window.confirm("Delete this payment? The linked movement will be removed and the pocket will be credited back.")) {
+    if (!window.confirm(t("purchaseOrders.detail.deletePaymentConfirm"))) {
       setPaymentMenuId(null);
       return;
     }
@@ -339,7 +377,7 @@ export default function PurchaseOrderDetailPage() {
     const data = await res.json().catch(() => ({}));
     setPaymentMenuId(null);
     if (!res.ok) {
-      setError(data.error || "Failed to delete payment");
+      setError(data.error || t("purchaseOrders.detail.deletePaymentFailed"));
       return;
     }
     if (editingPaymentId === paymentId) cancelPaymentEdit();
@@ -353,7 +391,7 @@ export default function PurchaseOrderDetailPage() {
     if (!isValidIsoVin(normalized)) {
       setVinFieldError((p) => ({
         ...p,
-        [carId]: "VIN must be 17 characters (letters A–Z except I, O, Q, and digits).",
+        [carId]: t("purchaseOrders.detail.vinInvalidFormat"),
       }));
       return;
     }
@@ -376,10 +414,10 @@ export default function PurchaseOrderDetailPage() {
     const data = await res.json().catch(() => ({}));
     setValidatingVinCarId(null);
     if (!res.ok) {
-      setError((data.error as string) || "VIN validation failed");
+      setError((data.error as string) || t("purchaseOrders.detail.vinValidationFailed"));
       return;
     }
-    setSuccessMessage("VIN validated and propagated to inventory.");
+    setSuccessMessage(t("purchaseOrders.detail.vinValidatedSuccess"));
     await load();
   };
 
@@ -387,7 +425,7 @@ export default function PurchaseOrderDetailPage() {
     if (!id || !isOwner || !vinOverride) return;
     const normalized = normalizeVin(vinOverride.vin);
     if (!isValidIsoVin(normalized)) {
-      setError("New VIN is invalid.");
+      setError(t("purchaseOrders.detail.vinNewInvalid"));
       return;
     }
     setError(null);
@@ -406,11 +444,11 @@ export default function PurchaseOrderDetailPage() {
     const data = await res.json().catch(() => ({}));
     setValidatingVinCarId(null);
     if (!res.ok) {
-      setError((data.error as string) || "Could not update VIN");
+      setError((data.error as string) || t("purchaseOrders.detail.vinUpdateFailed"));
       return;
     }
     setVinOverride(null);
-    setSuccessMessage("VIN updated (owner override).");
+    setSuccessMessage(t("purchaseOrders.detail.vinOverrideSuccess"));
     await load();
   };
 
@@ -431,7 +469,7 @@ export default function PurchaseOrderDetailPage() {
     const data = await res.json().catch(() => ({}));
     setReceiving(false);
     if (!res.ok) {
-      setError(data.error || "Failed to receive");
+      setError(data.error || t("purchaseOrders.detail.receiveFailed"));
       return;
     }
     load();
@@ -454,12 +492,12 @@ export default function PurchaseOrderDetailPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center gap-3 py-12">
           <Spinner size="md" color="danger" />
-          <span className="text-sm text-default-500">Loading purchase order…</span>
+          <span className="text-sm text-default-500">{t("purchaseOrders.detail.loadingDetail")}</span>
         </div>
       ) : !row ? (
         <Alert.Root status="danger">
           <Alert.Content>
-            <Alert.Description>{error || "PO not found."}</Alert.Description>
+            <Alert.Description>{error || t("purchaseOrders.detail.poNotFoundShort")}</Alert.Description>
           </Alert.Content>
         </Alert.Root>
       ) : (
@@ -469,19 +507,37 @@ export default function PurchaseOrderDetailPage() {
               <div>
                 <h1 className="text-xl font-bold">{row.po_number || row.id}</h1>
                 <p className="text-xs text-muted">
-                  Supplier: {row.suppliers?.name || row.supplier_id || "-"} · Market: {row.source_market || "-"} · Status: {row.status} · Ordered: {row.ordered_at || "-"} · ETA: {row.expected_arrival_date || "-"}
+                  {t("purchaseOrders.detail.metaLine", {
+                    supplier: row.suppliers?.name || row.supplier_id || dash,
+                    market: sourceMarketLabel(t, row.source_market),
+                    status: poStatusLabel(t, row.status),
+                    ordered: row.ordered_at ? fmtDate(row.ordered_at) : dash,
+                    eta: row.expected_arrival_date ? fmtDate(row.expected_arrival_date) : dash,
+                  })}
                 </p>
               </div>
               <div className="text-right text-sm">
-                <p>Items subtotal: {money(itemsSubtotal, row.currency)}</p>
-                <p>Shipping: {money(adjustments.shipping, row.currency)} · Other fees: {money(adjustments.fees, row.currency)}</p>
-                <p>Total: {money(computedGrandTotal, row.currency)}</p>
-                <p>Paid: {money(paid, row.currency)}</p>
+                <p>
+                  {t("purchaseOrders.detail.itemsSubtotal")}: {fmtMoney(itemsSubtotal, row.currency)}
+                </p>
+                <p>
+                  {t("purchaseOrders.detail.shipping")}: {fmtMoney(adjustments.shipping, row.currency)} · {t("purchaseOrders.detail.otherFees")}: {fmtMoney(adjustments.fees, row.currency)}
+                </p>
+                <p>
+                  {t("purchaseOrders.detail.total")}: {fmtMoney(computedGrandTotal, row.currency)}
+                </p>
+                <p>
+                  {t("purchaseOrders.detail.paid")}: {fmtMoney(paid, row.currency)}
+                </p>
                 <p className={owed <= 0 ? "text-emerald-600 font-semibold" : "text-amber-700 font-semibold"}>
-                  Owed: {money(owed, row.currency)}
+                  {t("purchaseOrders.detail.owed")}: {fmtMoney(owed, row.currency)}
                 </p>
                 <p className="text-xs text-muted">
-                  AED View: Total {money(Number(row.total_cost_aed || 0), "AED")} · Paid {money(Number(row.paid_amount_aed || 0), "AED")} · Owed {money(Number(row.supplier_owed_aed || 0), "AED")}
+                  {t("purchaseOrders.detail.aedViewLine", {
+                    total: fmtMoney(Number(row.total_cost_aed || 0), "AED"),
+                    paid: fmtMoney(Number(row.paid_amount_aed || 0), "AED"),
+                    owed: fmtMoney(Number(row.supplier_owed_aed || 0), "AED"),
+                  })}
                 </p>
               </div>
             </div>
@@ -489,12 +545,14 @@ export default function PurchaseOrderDetailPage() {
           </section>
 
           <section className="rounded-xl border border-app bg-panel p-4">
-            <h2 className="mb-3 text-base font-semibold">Line Items</h2>
+            <h2 className="mb-3 text-base font-semibold">{t("purchaseOrders.lineItems")}</h2>
             {canEditLifecycle && cars.length > 0 ? (
               <div className="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-app/60 bg-black/[0.02] px-3 py-2 text-xs">
-                <span className="font-medium text-foreground">{selectedLifecycleCarIds.length} car(s) selected</span>
+                <span className="font-medium text-foreground">
+                  {t("purchaseOrders.detail.carsSelected", { count: selectedLifecycleCarIds.length })}
+                </span>
                 <label className="flex items-center gap-1">
-                  <span className="text-muted">New status:</span>
+                  <span className="text-muted">{t("purchaseOrders.detail.newStatus")}:</span>
                   <select
                     className={inputCls}
                     disabled={lifecycleSaving}
@@ -506,7 +564,7 @@ export default function PurchaseOrderDetailPage() {
                   >
                     {CAR_LIFECYCLE_STATUSES.map((s) => (
                       <option key={s} value={s}>
-                        {s.replace(/_/g, " ")}
+                        {carLifecycleLabel(t, s)}
                       </option>
                     ))}
                   </select>
@@ -519,43 +577,49 @@ export default function PurchaseOrderDetailPage() {
                   isDisabled={lifecycleSaving || selectedLifecycleCarIds.length === 0}
                   onPress={() => updatePoCarLifecycle(selectedLifecycleCarIds, bulkLifecycleStatus)}
                 >
-                  Update status for selected
+                  {t("purchaseOrders.detail.updateStatusSelected")}
                 </Button>
               </div>
             ) : null}
             {isOwner && (
               <form className="mb-4 grid gap-2 md:grid-cols-8" onSubmit={addItem}>
-                <input className={inputCls} placeholder="Brand" value={itemForm.brand} onChange={(e) => setItemForm((p) => ({ ...p, brand: e.target.value }))} />
-                <input className={inputCls} placeholder="Model" value={itemForm.model} onChange={(e) => setItemForm((p) => ({ ...p, model: e.target.value }))} />
-                <input className={inputCls} placeholder="Year" value={itemForm.year} onChange={(e) => setItemForm((p) => ({ ...p, year: e.target.value }))} />
-                <input className={inputCls} placeholder="Color" value={itemForm.color} onChange={(e) => setItemForm((p) => ({ ...p, color: e.target.value }))} />
-                <input className={inputCls} placeholder="VIN (optional)" value={itemForm.vin} onChange={(e) => setItemForm((p) => ({ ...p, vin: e.target.value }))} />
-                <input className={inputCls} placeholder="Qty" value={itemForm.quantity} onChange={(e) => setItemForm((p) => ({ ...p, quantity: e.target.value }))} />
-                <input className={inputCls} placeholder="Unit cost" value={itemForm.unit_cost} onChange={(e) => setItemForm((p) => ({ ...p, unit_cost: e.target.value }))} />
+                <input className={inputCls} placeholder={t("purchaseOrders.colBrand")} value={itemForm.brand} onChange={(e) => setItemForm((p) => ({ ...p, brand: e.target.value }))} />
+                <input className={inputCls} placeholder={t("purchaseOrders.colModel")} value={itemForm.model} onChange={(e) => setItemForm((p) => ({ ...p, model: e.target.value }))} />
+                <input className={inputCls} placeholder={t("purchaseOrders.colYear")} value={itemForm.year} onChange={(e) => setItemForm((p) => ({ ...p, year: e.target.value }))} />
+                <input className={inputCls} placeholder={t("purchaseOrders.colColor")} value={itemForm.color} onChange={(e) => setItemForm((p) => ({ ...p, color: e.target.value }))} />
+                <input className={inputCls} placeholder={t("purchaseOrders.detail.placeholderVinOptional")} value={itemForm.vin} onChange={(e) => setItemForm((p) => ({ ...p, vin: e.target.value }))} />
+                <input className={inputCls} placeholder={t("purchaseOrders.detail.qty")} value={itemForm.quantity} onChange={(e) => setItemForm((p) => ({ ...p, quantity: e.target.value }))} />
+                <input className={inputCls} placeholder={t("purchaseOrders.detail.placeholderUnitCost")} value={itemForm.unit_cost} onChange={(e) => setItemForm((p) => ({ ...p, unit_cost: e.target.value }))} />
                 <Button type="submit" variant="primary" size="sm" isDisabled={savingItem}>
-                  {savingItem ? "Adding..." : "Add item"}
+                  {savingItem ? t("purchaseOrders.detail.addingItem") : t("purchaseOrders.addItem")}
                 </Button>
-                <input className={`${inputCls} md:col-span-8`} placeholder="Notes" value={itemForm.notes} onChange={(e) => setItemForm((p) => ({ ...p, notes: e.target.value }))} />
+                <input className={`${inputCls} md:col-span-8`} placeholder={t("purchaseOrders.notes")} value={itemForm.notes} onChange={(e) => setItemForm((p) => ({ ...p, notes: e.target.value }))} />
               </form>
             )}
             <div className="responsive-table-wrap">
               <table className="min-w-full text-sm">
                 <thead className="bg-black/5 text-xs uppercase text-muted">
                   <tr>
-                    <th className="px-2 py-2 text-left">Car</th>
-                    <th className="px-2 py-2 text-right">Qty</th>
-                    <th className="px-2 py-2 text-right">Unit</th>
-                    <th className="px-2 py-2 text-right">Total</th>
-                    <th className="px-2 py-2 text-left">Item status</th>
-                    <th className="px-2 py-2 text-right">Generated cars</th>
+                    <th className="px-2 py-2 text-left">{t("purchaseOrders.detail.carCol")}</th>
+                    <th className="px-2 py-2 text-right">{t("purchaseOrders.detail.qty")}</th>
+                    <th className="px-2 py-2 text-right">{t("purchaseOrders.detail.unit")}</th>
+                    <th className="px-2 py-2 text-right">{t("purchaseOrders.detail.total")}</th>
+                    <th className="px-2 py-2 text-left">{t("purchaseOrders.detail.itemStatus")}</th>
+                    <th className="px-2 py-2 text-right">{t("purchaseOrders.detail.generatedCars")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((it) => (
                     <tr key={it.id} className="border-t border-app/50">
                       <td className="px-2 py-2">
-                        {it.brand} {it.model} {it.year || ""} {it.color || ""}
-                        {it.vin ? <div className="text-[11px] text-muted">VIN: {it.vin}</div> : null}
+                        <div>
+                          {it.brand} {it.model} {it.year || ""} {it.color || ""}
+                        </div>
+                        {it.vin ? (
+                          <div className="text-[11px] text-muted">
+                            {t("purchaseOrders.detail.vinColon")} {it.vin}
+                          </div>
+                        ) : null}
                         {cars
                           .filter((c) => c.purchase_order_item_id === it.id)
                           .map((c) => {
@@ -571,7 +635,7 @@ export default function PurchaseOrderDetailPage() {
                                     <input
                                       type="checkbox"
                                       className="mt-1.5"
-                                      aria-label={`Select car ${c.id.slice(0, 8)} for bulk lifecycle`}
+                                      aria-label={t("purchaseOrders.detail.ariaSelectCarBulk", { id: c.id.slice(0, 8) })}
                                       checked={selectedLifecycleCarIds.includes(c.id)}
                                       disabled={lifecycleSaving}
                                       onChange={() => toggleLifecycleCarSelection(c.id)}
@@ -581,32 +645,37 @@ export default function PurchaseOrderDetailPage() {
                                 <div className="flex flex-wrap items-center gap-1">
                                   <span className="font-mono text-[9px] text-muted">{c.id.slice(0, 8)}</span>
                                   <Chip size="sm" variant="soft" className="h-5 px-2 text-[9px]">
-                                    {lifecycle.replace(/_/g, " ")}
+                                    {carLifecycleLabel(t, lifecycle)}
                                   </Chip>
                                   {validated ? (
                                     <Chip size="sm" color="success" variant="soft" className="h-5 text-[9px]">
-                                      VIN ✓
+                                      {t("purchaseOrders.detail.chipVinOk")}
                                     </Chip>
                                   ) : (
                                     <Chip size="sm" color="warning" variant="soft" className="h-5 text-[9px]">
-                                      VIN pending
+                                      {t("purchaseOrders.detail.chipVinPending")}
                                     </Chip>
                                   )}
                                 </div>
                                 {c.location ? (
                                   <div className="text-[9px] text-muted">
-                                    Location: <span className="font-medium text-app">{c.location}</span>
+                                    {t("purchaseOrders.detail.locationPrefix")}{" "}
+                                    <span className="font-medium text-app">{carLocationLabel(t, c.location)}</span>
                                   </div>
                                 ) : null}
                                 {(c.inventory_lifecycle_status || c.status) && (
                                   <div className="text-[9px] text-muted">
-                                    Legacy inventory: {c.inventory_lifecycle_status || "-"} · sales status:{" "}
-                                    {c.status || "-"}
+                                    {t("purchaseOrders.detail.legacyInventory", {
+                                      inv: c.inventory_lifecycle_status
+                                        ? inventoryLifecycleLabel(t, c.inventory_lifecycle_status)
+                                        : dash,
+                                      sales: c.status ? dealLifecycleLabel(t, c.status) : dash,
+                                    })}
                                   </div>
                                 )}
                                 {canEditLifecycle ? (
                                   <div className="flex flex-wrap items-center gap-1">
-                                    <span className="text-[9px] uppercase text-muted">Lifecycle</span>
+                                    <span className="text-[9px] uppercase text-muted">{t("purchaseOrders.detail.lifecycleLabel")}</span>
                                     <select
                                       className={`${inputCls} max-w-[14rem] py-1.5 text-[10px]`}
                                       value={lifecycle}
@@ -619,7 +688,7 @@ export default function PurchaseOrderDetailPage() {
                                     >
                                       {CAR_LIFECYCLE_STATUSES.map((s) => (
                                         <option key={s} value={s}>
-                                          {s.replace(/_/g, " ")}
+                                          {carLifecycleLabel(t, s)}
                                         </option>
                                       ))}
                                     </select>
@@ -629,17 +698,16 @@ export default function PurchaseOrderDetailPage() {
                                 </div>
                                 {validated && c.vin_validated_at ? (
                                   <div className="text-[9px] text-muted">
-                                    {new Date(c.vin_validated_at).toLocaleString(undefined, {
-                                      dateStyle: "short",
-                                      timeStyle: "short",
-                                    })}
-                                    {c.vin_validated_by ? ` · by ${c.vin_validated_by.slice(0, 8)}…` : null}
+                                    {fmtDateTime(c.vin_validated_at)}
+                                    {c.vin_validated_by
+                                      ? ` · ${c.vin_validated_by.slice(0, 8)}…`
+                                      : null}
                                   </div>
                                 ) : null}
                                 <input
                                   className={`${inputCls} mt-0.5 ${err ? "border-red-500" : ""}`}
                                   readOnly={!canEditField || lifecycleSaving}
-                                  placeholder="Enter 17‑char VIN"
+                                  placeholder={t("purchaseOrders.detail.vinPlaceholder")}
                                   value={displayVin}
                                   onChange={(e) => {
                                     setVinFieldError((p) => {
@@ -664,7 +732,7 @@ export default function PurchaseOrderDetailPage() {
                                     }
                                     onPress={() => validateVinForCar(c.id)}
                                   >
-                                    {validatingVinCarId === c.id ? "Validating…" : "Validate VIN"}
+                                    {validatingVinCarId === c.id ? t("purchaseOrders.detail.validatingVin") : t("purchaseOrders.detail.validateVin")}
                                   </Button>
                                 ) : null}
                                 {validated && isOwner ? (
@@ -680,18 +748,24 @@ export default function PurchaseOrderDetailPage() {
                                       })
                                     }
                                   >
-                                    Change VIN (owner)…
+                                    {t("purchaseOrders.detail.changeVinOwner")}
                                   </button>
                                 ) : null}
                               </div>
                             );
                           })}
                       </td>
-                      <td className="px-2 py-2 text-right">{it.quantity}</td>
-                      <td className="px-2 py-2 text-right">{money(it.unit_cost, row.currency)}</td>
-                      <td className="px-2 py-2 text-right">{money(it.total_cost, row.currency)}</td>
-                      <td className="px-2 py-2">{it.inventory_status}</td>
-                      <td className="px-2 py-2 text-right">{carsPerItem.get(it.id) || 0}</td>
+                      <td className="px-2 py-2 text-right">
+                        {formatNumberForLocale(locale, it.quantity, { maximumFractionDigits: 0 })}
+                      </td>
+                      <td className="px-2 py-2 text-right">{fmtMoney(it.unit_cost, row.currency)}</td>
+                      <td className="px-2 py-2 text-right">{fmtMoney(it.total_cost, row.currency)}</td>
+                      <td className="px-2 py-2">
+                        {inventoryLifecycleLabel(t, it.inventory_status)}
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        {formatNumberForLocale(locale, carsPerItem.get(it.id) || 0, { maximumFractionDigits: 0 })}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -700,19 +774,19 @@ export default function PurchaseOrderDetailPage() {
           </section>
 
           <section className="rounded-xl border border-app bg-panel p-4">
-            <h2 className="mb-3 text-base font-semibold">Payment Ledger</h2>
+            <h2 className="mb-3 text-base font-semibold">{t("purchaseOrders.detail.paymentLedger")}</h2>
             {isOwner && (
               <form className="mb-4 grid gap-2 md:grid-cols-7" onSubmit={savePayment}>
                 {editingPaymentId ? (
                   <div className="md:col-span-7 flex flex-wrap items-center gap-2 text-xs text-amber-800">
-                    <span>Editing payment</span>
+                    <span>{t("purchaseOrders.detail.editingPayment")}</span>
                     <button type="button" className="underline font-medium" onClick={cancelPaymentEdit}>
-                      Cancel edit
+                      {t("purchaseOrders.detail.cancelEdit")}
                     </button>
                   </div>
                 ) : null}
                 <input className={inputCls} type="date" value={paymentForm.date} onChange={(e) => setPaymentForm((p) => ({ ...p, date: e.target.value }))} />
-                <input className={inputCls} placeholder="Amount" value={paymentForm.amount} onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))} />
+                <input className={inputCls} placeholder={t("purchaseOrders.placeholderAmount")} value={paymentForm.amount} onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))} />
                 <select
                   className={inputCls}
                   value={paymentForm.currency}
@@ -732,62 +806,66 @@ export default function PurchaseOrderDetailPage() {
                   <option value="DZD">DZD</option>
                   <option value="EUR">EUR</option>
                 </select>
-                <input className={inputCls} placeholder="Rate snapshot" value={paymentForm.rate_snapshot} onChange={(e) => setPaymentForm((p) => ({ ...p, rate_snapshot: e.target.value }))} />
+                <input className={inputCls} placeholder={t("purchaseOrders.placeholderRateSnapshot")} value={paymentForm.rate_snapshot} onChange={(e) => setPaymentForm((p) => ({ ...p, rate_snapshot: e.target.value }))} />
                 <select
                   required
                   className={inputCls}
                   value={paymentForm.pocket}
                   onChange={(e) => setPaymentForm((p) => ({ ...p, pocket: e.target.value }))}
                 >
-                  <option value="">Cash pocket (required)…</option>
+                  <option value="">{t("purchaseOrders.detail.cashPocketRequired")}</option>
                   {cashPocketOptionsForCurrency(paymentForm.currency).map((opt) => (
                     <option key={opt} value={opt}>
-                      {opt}
+                      {pocketDetailLabel(t, opt)}
                     </option>
                   ))}
                 </select>
-                <input className={inputCls} placeholder="Method" value={paymentForm.method} onChange={(e) => setPaymentForm((p) => ({ ...p, method: e.target.value }))} />
+                <input className={inputCls} placeholder={t("purchaseOrders.placeholderMethod")} value={paymentForm.method} onChange={(e) => setPaymentForm((p) => ({ ...p, method: e.target.value }))} />
                 <button
                   type="submit"
                   disabled={savingPayment}
                   className="rounded-md bg-[var(--color-accent)] px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  {savingPayment ? "Saving…" : editingPaymentId ? "Save changes" : "Add payment"}
+                  {savingPayment
+                    ? t("purchaseOrders.detail.savingPaymentShort")
+                    : editingPaymentId
+                      ? t("purchaseOrders.detail.saveChanges")
+                      : t("purchaseOrders.detail.addPayment")}
                 </button>
-                <input className={`${inputCls} md:col-span-7`} placeholder="Notes" value={paymentForm.notes} onChange={(e) => setPaymentForm((p) => ({ ...p, notes: e.target.value }))} />
+                <input className={`${inputCls} md:col-span-7`} placeholder={t("purchaseOrders.placeholderNotes")} value={paymentForm.notes} onChange={(e) => setPaymentForm((p) => ({ ...p, notes: e.target.value }))} />
               </form>
             )}
             <div className="responsive-table-wrap">
               <table className="min-w-full text-sm">
                 <thead className="bg-black/5 text-xs uppercase text-muted">
                   <tr>
-                    <th className="px-2 py-2 text-left">Date</th>
-                    <th className="px-2 py-2 text-right">Amount</th>
-                    <th className="px-2 py-2 text-right">PO currency eq.</th>
-                    <th className="px-2 py-2 text-right">AED eq.</th>
-                    <th className="px-2 py-2 text-left">Pocket</th>
-                    <th className="px-2 py-2 text-left">Method</th>
-                    <th className="px-2 py-2 text-left">Notes</th>
+                    <th className="px-2 py-2 text-left">{t("purchaseOrders.detail.paymentsTableDate")}</th>
+                    <th className="px-2 py-2 text-right">{t("purchaseOrders.detail.paymentsTableAmount")}</th>
+                    <th className="px-2 py-2 text-right">{t("purchaseOrders.detail.paymentsTablePoEq")}</th>
+                    <th className="px-2 py-2 text-right">{t("purchaseOrders.detail.paymentsTableAedEq")}</th>
+                    <th className="px-2 py-2 text-left">{t("purchaseOrders.detail.paymentsTablePocket")}</th>
+                    <th className="px-2 py-2 text-left">{t("purchaseOrders.detail.paymentsTableMethod")}</th>
+                    <th className="px-2 py-2 text-left">{t("purchaseOrders.detail.paymentsTableNotes")}</th>
                     {isOwner ? <th className="px-2 py-2 w-10 text-right"> </th> : null}
                   </tr>
                 </thead>
                 <tbody>
                   {payments.map((p) => (
                     <tr key={p.id} className="border-t border-app/50">
-                      <td className="px-2 py-2">{p.date || "-"}</td>
-                      <td className="px-2 py-2 text-right">{money(p.amount, p.currency)}</td>
-                      <td className="px-2 py-2 text-right">{money(p.amount_in_po_currency || 0, row.currency)}</td>
-                      <td className="px-2 py-2 text-right">{money(p.aed_equivalent || 0, "AED")}</td>
-                      <td className="px-2 py-2">{p.pocket || "-"}</td>
-                      <td className="px-2 py-2">{p.method || "-"}</td>
-                      <td className="px-2 py-2">{p.notes || "-"}</td>
+                      <td className="px-2 py-2">{p.date ? fmtDate(p.date) : dash}</td>
+                      <td className="px-2 py-2 text-right">{fmtMoney(p.amount, p.currency)}</td>
+                      <td className="px-2 py-2 text-right">{fmtMoney(p.amount_in_po_currency || 0, row.currency)}</td>
+                      <td className="px-2 py-2 text-right">{fmtMoney(p.aed_equivalent || 0, "AED")}</td>
+                      <td className="px-2 py-2">{p.pocket ? pocketDetailLabel(t, p.pocket) : dash}</td>
+                      <td className="px-2 py-2">{paymentMethodLabelForPo(t, p.method) || dash}</td>
+                      <td className="px-2 py-2">{p.notes || dash}</td>
                       {isOwner ? (
                         <td className="px-2 py-2 text-right">
                           <div className="relative inline-block text-left">
                             <button
                               type="button"
                               className="rounded px-1.5 py-0.5 text-lg leading-none text-muted hover:bg-black/5"
-                              aria-label="Payment actions"
+                              aria-label={t("purchaseOrders.detail.paymentActions")}
                               onClick={() => setPaymentMenuId((open) => (open === p.id ? null : p.id))}
                             >
                               ⋮
@@ -799,14 +877,14 @@ export default function PurchaseOrderDetailPage() {
                                   className="block w-full px-3 py-1.5 text-left hover:bg-black/5"
                                   onClick={() => startEditPayment(p)}
                                 >
-                                  Edit
+                                  {t("purchaseOrders.detail.paymentMenuEdit")}
                                 </button>
                                 <button
                                   type="button"
                                   className="block w-full px-3 py-1.5 text-left text-red-700 hover:bg-red-50"
                                   onClick={() => deletePayment(p.id)}
                                 >
-                                  Delete
+                                  {t("purchaseOrders.detail.paymentMenuDelete")}
                                 </button>
                               </div>
                             ) : null}
@@ -830,16 +908,16 @@ export default function PurchaseOrderDetailPage() {
 
           {isOwner && (
             <section className="rounded-xl border border-app bg-panel p-4">
-              <h2 className="mb-3 text-base font-semibold">Receive Workflow</h2>
+              <h2 className="mb-3 text-base font-semibold">{t("purchaseOrders.detail.receiveWorkflowHeading")}</h2>
               <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-muted">Mode:</span>
+                <span className="text-muted">{t("purchaseOrders.detail.receiveMode")}:</span>
                 <select
                   className={inputCls}
                   value={receiveMode}
                   onChange={(e) => setReceiveMode(e.target.value as "arrived" | "available")}
                 >
-                  <option value="arrived">Arrived</option>
-                  <option value="available">Available</option>
+                  <option value="arrived">{t("purchaseOrders.detail.receiveAsArrived")}</option>
+                  <option value="available">{t("purchaseOrders.detail.receiveAsAvailable")}</option>
                 </select>
               </div>
               <div className="mb-3 grid gap-2 md:grid-cols-2">
@@ -855,7 +933,10 @@ export default function PurchaseOrderDetailPage() {
                       }
                     />
                     <span>
-                      {it.brand} {it.model} · Qty {it.quantity}
+                      {it.brand} {it.model}{" "}
+                      {t("purchaseOrders.detail.qtyDot", {
+                        n: formatNumberForLocale(locale, it.quantity, { maximumFractionDigits: 0 }),
+                      })}
                     </span>
                   </label>
                 ))}
@@ -868,7 +949,11 @@ export default function PurchaseOrderDetailPage() {
                   isDisabled={receiving}
                   onPress={() => receive(receiveMode)}
                 >
-                  {receiving ? "Processing..." : `Mark ${receiveMode === "available" ? "Available" : "Arrived"}`}
+                  {receiving
+                    ? t("purchaseOrders.detail.receiveProcessing")
+                    : receiveMode === "available"
+                      ? t("purchaseOrders.detail.receiveAsAvailable")
+                      : t("purchaseOrders.detail.receiveAsArrived")}
                 </Button>
                 <Button
                   type="button"
@@ -877,7 +962,7 @@ export default function PurchaseOrderDetailPage() {
                   isDisabled={receiving}
                   onPress={() => receive("available")}
                 >
-                  Mark Available
+                  {t("purchaseOrders.detail.receiveAsAvailable")}
                 </Button>
               </div>
             </section>
@@ -899,13 +984,11 @@ export default function PurchaseOrderDetailPage() {
             >
               <div className="w-full max-w-md rounded-lg border border-app bg-panel p-4 shadow-lg">
                 <h2 id="vin-override-title" className="mb-3 text-base font-semibold">
-                  Confirm VIN change
+                  {t("purchaseOrders.detail.vinOverrideTitle")}
                 </h2>
-                <p className="mb-3 text-xs text-muted">
-                  This car already has a validated VIN. Replacing it is logged for audit.
-                </p>
+                <p className="mb-3 text-xs text-muted">{t("purchaseOrders.detail.vinOverrideBody")}</p>
                 <label className="mb-2 block text-xs font-medium">
-                  New VIN
+                  {t("purchaseOrders.detail.vinOverrideNew")}
                   <input
                     className={`${inputCls} mt-1`}
                     value={vinOverride.vin}
@@ -913,17 +996,17 @@ export default function PurchaseOrderDetailPage() {
                   />
                 </label>
                 <label className="mb-3 block text-xs font-medium">
-                  Reason (optional)
+                  {t("purchaseOrders.detail.vinOverrideReason")}
                   <input
                     className={`${inputCls} mt-1`}
-                    placeholder="Correction, factory re-stamp, …"
+                    placeholder={t("purchaseOrders.detail.vinOverridePlaceholder")}
                     value={vinOverride.reason}
                     onChange={(e) => setVinOverride((p) => (p ? { ...p, reason: e.target.value } : p))}
                   />
                 </label>
                 <div className="flex flex-wrap justify-end gap-2">
                   <Button type="button" variant="outline" size="sm" onPress={() => setVinOverride(null)}>
-                    Cancel
+                    {t("purchaseOrders.detail.detailCancel")}
                   </Button>
                   <Button
                     type="button"
@@ -932,7 +1015,7 @@ export default function PurchaseOrderDetailPage() {
                     isDisabled={validatingVinCarId !== null || !isValidIsoVin(normalizeVin(vinOverride.vin))}
                     onPress={() => submitVinOverride()}
                   >
-                    Replace VIN
+                    {t("purchaseOrders.detail.replaceVin")}
                   </Button>
                 </div>
               </div>

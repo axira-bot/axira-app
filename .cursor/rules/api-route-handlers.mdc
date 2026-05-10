@@ -1,9 +1,7 @@
 ---
 description: Next.js Route Handlers — auth, validation, errors
-globs: app/api/**/*.ts
 alwaysApply: false
 ---
-
 # Responsibilities
 
 - Parse `request` (query, JSON body), authenticate/authorize, call Supabase or domain helpers, return `NextResponse.json`.

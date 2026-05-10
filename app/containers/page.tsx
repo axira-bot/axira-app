@@ -9,6 +9,8 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import { PageContainer } from "@/components/ui/page-container";
 import { CAR_LOCATION } from "@/lib/cars/carLocations";
+import { formatDateForLocale, formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
+import { containerStatusLabel, customsStatusLabel, pocketDetailLabel } from "@/lib/i18n/enumLabels";
 
 type Container = {
   id: string;
@@ -45,14 +47,14 @@ type NewContainerForm = {
   driveLink: string;
 };
 
-function DriveLinkIcon({ href }: { href: string }) {
+function DriveLinkIcon({ href, title }: { href: string; title: string }) {
   if (!href?.trim()) return null;
   return (
     <a
       href={href.startsWith("http") ? href : `https://${href}`}
       target="_blank"
       rel="noopener noreferrer"
-      title="Open Google Drive folder"
+      title={title}
       className="inline-flex items-center justify-center rounded border border-app bg-white p-1.5 text-muted transition hover:border-[var(--color-accent)]/70 hover:text-app"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -95,32 +97,24 @@ const STATUS_BADGE: Record<string, string> = {
   Cleared: "bg-emerald-50 text-emerald-700 border-emerald-300",
 };
 
-function formatNumber(value: number): string {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function formatMoney(value: number | null | undefined, currency: string) {
-  const v = typeof value === "number" && !Number.isNaN(value) ? value : 0;
-  return `${formatNumber(v)} ${currency}`;
-}
-
 function parseNum(s: string): number {
   const v = Number(s);
   return Number.isFinite(v) ? v : 0;
 }
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 export default function ContainersPage() {
+  const { locale, t } = useI18n();
+  const fmtNum = (n: number) => formatNumberForLocale(locale, n, { maximumFractionDigits: 0 });
+  const fmtMoney = (v: number | null | undefined, currency: string) => {
+    const val = typeof v === "number" && !Number.isNaN(v) ? v : 0;
+    return `${fmtNum(val)} ${currency}`;
+  };
+  const fmtDate = (value: string | null | undefined) => {
+    if (!value) return t("common.emiDash");
+    const d = formatDateForLocale(locale, value, { day: "2-digit", month: "short", year: "numeric" });
+    return d || t("common.emiDash");
+  };
+
   const { canDelete } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -188,7 +182,7 @@ export default function ContainersPage() {
     if (containersError || containerCarsError || carsError) {
       setError(
         [
-          "Failed to load containers data.",
+          t("containers.loadFailed"),
           containersError?.message,
           containerCarsError?.message,
           carsError?.message,
@@ -218,8 +212,8 @@ export default function ContainersPage() {
   };
 
   const validateNewContainer = () => {
-    if (!newForm.ref.trim()) return "Reference is required.";
-    if (!newForm.date) return "Date is required.";
+    if (!newForm.ref.trim()) return t("containers.refRequired");
+    if (!newForm.date) return t("containers.dateRequired");
     return null;
   };
 
@@ -253,7 +247,7 @@ export default function ContainersPage() {
         console.log("Supabase update container error:", updateError);
         setError(
           [
-            "Failed to update container.",
+            t("containers.updateFailed"),
             updateError.message,
             updateError.details,
             updateError.hint,
@@ -326,7 +320,7 @@ export default function ContainersPage() {
         console.log("Supabase insert container error:", insertError);
         setError(
           [
-            "Failed to create container.",
+            t("containers.createFailed"),
             insertError.message,
             insertError.details,
             insertError.hint,
@@ -367,13 +361,13 @@ export default function ContainersPage() {
     if (!canDelete) return;
     const carsInContainer = containerCars.filter((cc) => cc.container_id === container.id);
     if (carsInContainer.length > 0) {
-      setError("Remove all cars from container before deleting.");
+      setError(t("containers.removeCarsBeforeDelete"));
       return;
     }
 
     if (
       !window.confirm(
-        `Delete container ${container.ref || container.id}? This cannot be undone.`
+        t("containers.deleteConfirm", { ref: container.ref || container.id })
       )
     )
       return;
@@ -424,7 +418,7 @@ export default function ContainersPage() {
       console.log("Supabase delete container error:", deleteError);
       setError(
         [
-          "Failed to delete container.",
+          t("containers.deleteFailed"),
           deleteError.message,
           deleteError.details,
           deleteError.hint,
@@ -486,7 +480,7 @@ export default function ContainersPage() {
     if (addCarForm.mode === "inventory") {
       const car = cars.find((c) => c.id === addCarForm.inventoryCarId);
       if (!car) {
-        setError("Select a car from inventory or switch to manual mode.");
+        setError(t("containers.selectCarOrManual"));
         setIsAddingCar(false);
         return;
       }
@@ -496,7 +490,7 @@ export default function ContainersPage() {
       }`.trim();
     } else {
       if (!addCarForm.brand.trim() || !addCarForm.model.trim()) {
-        setError("Brand and Model are required for manual cars.");
+        setError(t("containers.brandModelManualRequired"));
         setIsAddingCar(false);
         return;
       }
@@ -533,7 +527,7 @@ export default function ContainersPage() {
       console.log("Supabase insert container_cars error:", insertError);
       setError(
         [
-          "Failed to add car to container.",
+          t("containers.addCarFailed"),
           insertError.message,
           insertError.details,
           insertError.hint,
@@ -589,7 +583,7 @@ export default function ContainersPage() {
   };
 
   const handleRemoveCar = async (cc: ContainerCar) => {
-    if (!window.confirm("Remove this car from container?")) return;
+    if (!window.confirm(t("containers.removeCarConfirm"))) return;
 
     setError(null);
     const { error: deleteError } = await supabase
@@ -602,7 +596,7 @@ export default function ContainersPage() {
       console.log("Supabase delete container_car error:", deleteError);
       setError(
         [
-          "Failed to remove car from container.",
+          t("containers.removeCarFailed"),
           deleteError.message,
           deleteError.details,
           deleteError.hint,
@@ -628,11 +622,11 @@ export default function ContainersPage() {
     if (selectedContainer.shipping_paid) return;
     const amount = parseNum(payInvoiceForm.amount);
     if (amount <= 0) {
-      setError("Invoice amount must be greater than 0.");
+      setError(t("containers.invoiceAmountPositive"));
       return;
     }
     if (carsInContainer.length === 0) {
-      setError("No cars in container to split shipping cost.");
+      setError(t("containers.noCarsToSplit"));
       return;
     }
 
@@ -662,7 +656,7 @@ export default function ContainersPage() {
       console.log("Supabase update container error:", containerUpdateError);
       setError(
         [
-          "Failed to update container with invoice.",
+          t("containers.updateInvoiceFailed"),
           containerUpdateError.message,
           containerUpdateError.details,
           containerUpdateError.hint,
@@ -728,7 +722,7 @@ export default function ContainersPage() {
         console.log("Supabase shipping movement error:", movementError);
         setError(
           [
-            "Invoice saved, but failed to create shipping movement.",
+            t("containers.invoiceSavedMovementFailed"),
             movementError.message,
             movementError.details,
             movementError.hint,
@@ -833,7 +827,7 @@ export default function ContainersPage() {
           console.log("Supabase insert shipping expense error:", insExErr);
           setError(
             [
-              "Invoice saved, but failed to update some deal shipping expenses.",
+              t("containers.invoiceSavedExpensesFailed"),
               insExErr.message,
               insExErr.details,
               insExErr.hint,
@@ -914,10 +908,10 @@ export default function ContainersPage() {
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              Containers
+              {t("pages.containers.title")}
             </h1>
             <p className="text-sm font-medium text-danger">
-              Shipping & logistics
+              {t("pages.containers.subtitle")}
             </p>
           </div>
           <Button
@@ -939,7 +933,7 @@ export default function ContainersPage() {
               setError(null);
             }}
           >
-            New Container
+            {t("containers.newContainer")}
           </Button>
         </header>
 
@@ -956,23 +950,23 @@ export default function ContainersPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center gap-3 p-8 text-default-500">
               <Spinner size="md" color="danger" />
-              <span className="text-sm">Loading containers…</span>
+              <span className="text-sm">{t("containers.loading")}</span>
             </div>
           ) : containers.length === 0 ? (
-            <div className="p-4 text-sm text-muted">No containers yet.</div>
+            <div className="p-4 text-sm text-muted">{t("containers.empty")}</div>
           ) : (
             <div className="responsive-table-wrap">
               <table className="min-w-[620px] w-full text-left text-xs">
                 <thead className="border-b border-app text-[11px] uppercase tracking-wide text-muted">
                   <tr>
-                    <th className="px-4 py-3">Ref</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Cars</th>
-                    <th className="px-4 py-3">Estimated</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">Actual</th>
-                    <th className="px-4 py-3 w-10">Drive</th>
-                    <th className="px-4 py-3">Actions</th>
+                    <th className="px-4 py-3">{t("containers.colRef")}</th>
+                    <th className="px-4 py-3">{t("containers.colDate")}</th>
+                    <th className="px-4 py-3">{t("containers.colStatus")}</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">{t("containers.colCars")}</th>
+                    <th className="px-4 py-3">{t("containers.colEstimated")}</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">{t("containers.colActual")}</th>
+                    <th className="px-4 py-3 w-10">{t("containers.colDrive")}</th>
+                    <th className="px-4 py-3">{t("containers.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -993,29 +987,29 @@ export default function ContainersPage() {
                           {container.ref || container.id}
                         </td>
                         <td className="px-4 py-3 text-app">
-                          {formatDate(container.date ?? container.created_at)}
+                          {fmtDate(container.date ?? container.created_at)}
                         </td>
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${badgeClass}`}
                           >
-                            {status}
+                            {containerStatusLabel(t, status)}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-app hidden sm:table-cell">{carsCount}</td>
                         <td className="px-4 py-3 text-app">
-                          {formatMoney(container.shipping_cost, "AED")}
+                          {fmtMoney(container.shipping_cost, "AED")}
                         </td>
                         <td className="px-4 py-3 text-app hidden sm:table-cell">
                           {container.shipping_paid
-                            ? formatMoney(container.shipping_cost, "AED")
-                            : "-"}
+                            ? fmtMoney(container.shipping_cost, "AED")
+                            : t("common.emiDash")}
                         </td>
                         <td className="px-4 py-3">
-                          <DriveLinkIcon href={container.drive_link ?? ""} />
+                          <DriveLinkIcon href={container.drive_link ?? ""} title={t("common.openDriveFolder")} />
                         </td>
                         <td className="px-4 py-3">
-                          <RowActionsMenu label="Container actions">
+                          <RowActionsMenu label={t("containers.actionsMenu")}>
                             <button
                               type="button"
                               onClick={() =>
@@ -1023,7 +1017,7 @@ export default function ContainersPage() {
                               }
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
-                              View
+                              {t("containers.view")}
                             </button>
                             <button
                               type="button"
@@ -1052,7 +1046,7 @@ export default function ContainersPage() {
                               }}
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
                             >
-                              Edit
+                              {t("containers.edit")}
                             </button>
                             {canDelete ? (
                             <button
@@ -1060,7 +1054,7 @@ export default function ContainersPage() {
                               onClick={() => handleDeleteContainer(container)}
                               className="rounded-md border border-app bg-white px-3 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 hover:border-red-300"
                             >
-                              Delete
+                              {t("containers.delete")}
                             </button>
                             ) : null}
                           </RowActionsMenu>
@@ -1080,13 +1074,15 @@ export default function ContainersPage() {
             <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
                 <div className="text-sm font-semibold text-app">
-                  Container {selectedContainer.ref || selectedContainer.id}
+                  {t("containers.detailTitle", {
+                    ref: selectedContainer.ref || selectedContainer.id,
+                  })}
                 </div>
                 <div className="mt-1 text-[11px] text-muted">
-                  {formatDate(selectedContainer.date ?? selectedContainer.created_at)}{" "}
-                  • Status:{" "}
+                  {fmtDate(selectedContainer.date ?? selectedContainer.created_at)}{" "}
+                  · {t("containers.detailStatus")}{" "}
                   <span className="font-semibold">
-                    {selectedContainer.status || "Loading"}
+                    {containerStatusLabel(t, selectedContainer.status || "Loading")}
                   </span>
                 </div>
               </div>
@@ -1095,7 +1091,7 @@ export default function ContainersPage() {
                 onClick={() => setSelectedContainerId(null)}
                 className="rounded-md border border-app px-3 py-1 text-[11px] font-semibold text-app"
               >
-                Close
+                {t("containers.close")}
               </button>
             </div>
 
@@ -1103,30 +1099,30 @@ export default function ContainersPage() {
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-md border border-app bg-white p-3">
                 <div className="text-[11px] font-semibold text-muted">
-                  Estimated Shipping
+                  {t("containers.estimatedShipping")}
                 </div>
                 <div className="mt-1 text-lg font-semibold text-app">
-                  {formatMoney(selectedContainer.shipping_cost, "AED")}
+                  {fmtMoney(selectedContainer.shipping_cost, "AED")}
                 </div>
               </div>
               <div className="rounded-md border border-app bg-white p-3">
                 <div className="text-[11px] font-semibold text-muted">
-                  Actual Shipping
+                  {t("containers.actualShipping")}
                 </div>
                 <div className="mt-1 text-lg font-semibold text-app">
                   {selectedContainer.shipping_paid
-                    ? formatMoney(selectedContainer.shipping_cost, "AED")
-                    : "-"}
+                    ? fmtMoney(selectedContainer.shipping_cost, "AED")
+                    : t("common.emiDash")}
                 </div>
                 {selectedContainer.invoice_ref && (
                   <div className="mt-1 text-[11px] text-muted">
-                    Invoice: {selectedContainer.invoice_ref}
+                    {t("containers.invoiceLabel")} {selectedContainer.invoice_ref}
                   </div>
                 )}
               </div>
               <div className="rounded-md border border-app bg-white p-3">
                 <div className="text-[11px] font-semibold text-muted">
-                  Cars in container
+                  {t("containers.carsInContainer")}
                 </div>
                 <div className="mt-1 text-lg font-semibold text-app">
                   {totalCarsInContainer}
@@ -1137,10 +1133,10 @@ export default function ContainersPage() {
             {selectedContainer.drive_link && (
               <div className="mt-3 rounded-md border border-app bg-white p-3">
                 <div className="text-[11px] font-semibold text-muted">
-                  Google Drive
+                  {t("containers.googleDrive")}
                 </div>
                 <div className="mt-2">
-                  <DriveLinkIcon href={selectedContainer.drive_link} />
+                  <DriveLinkIcon href={selectedContainer.drive_link} title={t("common.openDriveFolder")} />
                 </div>
               </div>
             )}
@@ -1149,7 +1145,7 @@ export default function ContainersPage() {
             <div className="mt-6 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-                  Cars
+                  {t("containers.carsHeading")}
                 </h2>
               </div>
 
@@ -1161,7 +1157,7 @@ export default function ContainersPage() {
                       checked={addCarForm.mode === "inventory"}
                       onChange={() => updateAddCarField("mode", "inventory")}
                     />
-                    <span>From inventory</span>
+                    <span>{t("containers.fromInventory")}</span>
                   </label>
                   <select
                     value={addCarForm.inventoryCarId}
@@ -1170,14 +1166,14 @@ export default function ContainersPage() {
                     }
                     className="w-full rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   >
-                    <option value="">Select car from inventory</option>
+                    <option value="">{t("containers.selectCarPlaceholder")}</option>
                     {availableInventoryCars.map((c) => (
                       <option key={c.id} value={c.id}>
                         {`${c.brand || ""} ${c.model || ""} ${
                           c.year || ""
                         }`.trim()}{" "}
                         {c.owner === "Client" && c.client_name
-                          ? `• Client: ${c.client_name}`
+                          ? `· ${t("containers.clientPrefix")} ${c.client_name}`
                           : ""}
                       </option>
                     ))}
@@ -1191,11 +1187,11 @@ export default function ContainersPage() {
                       checked={addCarForm.mode === "manual"}
                       onChange={() => updateAddCarField("mode", "manual")}
                     />
-                    <span>Add manually</span>
+                    <span>{t("containers.addManually")}</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <input
-                      placeholder="Brand"
+                      placeholder={t("reports.brand")}
                       value={addCarForm.brand}
                       onChange={(e) =>
                         updateAddCarField("brand", e.target.value)
@@ -1203,7 +1199,7 @@ export default function ContainersPage() {
                       className="rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                     <input
-                      placeholder="Model"
+                      placeholder={t("reports.model")}
                       value={addCarForm.model}
                       onChange={(e) =>
                         updateAddCarField("model", e.target.value)
@@ -1211,7 +1207,7 @@ export default function ContainersPage() {
                       className="rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                     <input
-                      placeholder="Year"
+                      placeholder={t("reports.year")}
                       value={addCarForm.year}
                       onChange={(e) =>
                         updateAddCarField("year", e.target.value)
@@ -1219,7 +1215,7 @@ export default function ContainersPage() {
                       className="rounded-md border border-app bg-white px-2 py-1 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                     />
                     <input
-                      placeholder="Color"
+                      placeholder={t("inventory.color")}
                       value={addCarForm.color}
                       onChange={(e) =>
                         updateAddCarField("color", e.target.value)
@@ -1238,11 +1234,11 @@ export default function ContainersPage() {
                         updateAddCarField("isPartner", e.target.checked)
                       }
                     />
-                    <span>Partner car</span>
+                    <span>{t("containers.partnerCar")}</span>
                   </label>
                   {addCarForm.isPartner && (
                     <input
-                      placeholder="Partner name"
+                      placeholder={t("containers.partnerName")}
                       value={addCarForm.partnerName}
                       onChange={(e) =>
                         updateAddCarField("partnerName", e.target.value)
@@ -1254,10 +1250,10 @@ export default function ContainersPage() {
 
                 <div className="space-y-2">
                   <label className="text-app">
-                    Shipping contribution (AED, optional)
+                    {t("containers.shippingContribution")}
                   </label>
                   <input
-                    placeholder="Override per-car cost"
+                    placeholder={t("containers.overridePerCar")}
                     value={addCarForm.shippingContribution}
                     onChange={(e) =>
                       updateAddCarField("shippingContribution", e.target.value)
@@ -1270,7 +1266,7 @@ export default function ContainersPage() {
                     disabled={isAddingCar}
                     className="mt-1 inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
                   >
-                    {isAddingCar ? "Adding..." : "Add Car to Container"}
+                    {isAddingCar ? t("containers.adding") : t("containers.addCar")}
                   </button>
                 </div>
               </div>
@@ -1279,11 +1275,11 @@ export default function ContainersPage() {
                 <table className="w-full text-left text-[11px]">
                   <thead className="border-b border-zinc-700 text-[10px] uppercase tracking-wide text-zinc-300">
                     <tr>
-                      <th className="px-3 py-2">Car</th>
-                      <th className="px-3 py-2">Owner</th>
-                      <th className="px-3 py-2">Shipping</th>
-                      <th className="px-3 py-2">Customs</th>
-                      <th className="px-3 py-2">Actions</th>
+                      <th className="px-3 py-2">{t("containers.carCol")}</th>
+                      <th className="px-3 py-2">{t("containers.ownerCol")}</th>
+                      <th className="px-3 py-2">{t("containers.shippingCol")}</th>
+                      <th className="px-3 py-2">{t("containers.customsCol")}</th>
+                      <th className="px-3 py-2">{t("containers.actionsCol")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1293,7 +1289,7 @@ export default function ContainersPage() {
                           colSpan={5}
                           className="px-3 py-3 text-xs text-zinc-300"
                         >
-                          No cars yet.
+                          {t("containers.noCars")}
                         </td>
                       </tr>
                     ) : (
@@ -1301,7 +1297,7 @@ export default function ContainersPage() {
                         const car = cc.car_id
                           ? cars.find((c) => c.id === (cc.car_id as string)) ?? null
                           : null;
-                        const owner = cc.is_partner ? "Partner" : "Axira";
+                        const owner = cc.is_partner ? t("containers.ownerPartner") : t("containers.ownerAxira");
                         return (
                           <tr
                             key={cc.id}
@@ -1313,10 +1309,10 @@ export default function ContainersPage() {
                                   ? `${car.brand || ""} ${car.model || ""} ${
                                       car.year || ""
                                     }`.trim()
-                                  : "-")}
+                                  : t("common.emiDash"))}
                               {car?.vin ? (
                                 <span className="mt-0.5 block text-[10px] text-zinc-300">
-                                  VIN: {car.vin}
+                                  {t("containers.vinPrefix")} {car.vin}
                                 </span>
                               ) : null}
                             </td>
@@ -1330,15 +1326,15 @@ export default function ContainersPage() {
                             </td>
                             <td className="px-3 py-2 text-app">
                               {cc.shipping_contribution != null
-                                ? formatMoney(cc.shipping_contribution, "AED")
-                                : "auto"}
+                                ? fmtMoney(cc.shipping_contribution, "AED")
+                                : t("containers.auto")}
                             </td>
                             <td className="px-3 py-2 text-app">
-                              {cc.customs_status || "pending"}
+                              {customsStatusLabel(t, cc.customs_status || "pending")}
                               {cc.customs_paid_dzd != null && (
                                 <span className="block text-[10px] text-muted">
-                                  Paid:{" "}
-                                  {formatMoney(
+                                  {t("containers.paidPrefix")}{" "}
+                                  {fmtMoney(
                                     cc.customs_paid_dzd,
                                     "DZD"
                                   )}
@@ -1351,7 +1347,7 @@ export default function ContainersPage() {
                                 onClick={() => handleRemoveCar(cc)}
                                 className="rounded-md border border-red-400/60 bg-red-950/20 px-2 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-900/30 hover:border-red-300"
                               >
-                                Remove
+                                {t("containers.remove")}
                               </button>
                             </td>
                           </tr>
@@ -1366,11 +1362,11 @@ export default function ContainersPage() {
             {/* Shipping / invoice section */}
             <div className="mt-6 space-y-3">
               <h2 className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-                Shipping invoice
+                {t("containers.shippingInvoice")}
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <label className="space-y-1 text-[11px] text-app">
-                  <span className="font-semibold">Actual invoice amount (AED)</span>
+                  <span className="font-semibold">{t("containers.actualInvoiceAed")}</span>
                   <input
                     type="number"
                     value={payInvoiceForm.amount}
@@ -1381,7 +1377,7 @@ export default function ContainersPage() {
                   />
                 </label>
                 <label className="space-y-1 text-[11px] text-app">
-                  <span className="font-semibold">Pocket</span>
+                  <span className="font-semibold">{t("containers.pocket")}</span>
                   <select
                     value={payInvoiceForm.pocket}
                     onChange={(e) =>
@@ -1392,11 +1388,19 @@ export default function ContainersPage() {
                     }
                     className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                   >
-                    <option value="Dubai Cash">Dubai Cash</option>
-                    <option value="Dubai Bank">Dubai Bank</option>
-                    <option value="Qatar">Qatar</option>
-                    <option value="Algeria Cash">Algeria Cash</option>
-                    <option value="Algeria Bank">Algeria Bank</option>
+                    {(
+                      [
+                        "Dubai Cash",
+                        "Dubai Bank",
+                        "Qatar",
+                        "Algeria Cash",
+                        "Algeria Bank",
+                      ] as const
+                    ).map((p) => (
+                      <option key={p} value={p}>
+                        {pocketDetailLabel(t, p)}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <div className="flex items-end">
@@ -1407,10 +1411,10 @@ export default function ContainersPage() {
                     className="inline-flex w-full items-center justify-center rounded-md bg-[var(--color-accent)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
                   >
                     {selectedContainer.shipping_paid
-                      ? "Invoice Paid"
+                      ? t("containers.invoicePaid")
                       : isPayingInvoice
-                      ? "Paying..."
-                      : "Pay Invoice & Split"}
+                      ? t("containers.paying")
+                      : t("containers.payInvoiceSplit")}
                   </button>
                 </div>
               </div>
@@ -1430,10 +1434,10 @@ export default function ContainersPage() {
             <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
               <div>
                 <div className="text-sm font-semibold text-app">
-                  New Container
+                  {editingContainerId ? t("containers.modalEditTitle") : t("containers.modalNewTitle")}
                 </div>
                 <div className="text-[11px] text-muted">
-                  Create a container with estimated shipping cost.
+                  {t("containers.modalNewBlurb")}
                 </div>
               </div>
               <button
@@ -1441,14 +1445,14 @@ export default function ContainersPage() {
                 onClick={() => !isSavingNew && setIsNewModalOpen(false)}
                 className="rounded-md border border-app px-3 py-1 text-[11px] font-semibold text-app"
               >
-                Close
+                {t("containers.close")}
               </button>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1">
                 <span className="font-semibold text-app">
-                  Reference <span className="text-[var(--color-accent)]">*</span>
+                  {t("containers.reference")} <span className="text-[var(--color-accent)]">*</span>
                 </span>
                 <input
                   value={newForm.ref}
@@ -1458,7 +1462,7 @@ export default function ContainersPage() {
               </label>
               <label className="space-y-1">
                 <span className="font-semibold text-app">
-                  Date <span className="text-[var(--color-accent)]">*</span>
+                  {t("containers.date")} <span className="text-[var(--color-accent)]">*</span>
                 </span>
                 <input
                   type="date"
@@ -1469,7 +1473,7 @@ export default function ContainersPage() {
               </label>
               <label className="space-y-1">
                 <span className="font-semibold text-app">
-                  Estimated shipping cost (AED)
+                  {t("containers.estShippingCost")}
                 </span>
                 <input
                   type="number"
@@ -1482,7 +1486,7 @@ export default function ContainersPage() {
               </label>
               <label className="space-y-1">
                 <span className="font-semibold text-app">
-                  Invoice reference (optional)
+                  {t("containers.invoiceRefOptional")}
                 </span>
                 <input
                   value={newForm.invoiceRef}
@@ -1493,7 +1497,7 @@ export default function ContainersPage() {
                 />
               </label>
               <label className="space-y-1">
-                <span className="font-semibold text-app">Status</span>
+                <span className="font-semibold text-app">{t("containers.status")}</span>
                 <select
                   value={newForm.status}
                   onChange={(e) =>
@@ -1506,26 +1510,26 @@ export default function ContainersPage() {
                 >
                   {STATUS_OPTIONS.map((s) => (
                     <option key={s} value={s}>
-                      {s}
+                      {containerStatusLabel(t, s)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="space-y-1 sm:col-span-2">
-                <span className="font-semibold text-app">Google Drive Folder Link</span>
+                <span className="font-semibold text-app">{t("containers.driveFolderLink")}</span>
                 <input
                   type="text"
                   value={newForm.driveLink}
                   onChange={(e) =>
                     updateNewField("driveLink", e.target.value)
                   }
-                  placeholder="https://drive.google.com/..."
+                  placeholder={t("containers.drivePlaceholder")}
                   className="w-full rounded-md border border-app bg-white px-3 py-2 text-xs text-app outline-none focus:border-[var(--color-accent)]"
                 />
               </label>
               <div className="sm:col-span-2">
                 <label className="space-y-1">
-                  <span className="font-semibold text-app">Notes</span>
+                  <span className="font-semibold text-app">{t("containers.notes")}</span>
                   <textarea
                     value={newForm.notes}
                     onChange={(e) =>
@@ -1545,7 +1549,7 @@ export default function ContainersPage() {
                 disabled={isSavingNew}
                 className="rounded-md border border-app bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -1553,7 +1557,11 @@ export default function ContainersPage() {
                 disabled={isSavingNew}
                 className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
               >
-                {isSavingNew ? "Saving..." : "Create"}
+                {isSavingNew
+                  ? t("containers.save")
+                  : editingContainerId
+                  ? t("common.save")
+                  : t("containers.create")}
               </button>
             </div>
           </div>

@@ -5,11 +5,9 @@ import { Alert, Button, Spinner } from "@heroui/react";
 import { PageContainer } from "@/components/ui/page-container";
 import { useAuth } from "@/lib/context/AuthContext";
 import type { CompanySettings } from "@/lib/contracts/companySettings";
+import { formatDateForLocale, useI18n } from "@/lib/context/I18nContext";
 
-type FormState = Omit<
-  CompanySettings,
-  "id" | "updated_at" | "updated_by"
->;
+type FormState = Omit<CompanySettings, "id" | "updated_at" | "updated_by">;
 
 const EMPTY_FORM: FormState = {
   fze_license_number: "",
@@ -41,22 +39,8 @@ const FIELD_ORDER: Array<keyof FormState> = [
   "auto_email",
 ];
 
-const LABELS: Record<keyof FormState, string> = {
-  fze_license_number: "FZE License Number",
-  fze_address: "FZE Address",
-  fze_representative: "FZE Representative",
-  fze_position: "FZE Position",
-  fze_phone: "FZE Phone",
-  fze_email: "FZE Email",
-  auto_license_number: "Auto License Number",
-  auto_address: "Auto Address",
-  auto_representative: "Auto Representative",
-  auto_position: "Auto Position",
-  auto_phone: "Auto Phone",
-  auto_email: "Auto Email",
-};
-
 export default function CompanySettingsPage() {
+  const { t, locale } = useI18n();
   const { role, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -79,7 +63,7 @@ export default function CompanySettingsPage() {
     try {
       const res = await fetch("/api/settings/company", { cache: "no-store" });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || "Failed to load company settings");
+      if (!res.ok) throw new Error(json?.error || t("companySettings.loadFailed"));
       const row = (json.row || {}) as Partial<CompanySettings>;
       setForm({
         fze_license_number: String(row.fze_license_number || ""),
@@ -98,11 +82,11 @@ export default function CompanySettingsPage() {
       setUpdatedAt((row.updated_at as string | null) || null);
       setUpdatedByName((json.updated_by_name as string | null) || null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : t("companySettings.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -125,21 +109,32 @@ export default function CompanySettingsPage() {
         body: JSON.stringify(form),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || "Failed to save company settings");
-      setSuccess("Company settings saved.");
+      if (!res.ok) throw new Error(json?.error || t("companySettings.saveFailed"));
+      setSuccess(t("companySettings.saved"));
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save");
+      setError(e instanceof Error ? e.message : t("companySettings.saveFailed"));
     } finally {
       setSaving(false);
     }
   };
 
+  const updatedLine =
+    updatedAt != null
+      ? t("companySettings.lastUpdatedBy", {
+          name: updatedByName || t("common.emiDash"),
+          datetime: formatDateForLocale(locale, updatedAt, {
+            dateStyle: "short",
+            timeStyle: "short",
+          }),
+        })
+      : t("companySettings.lastUpdatedDash");
+
   if (authLoading || loading) {
     return (
       <PageContainer size="lg">
         <div className="flex items-center gap-2 text-sm text-muted">
-          <Spinner size="sm" color="danger" /> Loading company settings...
+          <Spinner size="sm" color="danger" /> {t("companySettings.loading")}
         </div>
       </PageContainer>
     );
@@ -150,7 +145,7 @@ export default function CompanySettingsPage() {
       <PageContainer size="lg">
         <Alert.Root status="danger">
           <Alert.Content>
-            <Alert.Description>Forbidden. Owner role required.</Alert.Description>
+            <Alert.Description>{t("companySettings.forbidden")}</Alert.Description>
           </Alert.Content>
         </Alert.Root>
       </PageContainer>
@@ -160,11 +155,8 @@ export default function CompanySettingsPage() {
   return (
     <PageContainer size="lg" className="gap-4">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-app">Company Settings</h1>
-        <p className="text-xs text-muted">
-          Last updated by {updatedByName || "—"} on{" "}
-          {updatedAt ? new Date(updatedAt).toLocaleString("en-GB") : "—"}
-        </p>
+        <h1 className="text-2xl font-semibold text-app">{t("companySettings.title")}</h1>
+        <p className="text-xs text-muted">{updatedLine}</p>
       </header>
       {error ? (
         <Alert.Root status="danger">
@@ -183,9 +175,7 @@ export default function CompanySettingsPage() {
       {missingFields.length > 0 ? (
         <Alert.Root status="warning">
           <Alert.Content>
-            <Alert.Description>
-              All 12 company fields are required before contract generation.
-            </Alert.Description>
+            <Alert.Description>{t("companySettings.allFieldsRequired")}</Alert.Description>
           </Alert.Content>
         </Alert.Root>
       ) : null}
@@ -193,7 +183,7 @@ export default function CompanySettingsPage() {
         {FIELD_ORDER.map((key) => (
           <label key={key} className="space-y-1">
             <span className="text-xs font-semibold text-app">
-              {LABELS[key]} <span className="text-red-500">*</span>
+              {t(`companySettings.fields.${key}`)} <span className="text-red-500">*</span>
             </span>
             <input
               value={form[key]}
@@ -207,7 +197,7 @@ export default function CompanySettingsPage() {
       </div>
       <div className="flex justify-end">
         <Button type="button" variant="primary" onPress={handleSave} isDisabled={!canSave}>
-          {saving ? "Saving..." : "Save"}
+          {saving ? t("dashboard.saving") : t("common.save")}
         </Button>
       </div>
     </PageContainer>
