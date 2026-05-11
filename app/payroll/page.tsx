@@ -224,7 +224,7 @@ export default function PayrollPage() {
   };
 
   return (
-    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
+    <div className="min-h-full w-full min-w-0 text-foreground" style={{ background: "var(--color-bg)" }}>
       <PageContainer size="lg">
         <header className="mb-5">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("payroll.title")}</h1>

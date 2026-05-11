@@ -169,7 +169,7 @@ export default function InquiriesPage() {
   const newCount = inquiries.filter((i) => i.status === "new").length;
 
   return (
-    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
+    <div className="min-h-full w-full min-w-0 text-foreground" style={{ background: "var(--color-bg)" }}>
       <PageContainer size="md">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">

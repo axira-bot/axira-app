@@ -46,7 +46,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div
-        className="flex min-h-screen flex-col items-center justify-center gap-4"
+        className="flex min-h-dvh flex-col items-center justify-center gap-4"
         style={{ background: "var(--color-bg)" }}
       >
         <Spinner size="lg" color="danger" />
@@ -59,15 +59,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (isLogin) return <>{children}</>;
 
   return (
-    <div className="flex min-h-screen w-full" style={{ background: "var(--color-bg)" }}>
+    <div
+      className="flex h-dvh max-h-dvh min-h-0 w-full overflow-hidden"
+      style={{ background: "var(--color-bg)" }}
+    >
       <Sidebar />
 
       <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
-      <div className="flex min-w-0 flex-1 flex-col md:ml-[240px] xl:ml-[252px]">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:ml-[240px] xl:ml-[252px]">
 
         <div
-          className="card sticky top-0 z-30 flex items-center gap-3 rounded-none border-x-0 border-t-0 px-3 py-3 md:hidden"
+          className="card sticky top-0 z-30 flex shrink-0 items-center gap-3 rounded-none border-x-0 border-t-0 px-3 py-3 md:hidden"
           style={{
             background: "var(--color-sidebar)",
             borderBottom: "1px solid rgba(255,255,255,0.08)",
@@ -96,7 +99,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         <Header />
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto">
+        <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[max(1rem,calc(5.25rem+env(safe-area-inset-bottom,0px)))] md:pb-[max(1rem,calc(3.5rem+env(safe-area-inset-bottom,0px)))]">
           {children}
         </main>
       </div>

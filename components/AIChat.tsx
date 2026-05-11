@@ -69,7 +69,7 @@ export function AIChat() {
         isIconOnly
         variant="primary"
         aria-label="Axira AI"
-        className="fixed bottom-6 right-6 z-50 h-12 w-12 min-w-12 rounded-full shadow-lg"
+        className="fixed z-50 h-12 w-12 min-w-12 rounded-full shadow-lg bottom-[max(1.25rem,env(safe-area-inset-bottom,0.25rem))] right-[max(1.25rem,env(safe-area-inset-right,0.25rem))]"
         style={{ boxShadow: "0 4px 20px rgba(196,18,48,0.4)" }}
         onPress={() => setOpen((v) => !v)}
       >
@@ -82,7 +82,7 @@ export function AIChat() {
       {/* Chat panel */}
       {open && (
         <div
-          className="fixed bottom-20 right-4 z-50 flex flex-col rounded-2xl overflow-hidden"
+          className="fixed z-50 flex flex-col overflow-hidden rounded-2xl bottom-[max(5rem,calc(4.5rem+env(safe-area-inset-bottom,0px)))] right-[max(1rem,env(safe-area-inset-right,0px))]"
           style={{
             height: "min(520px, calc(100dvh - 100px))",
             width: "min(380px, calc(100vw - 32px))",

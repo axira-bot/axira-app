@@ -235,7 +235,7 @@ export default function AdminUsersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-app p-6 text-muted">
+      <div className="min-h-full w-full bg-app p-6 text-muted">
         Loading users…
       </div>
     );
@@ -243,7 +243,7 @@ export default function AdminUsersPage() {
 
   if (error && users.length === 0) {
     return (
-      <div className="min-h-screen bg-app p-6">
+      <div className="min-h-full w-full bg-app p-6">
         <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
@@ -261,7 +261,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
+    <div className="min-h-full w-full min-w-0 text-foreground" style={{ background: "var(--color-bg)" }}>
       <PageContainer size="md">
         <header className="mb-6 flex items-center justify-between gap-4">
           <div>

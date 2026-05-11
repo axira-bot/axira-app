@@ -42,7 +42,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="flex min-h-screen flex-col items-center justify-center px-4"
+      className="flex min-h-dvh flex-col items-center justify-center px-4"
       style={{ background: "var(--color-bg)" }}
     >
       <div className="absolute right-4 top-4">

@@ -728,7 +728,7 @@ export default function TransfersPage() {
   };
 
   return (
-    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
+    <div className="min-h-full w-full min-w-0 text-foreground" style={{ background: "var(--color-bg)" }}>
       <PageContainer size="xl">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
@@ -756,7 +756,7 @@ export default function TransfersPage() {
           </section>
         )}
 
-        <div className="flex flex-wrap gap-2 border-b border-default-200 pb-2">
+        <div className="-mx-1 flex flex-nowrap gap-2 overflow-x-auto overflow-y-visible border-b border-default-200 px-1 pb-2 [overscroll-behavior-x:contain] [scrollbar-width:thin] sm:flex-wrap">
           {(
             [
               { key: "conversions" as const, label: t("transfers.tabConversions") },

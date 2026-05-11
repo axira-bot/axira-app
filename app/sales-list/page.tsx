@@ -207,7 +207,7 @@ export default function SalesListPage() {
   }
 
   return (
-    <main className="min-h-full space-y-5 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
+    <main className="min-h-full w-full min-w-0 space-y-5 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold">{t("salesList.pageTitle")}</h1>

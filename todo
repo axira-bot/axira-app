@@ -1,4 +1,9 @@
 ----samer 
 zidt chway ui w raka7et el menu w pagination
 
--rami 
+-rami style: enhance layout and responsiveness across multiple components
+
+- Updated CSS styles to ensure full height and width for various components, improving layout consistency.
+- Added viewport settings in layout for better mobile responsiveness.
+- Adjusted loading and main page components to utilize new height settings for improved user experience.
+- Refactored several pages to ensure proper minimum height and width, enhancing overall layout stability.

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import { I18nProvider } from "@/lib/context/I18nContext";
@@ -8,6 +8,12 @@ import { AIChat } from "@/components/AIChat";
 export const metadata: Metadata = {
   title: "Axira Trading FZE",
   description: "Axira Trading FZE",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

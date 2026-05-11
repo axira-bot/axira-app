@@ -572,7 +572,7 @@ export default function EmployeesPage() {
   };
 
   return (
-    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
+    <div className="min-h-full w-full min-w-0 text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="border-b border-default-200 bg-content1 px-4 py-4">
         <h1 className="text-xl font-semibold">{t("employees.pageTitle")}</h1>
         <p className="mt-1 text-xs text-default-500">{t("employees.pageSubtitle")}</p>

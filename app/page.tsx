@@ -7,7 +7,7 @@ import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 export default function Home() {
   const { t } = useI18n();
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16" style={{ background: "var(--color-bg)" }}>
+    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-16" style={{ background: "var(--color-bg)" }}>
       <div className="absolute right-4 top-4">
         <LocaleSwitcher />
       </div>

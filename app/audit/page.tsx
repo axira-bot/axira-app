@@ -142,7 +142,7 @@ export default function AuditPage() {
   }, [fetchAll]);
 
   return (
-    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
+    <div className="min-h-full w-full min-w-0 text-foreground" style={{ background: "var(--color-bg)" }}>
       <PageContainer size="lg">
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("activityLog.auditTitle")}</h1>

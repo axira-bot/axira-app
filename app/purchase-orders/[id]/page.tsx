@@ -488,7 +488,7 @@ export default function PurchaseOrderDetailPage() {
   const owed = Number(row?.supplier_owed ?? (computedGrandTotal - paid));
 
   return (
-    <main className="min-h-full space-y-5 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
+    <main className="min-h-full w-full min-w-0 space-y-5 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
       {loading ? (
         <div className="flex flex-col items-center justify-center gap-3 py-12">
           <Spinner size="md" color="danger" />

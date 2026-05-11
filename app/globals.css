@@ -47,7 +47,13 @@
 }
 
 /* ── Base ───────────────────────────────────────────────────── */
+html {
+  height: 100%;
+}
+
 body {
+  min-height: 100%;
+  min-height: 100dvh;
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-body);
@@ -190,6 +196,7 @@ table tbody td {
 
 .app-page {
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   padding-inline: var(--layout-content-pad);
   padding-block: var(--layout-section-y);
@@ -199,6 +206,7 @@ table tbody td {
   width: 100%;
   /* max-width: var(--layout-content-max); */
   min-width: 0;
+  min-height: 0;
   margin-inline: auto;
   display: flex;
   flex-direction: column;
@@ -230,9 +238,11 @@ table tbody td {
 
 .responsive-table-wrap {
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   border-radius: var(--layout-radius);
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .responsive-table-wrap table {

@@ -609,7 +609,7 @@ export default function DashboardPage() {
 
   return (
     <div
-      className="min-h-screen text-[var(--color-text)]"
+      className="min-h-full w-full text-[var(--color-text)]"
       style={{ background: "var(--color-bg)" }}
     >
       <PageContainer size="xl" className="gap-8">

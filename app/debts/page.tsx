@@ -703,7 +703,7 @@ export default function DebtsPage() {
   const listReceivables = receivables;
 
   return (
-    <div className="min-h-full text-foreground" style={{ background: "var(--color-bg)" }}>
+    <div className="min-h-full w-full min-w-0 text-foreground" style={{ background: "var(--color-bg)" }}>
       <PageContainer size="xl">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("debts.title")}</h1>

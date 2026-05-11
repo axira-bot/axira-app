@@ -125,7 +125,7 @@ export default function SuppliersPage() {
 
   if (!canAccess) {
     return (
-      <main className="min-h-full p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
+      <main className="min-h-full w-full min-w-0 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
         <Card.Root className="max-w-md border border-default-200 shadow-sm">
           <Card.Content className="space-y-3">
             <Text className="text-sm text-default-600">{t("suppliers.noAccess")}</Text>
@@ -142,7 +142,7 @@ export default function SuppliersPage() {
   }
 
   return (
-    <main className="min-h-full space-y-6 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
+    <main className="min-h-full w-full min-w-0 space-y-6 p-6 text-foreground" style={{ background: "var(--color-bg)" }}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">{t("suppliers.title")}</h1>

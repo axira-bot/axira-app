@@ -252,7 +252,7 @@ export default function SalesCatalogAdminPage() {
   }
 
   return (
-    <main className="min-h-full" style={{ background: "var(--color-bg)" }}>
+    <main className="min-h-full w-full min-w-0" style={{ background: "var(--color-bg)" }}>
       <PageContainer size="lg" className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
