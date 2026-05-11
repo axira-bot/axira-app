@@ -1122,13 +1122,13 @@ export default function TransfersPage() {
 
       {/* Add Conversion Modal */}
       {isConversionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:px-4">
           <div
             className="absolute inset-0 bg-black/70"
             onClick={() => !isSaving && setIsConversionModalOpen(false)}
           />
-          <div className="relative flex w-full max-w-2xl flex-col overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
-            <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
+          <div className="relative my-auto flex w-full max-w-2xl max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1.5rem))] min-h-0 flex-col overflow-hidden rounded-lg border border-app surface shadow-xl">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-app px-4 pb-3 pt-4">
               <div>
                 <div className="text-lg font-semibold text-app">
                   {t("transfers.modalAddConversionTitle")}
@@ -1146,7 +1146,8 @@ export default function TransfersPage() {
                 {t("transfers.close")}
               </button>
             </div>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">{t("transfers.txIdAuto")}</span>
                 <input
@@ -1307,7 +1308,8 @@ export default function TransfersPage() {
                 />
               </label>
             </div>
-            <div className="mt-4 flex justify-end gap-2 border-t border-app pt-3">
+            </div>
+            <div className="flex shrink-0 justify-end gap-2 border-t border-app px-4 pb-4 pt-3">
               <button
                 type="button"
                 onClick={() => !isSaving && setIsConversionModalOpen(false)}
@@ -1331,9 +1333,9 @@ export default function TransfersPage() {
 
       {/* ── Receipt Modal ─────────────────────────────────────────────── */}
       {pendingReceipt && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:px-4">
           <div className="absolute inset-0 bg-black/75" onClick={() => setPendingReceipt(null)} />
-          <div className="relative flex w-full max-w-sm flex-col rounded-xl border border-app surface p-6 shadow-2xl">
+          <div className="relative my-auto flex w-full max-w-sm max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1.5rem))] min-h-0 flex-col overflow-y-auto rounded-xl border border-app surface p-6 shadow-2xl">
             {/* Header */}
             <div className="mb-4 flex items-center justify-between">
               <div>
@@ -1380,19 +1382,19 @@ export default function TransfersPage() {
 
       {/* Approval Modal */}
       {approvalModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:px-4">
           <div
             className="absolute inset-0 bg-black/70"
             onClick={() => !isApprovalSaving && setApprovalModal(null)}
           />
-          <div className="relative flex w-full max-w-md flex-col rounded-lg border border-app surface p-4 shadow-xl">
-            <div className="border-b border-app pb-3 text-lg font-semibold text-app">
+          <div className="relative my-auto flex w-full max-w-md max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1.5rem))] min-h-0 flex-col overflow-hidden rounded-lg border border-app surface shadow-xl">
+            <div className="shrink-0 border-b border-app px-4 pb-3 pt-4 text-lg font-semibold text-app">
               {t("transfers.approveConversionTitle")}
             </div>
-            <p className="mt-2 text-xs text-muted">
+            <p className="shrink-0 px-4 pt-2 text-xs text-muted">
               {t("transfers.approveConversionBlurb")}
             </p>
-            <div className="mt-4 space-y-3">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
               <label className="block text-xs text-app">
                 <span className="font-semibold">{t("transfers.receivingPocketConfirm")}</span>
                 <input
@@ -1430,7 +1432,7 @@ export default function TransfersPage() {
                 />
               </label>
             </div>
-            <div className="mt-4 flex justify-end gap-2 border-t border-app pt-3">
+            <div className="flex shrink-0 justify-end gap-2 border-t border-app px-4 pb-4 pt-3">
               <button
                 type="button"
                 onClick={() => !isApprovalSaving && setApprovalModal(null)}
@@ -1454,13 +1456,13 @@ export default function TransfersPage() {
 
       {/* Add Exchange Modal */}
       {isExchangeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:px-4">
           <div
             className="absolute inset-0 bg-black/70"
             onClick={() => !isSaving && setIsExchangeModalOpen(false)}
           />
-          <div className="relative flex w-full max-w-2xl flex-col overflow-y-auto rounded-lg border border-app surface p-4 shadow-xl">
-            <div className="flex items-start justify-between gap-4 border-b border-app pb-3">
+          <div className="relative my-auto flex w-full max-w-2xl max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1.5rem))] min-h-0 flex-col overflow-hidden rounded-lg border border-app surface shadow-xl">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-app px-4 pb-3 pt-4">
               <div>
                 <div className="text-lg font-semibold text-app">
                   {t("transfers.modalAddExchangeTitle")}
@@ -1478,7 +1480,8 @@ export default function TransfersPage() {
                 {t("transfers.close")}
               </button>
             </div>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">{t("transfers.refIdAuto")}</span>
                 <input
@@ -1636,7 +1639,8 @@ export default function TransfersPage() {
                 />
               </label>
             </div>
-            <div className="mt-4 flex justify-end gap-2 border-t border-app pt-3">
+            </div>
+            <div className="flex shrink-0 justify-end gap-2 border-t border-app px-4 pb-4 pt-3">
               <button
                 type="button"
                 onClick={() => !isSaving && setIsExchangeModalOpen(false)}
