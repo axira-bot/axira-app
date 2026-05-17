@@ -32,9 +32,9 @@ Axira currently has several different status-related fields. This file explains 
   - `getEffectiveStatus` in `app/inventory/page.tsx`.
 - **Notes**: when present, this takes precedence over both `cars.display_status` and `cars.status`.
 
-### 4. `cars.inventory_lifecycle_status`
+### 4. `cars.inventory_lifecycle_status` (legacy)
 
-- **Type**: constrained text; allowed values (from migrations) are:
+- **Type**: constrained text; allowed values (from migrations) include:
   - `IN_STOCK`
   - `INCOMING`
   - `IN_TRANSIT`
@@ -42,39 +42,59 @@ Axira currently has several different status-related fields. This file explains 
   - `ARRIVED`
   - `READY_TO_SHIP`
   - `DELIVERED`
-- **Owner**: legacy inventory / PO flows.
-- **Meaning**: older physical lifecycle field for stock managed via purchase orders.
+- **Owner**: legacy inventory / PO flows; **automatically synced** from `lifecycle_status` on each lifecycle write (RPC `update_car_lifecycle_with_audit` and bulk PO/inventory lifecycle updates).
+- **Meaning**: older physical lifecycle bucket for PO and reporting; mirrors canonical lifecycle via **`lifecycle_status_to_inventory_lifecycle()`** in Postgres (see mapping below).
 - **Used in**:
   - PO flows (`app/api/purchase-orders/*`, `app/purchase-orders/[id]/page.tsx`).
-  - Inventory list (PO badge: `PO: ... · {inventory_lifecycle_status || "IN_TRANSIT"}`).
-  - Sales list segmentation (`app/api/sales-list/route.ts` and `app/sales-list/page.tsx`).
-- **Notes**:
-  - This field remains **untouched** by the new lifecycle feature.
-  - A future "Sync to inventory_lifecycle_status" owner-only tool will allow manually copying the new lifecycle field into this legacy column when desired.
+  - Inventory list (PO badge: `PO: … · {inventory_lifecycle_status || "IN_TRANSIT"}`).
 
-### 5. `cars.lifecycle_status` (NEW)
+### 5. `cars.lifecycle_status` (canonical physical lifecycle)
 
 - **Type**: text, NOT NULL, default `'ORDERED'`.
-- **Enum values (business-level)**:
-  - `ORDERED` — supplier order placed, no production yet.
-  - `IN_PRODUCTION` — being manufactured/sourced.
-  - `AT_POL` — arrived at Port of Loading (origin port).
-  - `LOADED` — loaded onto vessel.
-  - `IN_TRANSIT` — sailing.
-  - `AT_POD` — arrived at Port of Discharge (Algeria).
-  - `CLEARED` — cleared through Algerian customs by Axira agent.
-  - `DELIVERED` — handed to customer at Axira Auto premises.
-- **Owner**: lifecycle feature (Owner/Manager can change via dedicated dropdown).
-- **Meaning**: **canonical physical lifecycle** of the car, independent of sales status.
-- **Used in** (after full feature rollout):
-  - Inventory car detail (badge + dropdown).
-  - Purchase order car views (read-only badge, possibly with quick access).
-  - Deal view (read-only badge, to understand car’s physical state).
-  - Car audit history (`car_audit_log`).
-- **Backfill rule for existing rows**:
-  - if `status` is `available` or `in_stock` → `CLEARED`
-  - if `status` is `sold` or `delivered` → `DELIVERED`
-  - otherwise → `ORDERED`
+- **Enum values** (canonical order: `CAR_LIFECYCLE_STATUSES` + `lifecycle_status_to_inventory_lifecycle()` in `lib/cars/carLifecycleStatus.ts` / migration):
+
+  | Value | Meaning |
+  | :--- | :--- |
+  | `ORDERED` | Supplier order placed; not yet in production |
+  | `IN_PRODUCTION` | Being manufactured or sourced |
+  | `READY_FOR_EXPORT` | Ready for export (e.g. Dubai hub) |
+  | `AT_POL` | At Port of Loading (origin) |
+  | `LOADED` | Loaded onto vessel |
+  | `IN_TRANSIT` | Sailing |
+  | `AT_POD` | At Port of Discharge (Algeria) |
+  | `CLEARED` | Cleared Algerian customs (Axira agent) |
+  | `DELIVERED` | Handed to customer at Axira Auto |
+
+- **Owner**: lifecycle feature (Owner/Manager via dropdown on inventory car and PO-linked cars).
+- **Meaning**: **single source of truth** for “where is the car physically?”.
+- **Used in**:
+  - Inventory and PO dropdowns (`CAR_LIFECYCLE_STATUSES`).
+  - **Sales list tabs** (`app/api/sales-list/route.ts`): cars are grouped by **`salesBucketFor(lifecycle_status)`** in `lib/cars/carLifecycleStatus.ts`:
+    - **`coming_soon`**: `ORDERED`, `IN_PRODUCTION`
+    - **`ready_for_export`**: `READY_FOR_EXPORT`, `AT_POL`
+    - **`in_transit`**: `LOADED`, `IN_TRANSIT`
+    - **`available_now`**: `AT_POD`, `CLEARED`
+    - **`null`** (excluded from inventory tabs): **`DELIVERED`** only
+  - Car audit (`car_audit_log`).
+- **Canonical → legacy inventory column** (`lifecycle_status_to_inventory_lifecycle()`):
+
+  | Canonical | Legacy `inventory_lifecycle_status` |
+  | :--- | :--- |
+  | `ORDERED` | `INCOMING` |
+  | `IN_PRODUCTION` | `INCOMING` |
+  | `READY_FOR_EXPORT` | `IN_STOCK` |
+  | `AT_POL` | `IN_TRANSIT` |
+  | `LOADED` | `IN_TRANSIT` |
+  | `IN_TRANSIT` | `IN_TRANSIT` |
+  | `AT_POD` | `IN_STOCK` |
+  | `CLEARED` | `IN_STOCK` |
+  | `DELIVERED` | `DELIVERED` |
+
+- **Sales list exclusion**: **`DELIVERED`** cars are never returned in `/api/sales-list` inventory buckets (same as before for “sold/delivered” behavior).
+- **Backfill rule for legacy rows** (historical docs; not re-run automatically):
+  - if `status` is `available` or `in_stock` → commonly mapped to **`CLEARED`**
+  - if `status` is `sold` or `delivered` → **`DELIVERED`**
+  - otherwise → **`ORDERED`**
 
 ### 6. `deals.lifecycle_status`
 
@@ -91,26 +111,23 @@ Axira currently has several different status-related fields. This file explains 
   - Deal transition API (`app/api/deals/[id]/transition/route.ts`).
   - Pre-order UI (buttons for ORDERED/SHIPPED/ARRIVED/CLOSED/CANCELLED).
   - Side-effects into `cars.inventory_lifecycle_status` when a deal reaches ARRIVED/CLOSED.
-- **Notes**: this is **deal-level** lifecycle, not car inventory lifecycle.
+- **Notes**: this is **deal-level** lifecycle, not canonical car **`lifecycle_status`**.
 
 ### 7. How they relate (high level)
 
 - **Sales status (availability)**:
   - Primary: `cars.status`
   - Overrides: `cars.status_override`, `cars.display_status`
-  - UI: `DisplayStatusBadge` in inventory; sales list filters.
+  - UI: `DisplayStatusBadge` in inventory; sales list eligibility still respects sales rules in the API route.
 
 - **Legacy inventory lifecycle**:
   - `cars.inventory_lifecycle_status`
-  - Still used by PO and sales-list flows.
-  - Not automatically synced from the new lifecycle field yet.
+  - Kept for PO/reporting parity; synced from **`cars.lifecycle_status`** on lifecycle RPC updates.
 
-- **New physical lifecycle**:
+- **Canonical physical lifecycle**:
   - `cars.lifecycle_status`
-  - Single canonical source of truth for "where is the car physically?" going forward.
-  - Editable via a dedicated dropdown (Owner/Manager), with audit logging.
+  - Drives location suggestions (`suggestedLocationForLifecycle` in `lib/cars/carLocations.ts`) and sales-list bucket tabs.
 
 - **Deal lifecycle**:
   - `deals.lifecycle_status`
-  - Represents the customer’s journey from pre-order to closed/cancelled, and may update related car rows when appropriate.
-
+  - Represents the customer’s journey from pre-order to closed/cancelled.

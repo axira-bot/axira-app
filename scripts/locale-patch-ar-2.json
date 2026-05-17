@@ -15,8 +15,16 @@
     "sortPriceDesc": "السعر ↓",
     "sortLeadAsc": "مدة التسليم ↑",
     "applyFilters": "تطبيق المرشحات",
-    "tabAvailableNow": "متوفر الآن ({count})",
-    "tabComingSoon": "قريباً ({count})",
+    "bucketTabAvailableNow": "متوفر الآن ({count})",
+    "bucketTabReadyForExport": "جاهز للتصدير ({count})",
+    "bucketTabInTransit": "في الطريق ({count})",
+    "bucketTabComingSoon": "قريباً ({count})",
+    "bucketBadge": {
+      "available_now": "صالة الجزائر",
+      "ready_for_export": "دبي — جاهز للتصدير",
+      "in_transit": "في العبور",
+      "coming_soon": "تجميع / توريد"
+    },
     "tabOrderOnDemand": "طلب حسب الطلب ({count})",
     "noVehicles": "لا مركبات تطابق هذه المرشحات.",
     "noPhoto": "لا صورة",

@@ -10,6 +10,8 @@ import type { FeatureKey, FeaturePermissions } from "@/lib/auth/featureKeys";
 import { getRates, type AppRates } from "@/lib/rates";
 import { displayFxFromAppRates } from "@/lib/finance/dealMoney";
 import { SalesNotesField, type SalesNotesSaveResult } from "@/components/cars/SalesNotesField";
+import type { SalesListLifecycleBucket } from "@/lib/cars/carLifecycleStatus";
+import { salesBucketFor } from "@/lib/cars/carLifecycleStatus";
 import { formatDateForLocale, formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
 
 type CarRow = Record<string, unknown>;
@@ -37,6 +39,16 @@ function firstPhotoUrl(row: CarRow | CatalogRow): string | null {
   return typeof first === "string" && first.trim() ? first : null;
 }
 
+type InventorySegmentTab = "brand_new" | "used_under_three";
+type InventoryBucketInnerTab = SalesListLifecycleBucket | "demand";
+
+const emptyInventoryBuckets = (): Record<SalesListLifecycleBucket, CarRow[]> => ({
+  available_now: [],
+  ready_for_export: [],
+  in_transit: [],
+  coming_soon: [],
+});
+
 export default function SalesListPage() {
   const router = useRouter();
   const { t, locale } = useI18n();
@@ -45,7 +57,21 @@ export default function SalesListPage() {
   const canSeeInternal = isManager || isOwnerLike;
   const canEditSalesNotes = isManager || isOwnerLike;
 
-  const [tab, setTab] = useState<"now" | "soon" | "demand">("now");
+  const [inventorySegment, setInventorySegment] = useState<InventorySegmentTab>("brand_new");
+  const [segmentTotals, setSegmentTotals] = useState<{ brand_new: number; used_under_three: number }>({
+    brand_new: 0,
+    used_under_three: 0,
+  });
+  const [innerTab, setInnerTab] = useState<InventoryBucketInnerTab>("available_now");
+  const [bucketCounts, setBucketCounts] = useState<
+    Record<SalesListLifecycleBucket, number>
+  >({
+    available_now: 0,
+    ready_for_export: 0,
+    in_transit: 0,
+    coming_soon: 0,
+  });
+  const [inventoryBuckets, setInventoryBuckets] = useState<Record<SalesListLifecycleBucket, CarRow[]>>(emptyInventoryBuckets);
   const [search, setSearch] = useState("");
   const [brand, setBrand] = useState("");
   const [minPrice, setMinPrice] = useState("");
@@ -53,8 +79,6 @@ export default function SalesListPage() {
   const [sort, setSort] = useState("price_asc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [availableNow, setAvailableNow] = useState<CarRow[]>([]);
-  const [comingSoon, setComingSoon] = useState<CarRow[]>([]);
   const [orderOnDemand, setOrderOnDemand] = useState<CatalogRow[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   const [rates, setRates] = useState<AppRates>({ DZD: 0, EUR: 0, USD: 0, GBP: 0 });
@@ -71,6 +95,7 @@ export default function SalesListPage() {
     setLoading(true);
     setError(null);
     const params = new URLSearchParams();
+    params.set("segment", inventorySegment);
     if (search.trim()) params.set("search", search.trim());
     if (brand) params.set("brand", brand);
     if (minPrice.trim()) params.set("minPrice", minPrice.trim());
@@ -83,11 +108,30 @@ export default function SalesListPage() {
       setError(data.error || t("salesList.loadFailed"));
       return;
     }
-    setAvailableNow((data.availableNow as CarRow[]) || []);
-    setComingSoon((data.comingSoon as CarRow[]) || []);
+    setSegmentTotals({
+      brand_new: Number((data as { segmentTotals?: { brand_new?: unknown } }).segmentTotals?.brand_new ?? 0),
+      used_under_three: Number(
+        (data as { segmentTotals?: { used_under_three?: unknown } }).segmentTotals?.used_under_three ?? 0
+      ),
+    });
+    type BC = Partial<Record<SalesListLifecycleBucket, unknown>>;
+    const bcRaw = ((data as { bucketCounts?: BC }).bucketCounts ?? {}) as BC;
+    setBucketCounts({
+      available_now: Number(bcRaw.available_now ?? 0),
+      ready_for_export: Number(bcRaw.ready_for_export ?? 0),
+      in_transit: Number(bcRaw.in_transit ?? 0),
+      coming_soon: Number(bcRaw.coming_soon ?? 0),
+    });
+    type IB = Partial<Record<SalesListLifecycleBucket, CarRow[]>>;
+    const ibRaw = (((data as { inventoryBuckets?: IB }).inventoryBuckets ?? {}) as IB) || {};
+    const nextIb = emptyInventoryBuckets();
+    (Object.keys(nextIb) as SalesListLifecycleBucket[]).forEach((k) => {
+      nextIb[k] = (Array.isArray(ibRaw[k]) ? ibRaw[k] : []) ?? [];
+    });
+    setInventoryBuckets(nextIb);
     setOrderOnDemand((data.orderOnDemand as CatalogRow[]) || []);
     setBrands((data.brands as string[]) || []);
-  }, [canAccess, search, brand, minPrice, maxPrice, sort, t]);
+  }, [canAccess, inventorySegment, search, brand, minPrice, maxPrice, sort, t]);
 
   useEffect(() => {
     void getRates().then(setRates);
@@ -147,26 +191,21 @@ export default function SalesListPage() {
     [fx]
   );
 
-  const rowsForTab = useMemo(() => {
-    if (tab === "now") return availableNow;
-    if (tab === "soon") return comingSoon;
-    return orderOnDemand;
-  }, [tab, availableNow, comingSoon, orderOnDemand]);
+  const rowsForInnerTab = useMemo(() => {
+    if (innerTab === "demand") return orderOnDemand as unknown as (CarRow | CatalogRow)[];
+    return inventoryBuckets[innerTab] ?? [];
+  }, [innerTab, inventoryBuckets, orderOnDemand]);
 
   const badgeForCar = (row: CarRow) => {
-    const life = String(row.inventory_lifecycle_status || "").toUpperCase();
-    if (life === "IN_STOCK") return t("salesList.lifecycleInStock");
-    if (life === "AT_PORT") return t("salesList.lifecycleAtPort");
-    if (life === "IN_TRANSIT") return t("salesList.lifecycleInTransit");
-    if (life === "INCOMING") return t("salesList.lifecycleIncoming");
-    return life || t("common.emiDash");
+    const bucket = salesBucketFor(String(row.lifecycle_status ?? ""));
+    return bucket ? t(`salesList.bucketBadge.${bucket}` as "salesList.bucketBadge.available_now") : t("common.emiDash");
   };
 
   const primaryAction = (kind: "car" | "catalog", row: CarRow | CatalogRow) => {
     if (kind === "car") {
-      const life = String((row as CarRow).inventory_lifecycle_status || "").toUpperCase();
+      const bucket = salesBucketFor(String((row as CarRow).lifecycle_status ?? ""));
       const id = String((row as CarRow).id || "");
-      if (life === "IN_STOCK") {
+      if (bucket === "available_now") {
         router.push(`/deals?addDeal=1&carId=${encodeURIComponent(id)}`);
         return;
       }
@@ -178,8 +217,8 @@ export default function SalesListPage() {
 
   const primaryLabel = (kind: "car" | "catalog", row: CarRow | CatalogRow) => {
     if (kind === "car") {
-      const life = String((row as CarRow).inventory_lifecycle_status || "").toUpperCase();
-      return life === "IN_STOCK" ? t("salesList.createDeal") : t("salesList.createPreorder");
+      const bucket = salesBucketFor(String((row as CarRow).lifecycle_status ?? ""));
+      return bucket === "available_now" ? t("salesList.createDeal") : t("salesList.createPreorder");
     }
     return t("salesList.createPreorder");
   };
@@ -215,6 +254,32 @@ export default function SalesListPage() {
             {t("salesList.pageBlurb")}
           </p>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 rounded-lg border border-app bg-panel p-1">
+        {(
+          [
+            ["brand_new", t("salesList.segmentTabBrandNew", { count: segmentTotals.brand_new })],
+            [
+              "used_under_three",
+              t("salesList.segmentTabUsedUnderThree", { count: segmentTotals.used_under_three }),
+            ],
+          ] as const
+        ).map(([key, label]) => (
+          <Button
+            key={key}
+            type="button"
+            size="sm"
+            variant={inventorySegment === key ? "primary" : "ghost"}
+            className="min-w-0 flex-1 sm:flex-none"
+            onPress={() => {
+              setInventorySegment(key);
+              setInnerTab("available_now");
+            }}
+          >
+            {label}
+          </Button>
+        ))}
       </div>
 
       <section className="rounded-xl border border-app bg-panel p-4 space-y-3">
@@ -288,8 +353,10 @@ export default function SalesListPage() {
       <div className="flex flex-wrap gap-2 rounded-lg border border-app bg-panel p-1">
         {(
           [
-            ["now", t("salesList.tabAvailableNow", { count: availableNow.length })],
-            ["soon", t("salesList.tabComingSoon", { count: comingSoon.length })],
+            ["available_now", t("salesList.bucketTabAvailableNow", { count: bucketCounts.available_now })],
+            ["ready_for_export", t("salesList.bucketTabReadyForExport", { count: bucketCounts.ready_for_export })],
+            ["in_transit", t("salesList.bucketTabInTransit", { count: bucketCounts.in_transit })],
+            ["coming_soon", t("salesList.bucketTabComingSoon", { count: bucketCounts.coming_soon })],
             ["demand", t("salesList.tabOrderOnDemand", { count: orderOnDemand.length })],
           ] as const
         ).map(([key, label]) => (
@@ -297,9 +364,9 @@ export default function SalesListPage() {
             key={key}
             type="button"
             size="sm"
-            variant={tab === key ? "primary" : "ghost"}
+            variant={innerTab === key ? "primary" : "ghost"}
             className="min-w-0 flex-1 sm:flex-none"
-            onPress={() => setTab(key)}
+            onPress={() => setInnerTab(key as InventoryBucketInnerTab)}
           >
             {label}
           </Button>
@@ -312,11 +379,11 @@ export default function SalesListPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {rowsForTab.length === 0 ? (
+          {rowsForInnerTab.length === 0 ? (
             <p className="text-sm text-default-500">{t("salesList.noVehicles")}</p>
           ) : (
-            rowsForTab.map((row) => {
-              const isCatalog = tab === "demand";
+            rowsForInnerTab.map((row) => {
+              const isCatalog = innerTab === "demand";
               const kind = isCatalog ? "catalog" : "car";
               const photo = firstPhotoUrl(row);
               const price = Number((row as { sale_price_dzd?: unknown }).sale_price_dzd ?? 0);

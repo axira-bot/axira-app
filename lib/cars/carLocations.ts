@@ -31,6 +31,8 @@ export function suggestedLocationForLifecycle(status: CarLifecycleStatus): CarLo
     case "IN_PRODUCTION":
     case "AT_POL":
       return CAR_LOCATION.chinaPort;
+    case "READY_FOR_EXPORT":
+      return CAR_LOCATION.dubaiShowroom;
     case "LOADED":
     case "IN_TRANSIT":
       return CAR_LOCATION.inTransit;

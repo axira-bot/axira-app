@@ -15,8 +15,16 @@
     "sortPriceDesc": "Price ↓",
     "sortLeadAsc": "Lead time ↑",
     "applyFilters": "Apply filters",
-    "tabAvailableNow": "Available now ({count})",
-    "tabComingSoon": "Coming soon ({count})",
+    "bucketTabAvailableNow": "Available Now ({count})",
+    "bucketTabReadyForExport": "Ready for Export ({count})",
+    "bucketTabInTransit": "In Transit ({count})",
+    "bucketTabComingSoon": "Coming Soon ({count})",
+    "bucketBadge": {
+      "available_now": "Algeria showroom",
+      "ready_for_export": "Dubai — ready export",
+      "in_transit": "In transit",
+      "coming_soon": "Build / sourcing"
+    },
     "tabOrderOnDemand": "Order on demand ({count})",
     "noVehicles": "No vehicles match these filters.",
     "noPhoto": "No photo",

@@ -7,6 +7,7 @@ import type { Car } from "@/lib/types";
 import {
   CAR_LIFECYCLE_STATUSES,
   isCarLifecycleStatus,
+  lifecycleStatusChipTone,
   type CarLifecycleStatus,
 } from "@/lib/cars/carLifecycleStatus";
 import { CAR_LOCATION, CAR_LOCATIONS, isCarLocation, suggestedLocationForLifecycle, type CarLocation } from "@/lib/cars/carLocations";
@@ -1330,7 +1331,16 @@ export default function InventoryPage() {
                         </td>
                         <td className="px-4 py-3 align-top">
                           <div className="flex flex-col gap-1">
-                            <Chip size="sm" variant="soft" className="h-5 w-fit max-w-full px-2 text-[10px]">
+                            <Chip
+                              size="sm"
+                              variant="soft"
+                              className={[
+                                "h-5 w-fit max-w-full px-2 text-[10px] border border-transparent",
+                                lifecycleStatusChipTone(coerceInventoryLifecycle(car.lifecycle_status)),
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                            >
                               {inventoryLifecycleLabel(t, coerceInventoryLifecycle(car.lifecycle_status))}
                             </Chip>
                             {canEditLifecycle && !isInvestorReadOnly ? (
