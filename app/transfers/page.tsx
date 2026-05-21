@@ -9,7 +9,7 @@ import { logActivity } from "@/lib/activity";
 import {
   reverseMovementOnCashPosition,
 } from "@/lib/finance/applyCashPositionChange";
-import { validatePocketForCurrency } from "@/lib/finance/cashPockets";
+import { type CashPocket, validatePocketForCurrency } from "@/lib/finance/cashPockets";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
 import { formatDateForLocale, formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
@@ -21,16 +21,6 @@ const ReceiptDownloadButton = dynamic(
   () => import("@/components/PDFButtons").then((m) => m.ReceiptDownloadButton),
   { ssr: false }
 );
-
-const POCKETS_ALL = [
-  "Dubai Cash",
-  "Dubai Bank",
-  "Algeria Cash",
-  "Algeria Bank",
-  "Qatar",
-  "EUR Cash",
-  "USD Cash",
-] as const;
 
 const CONVERSION_FROM_POCKETS = ["Algeria Cash", "Algeria Bank"] as const;
 
@@ -48,16 +38,16 @@ type CashPosition = {
 function pocketsHoldingCurrency(
   cashPositions: CashPosition[],
   currency: string
-): string[] {
+): CashPocket[] {
   const c = currency.trim().toUpperCase();
   if (!c) return [];
-  const seen = new Set<string>();
+  const seen = new Set<CashPocket>();
   for (const row of cashPositions) {
     if ((row.currency || "").trim().toUpperCase() !== c) continue;
     const pocket = (row.pocket || "").trim();
-    if (!pocket || seen.has(pocket)) continue;
+    if (!pocket || seen.has(pocket as CashPocket)) continue;
     if (validatePocketForCurrency(pocket, c) !== null) continue;
-    seen.add(pocket);
+    seen.add(pocket as CashPocket);
   }
   return [...seen].sort((a, b) => a.localeCompare(b));
 }
@@ -184,7 +174,7 @@ type ConversionFormState = {
   amountDzd: string;
   toCurrency: (typeof CONVERSION_TO_CURRENCIES)[number];
   rate: string;
-  receivingPocket: string;
+  receivingPocket: CashPocket | null;
   notes: string;
 };
 
@@ -206,10 +196,10 @@ type ExchangeFormState = {
   doneBy: string;
   fromCurrency: (typeof CURRENCIES)[number];
   fromAmount: string;
-  fromPocket: (typeof POCKETS_ALL)[number];
+  fromPocket: CashPocket | null;
   toCurrency: (typeof CURRENCIES)[number];
   toAmount: string;
-  toPocket: (typeof POCKETS_ALL)[number];
+  toPocket: CashPocket | null;
   notes: string;
 };
 
@@ -462,9 +452,9 @@ export default function TransfersPage() {
     setConversionForm((prev) => {
       const pockets = pocketsHoldingCurrency(cashPositions, prev.toCurrency);
       if (pockets.length === 0) {
-        return prev.receivingPocket === "" ? prev : { ...prev, receivingPocket: "" };
+        return prev.receivingPocket === null ? prev : { ...prev, receivingPocket: null };
       }
-      if (pockets.includes(prev.receivingPocket)) return prev;
+      if (prev.receivingPocket && pockets.includes(prev.receivingPocket)) return prev;
       return { ...prev, receivingPocket: pockets[0]! };
     });
   }, [cashPositions, conversionForm.toCurrency]);
@@ -478,13 +468,13 @@ export default function TransfersPage() {
       let fromPocket = prev.fromPocket;
       let toPocket = prev.toPocket;
       if (fromPockets.length === 0) {
-        fromPocket = "";
-      } else if (!fromPockets.includes(fromPocket)) {
+        fromPocket = null;
+      } else if (!fromPocket || !fromPockets.includes(fromPocket)) {
         fromPocket = fromPockets[0]!;
       }
       if (toPockets.length === 0) {
-        toPocket = "";
-      } else if (!toPockets.includes(toPocket)) {
+        toPocket = null;
+      } else if (!toPocket || !toPockets.includes(toPocket)) {
         toPocket = toPockets[0]!;
       }
       if (fromPocket === prev.fromPocket && toPocket === prev.toPocket) return prev;
@@ -508,7 +498,7 @@ export default function TransfersPage() {
       return;
     }
     if (
-      !conversionForm.receivingPocket.trim() ||
+      !conversionForm.receivingPocket ||
       !receivingPocketsForConversion.includes(conversionForm.receivingPocket)
     ) {
       setError(t("transfers.noPocketForCurrency", { currency: conversionForm.toCurrency }));
@@ -743,22 +733,22 @@ export default function TransfersPage() {
       setError(t("transfers.exchangeAmountsRequired"));
       return;
     }
-    if (exchangeForm.fromPocket === exchangeForm.toPocket) {
-      setError(t("transfers.pocketsMustDiffer"));
-      return;
-    }
     if (
-      !exchangeForm.fromPocket.trim() ||
+      !exchangeForm.fromPocket ||
       !fromPocketsForExchange.includes(exchangeForm.fromPocket)
     ) {
       setError(t("transfers.noPocketForCurrency", { currency: exchangeForm.fromCurrency }));
       return;
     }
     if (
-      !exchangeForm.toPocket.trim() ||
+      !exchangeForm.toPocket ||
       !toPocketsForExchange.includes(exchangeForm.toPocket)
     ) {
       setError(t("transfers.noPocketForCurrency", { currency: exchangeForm.toCurrency }));
+      return;
+    }
+    if (exchangeForm.fromPocket === exchangeForm.toPocket) {
+      setError(t("transfers.pocketsMustDiffer"));
       return;
     }
 
@@ -1527,9 +1517,12 @@ export default function TransfersPage() {
                   </p>
                 ) : (
                   <select
-                    value={conversionForm.receivingPocket}
+                    value={conversionForm.receivingPocket ?? ""}
                     onChange={(e) =>
-                      updateConversionField("receivingPocket", e.target.value)
+                      updateConversionField(
+                        "receivingPocket",
+                        e.target.value as CashPocket
+                      )
                     }
                     className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
                   >
@@ -1799,11 +1792,11 @@ export default function TransfersPage() {
                   </p>
                 ) : (
                   <select
-                    value={exchangeForm.fromPocket}
+                    value={exchangeForm.fromPocket ?? ""}
                     onChange={(e) =>
                       updateExchangeField(
                         "fromPocket",
-                        e.target.value as ExchangeFormState["fromPocket"]
+                        e.target.value as CashPocket
                       )
                     }
                     className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
@@ -1869,11 +1862,11 @@ export default function TransfersPage() {
                   </p>
                 ) : (
                   <select
-                    value={exchangeForm.toPocket}
+                    value={exchangeForm.toPocket ?? ""}
                     onChange={(e) =>
                       updateExchangeField(
                         "toPocket",
-                        e.target.value as ExchangeFormState["toPocket"]
+                        e.target.value as CashPocket
                       )
                     }
                     className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
