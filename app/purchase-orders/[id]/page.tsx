@@ -11,11 +11,31 @@ import {
   dealLifecycleLabel,
   inventoryLifecycleLabel,
   pocketDetailLabel,
+  poLineInventoryStatusLabel,
   poStatusLabel,
 } from "@/lib/i18n/enumLabels";
 import { CAR_LIFECYCLE_STATUSES, isCarLifecycleStatus, type CarLifecycleStatus } from "@/lib/cars/carLifecycleStatus";
 import { cashPocketOptionsForCurrency, validatePocketForCurrency } from "@/lib/finance/cashPockets";
 import { isValidIsoVin, normalizeVin } from "@/lib/vin/isoVin";
+
+const PO_LINE_INVENTORY_STATUSES = ["in_transit", "arrived", "available", "sold"] as const;
+type PoLineInventoryStatus = (typeof PO_LINE_INVENTORY_STATUSES)[number];
+
+function isPoLineInventoryStatus(s: string | null | undefined): s is PoLineInventoryStatus {
+  return PO_LINE_INVENTORY_STATUSES.includes(s as PoLineInventoryStatus);
+}
+
+type LineEditFormState = {
+  brand: string;
+  model: string;
+  year: string;
+  color: string;
+  grade: string;
+  quantity: string;
+  unit_cost: string;
+  notes: string;
+  inventory_status: PoLineInventoryStatus;
+};
 
 type PurchaseOrder = {
   id: string;
@@ -51,6 +71,7 @@ type Item = {
   total_cost: number;
   inventory_status: string;
   notes: string | null;
+  grade?: string | null;
 };
 
 type Payment = {
@@ -124,6 +145,7 @@ export default function PurchaseOrderDetailPage() {
   };
   const canValidateVin = isOwner || isManager;
   const canEditLifecycle = canValidateVin;
+  const canEditPoLines = isOwner || isManager;
   const [row, setRow] = useState<PurchaseOrder | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -144,11 +166,15 @@ export default function PurchaseOrderDetailPage() {
   const [selectedLifecycleCarIds, setSelectedLifecycleCarIds] = useState<string[]>([]);
   const [bulkLifecycleStatus, setBulkLifecycleStatus] = useState<CarLifecycleStatus>("ORDERED");
   const [lifecycleSaving, setLifecycleSaving] = useState(false);
+  const [editingLineItemId, setEditingLineItemId] = useState<string | null>(null);
+  const [lineEditForm, setLineEditForm] = useState<LineEditFormState | null>(null);
+  const [savingLineItemId, setSavingLineItemId] = useState<string | null>(null);
   const [itemForm, setItemForm] = useState({
     brand: "",
     model: "",
     year: "",
     color: "",
+    grade: "",
     vin: "",
     quantity: "1",
     unit_cost: "0",
@@ -257,7 +283,7 @@ export default function PurchaseOrderDetailPage() {
 
   const addItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !isOwner) return;
+    if (!id || !canEditPoLines) return;
     setSavingItem(true);
     const res = await fetch(`/api/purchase-orders/${id}/items`, {
       method: "POST",
@@ -269,6 +295,7 @@ export default function PurchaseOrderDetailPage() {
             model: itemForm.model,
             year: itemForm.year ? Number(itemForm.year) : null,
             color: itemForm.color || null,
+            grade: itemForm.grade?.trim() || null,
             vin: itemForm.vin || null,
             quantity: Number(itemForm.quantity || 1),
             unit_cost: Number(itemForm.unit_cost || 0),
@@ -284,8 +311,78 @@ export default function PurchaseOrderDetailPage() {
       setError(data.error || t("purchaseOrders.detail.addItemFailed"));
       return;
     }
-    setItemForm({ brand: "", model: "", year: "", color: "", vin: "", quantity: "1", unit_cost: "0", notes: "" });
+    setItemForm({ brand: "", model: "", year: "", color: "", grade: "", vin: "", quantity: "1", unit_cost: "0", notes: "" });
     load();
+  };
+
+  const cancelLineItemEditUi = () => {
+    setEditingLineItemId(null);
+    setLineEditForm(null);
+  };
+
+  const startLineEdit = (it: Item) => {
+    if (!canEditPoLines || savingLineItemId) return;
+    const inv: PoLineInventoryStatus = isPoLineInventoryStatus(it.inventory_status) ? it.inventory_status : "in_transit";
+    setEditingLineItemId(it.id);
+    setLineEditForm({
+      brand: it.brand,
+      model: it.model,
+      year: it.year != null ? String(it.year) : "",
+      color: it.color ?? "",
+      grade: (it.grade ?? "").trim(),
+      quantity: String(Math.max(1, Number(it.quantity ?? 1))),
+      unit_cost: String(it.unit_cost ?? 0),
+      notes: it.notes ?? "",
+      inventory_status: inv,
+    });
+    setError(null);
+  };
+
+  const saveLineItemEdit = async () => {
+    if (!id || !editingLineItemId || !lineEditForm || !canEditPoLines) return;
+    const brand = lineEditForm.brand.trim();
+    const model = lineEditForm.model.trim();
+    if (!brand || !model) {
+      setError(t("purchaseOrders.detail.lineBrandModelRequired"));
+      return;
+    }
+    let yearVal: number | null = null;
+    if (lineEditForm.year.trim() !== "") {
+      const y = Number(lineEditForm.year);
+      if (!Number.isFinite(y) || !Number.isInteger(y)) {
+        setError(t("purchaseOrders.detail.lineYearInvalid"));
+        return;
+      }
+      yearVal = y;
+    }
+    const qty = Math.max(1, Math.floor(Number(lineEditForm.quantity) || 1));
+    const uc = Number(lineEditForm.unit_cost || 0);
+    setSavingLineItemId(editingLineItemId);
+    setError(null);
+    const res = await fetch(`/api/purchase-orders/${id}/items/${editingLineItemId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        brand,
+        model,
+        year: yearVal,
+        color: lineEditForm.color.trim() || null,
+        grade: lineEditForm.grade.trim() || null,
+        quantity: qty,
+        unit_cost: uc,
+        notes: lineEditForm.notes.trim() || null,
+        inventory_status: lineEditForm.inventory_status,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setSavingLineItemId(null);
+    if (!res.ok) {
+      setError((data.error as string) || t("purchaseOrders.detail.saveLineItemFailed"));
+      return;
+    }
+    setSuccessMessage(t("purchaseOrders.detail.lineItemSaved"));
+    cancelLineItemEditUi();
+    await load();
   };
 
   const resetPaymentFormAfterSave = () => {
@@ -581,19 +678,20 @@ export default function PurchaseOrderDetailPage() {
                 </Button>
               </div>
             ) : null}
-            {isOwner && (
-              <form className="mb-4 grid gap-2 md:grid-cols-8" onSubmit={addItem}>
+            {canEditPoLines && (
+              <form className="mb-4 grid gap-2 md:grid-cols-10" onSubmit={addItem}>
                 <input className={inputCls} placeholder={t("purchaseOrders.colBrand")} value={itemForm.brand} onChange={(e) => setItemForm((p) => ({ ...p, brand: e.target.value }))} />
                 <input className={inputCls} placeholder={t("purchaseOrders.colModel")} value={itemForm.model} onChange={(e) => setItemForm((p) => ({ ...p, model: e.target.value }))} />
                 <input className={inputCls} placeholder={t("purchaseOrders.colYear")} value={itemForm.year} onChange={(e) => setItemForm((p) => ({ ...p, year: e.target.value }))} />
                 <input className={inputCls} placeholder={t("purchaseOrders.colColor")} value={itemForm.color} onChange={(e) => setItemForm((p) => ({ ...p, color: e.target.value }))} />
+                <input className={inputCls} placeholder={t("purchaseOrders.colGrade")} value={itemForm.grade} onChange={(e) => setItemForm((p) => ({ ...p, grade: e.target.value }))} />
                 <input className={inputCls} placeholder={t("purchaseOrders.detail.placeholderVinOptional")} value={itemForm.vin} onChange={(e) => setItemForm((p) => ({ ...p, vin: e.target.value }))} />
                 <input className={inputCls} placeholder={t("purchaseOrders.detail.qty")} value={itemForm.quantity} onChange={(e) => setItemForm((p) => ({ ...p, quantity: e.target.value }))} />
                 <input className={inputCls} placeholder={t("purchaseOrders.detail.placeholderUnitCost")} value={itemForm.unit_cost} onChange={(e) => setItemForm((p) => ({ ...p, unit_cost: e.target.value }))} />
-                <Button type="submit" variant="primary" size="sm" isDisabled={savingItem}>
+                <Button type="submit" variant="primary" size="sm" className="md:col-span-2" isDisabled={savingItem}>
                   {savingItem ? t("purchaseOrders.detail.addingItem") : t("purchaseOrders.addItem")}
                 </Button>
-                <input className={`${inputCls} md:col-span-8`} placeholder={t("purchaseOrders.notes")} value={itemForm.notes} onChange={(e) => setItemForm((p) => ({ ...p, notes: e.target.value }))} />
+                <input className={`${inputCls} md:col-span-10`} placeholder={t("purchaseOrders.notes")} value={itemForm.notes} onChange={(e) => setItemForm((p) => ({ ...p, notes: e.target.value }))} />
               </form>
             )}
             <div className="responsive-table-wrap">
@@ -606,20 +704,102 @@ export default function PurchaseOrderDetailPage() {
                     <th className="px-2 py-2 text-right">{t("purchaseOrders.detail.total")}</th>
                     <th className="px-2 py-2 text-left">{t("purchaseOrders.detail.itemStatus")}</th>
                     <th className="px-2 py-2 text-right">{t("purchaseOrders.detail.generatedCars")}</th>
+                    {canEditPoLines ? (
+                      <th className="px-2 py-2 text-right whitespace-nowrap">{t("purchaseOrders.detail.actionsShort")}</th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((it) => (
                     <tr key={it.id} className="border-t border-app/50">
-                      <td className="px-2 py-2">
-                        <div>
-                          {it.brand} {it.model} {it.year || ""} {it.color || ""}
-                        </div>
-                        {it.vin ? (
-                          <div className="text-[11px] text-muted">
-                            {t("purchaseOrders.detail.vinColon")} {it.vin}
+                      <td className="px-2 py-2 align-top">
+                        {editingLineItemId === it.id && lineEditForm ? (
+                          <div className="grid max-w-xl gap-1 sm:grid-cols-2">
+                            <input
+                              className={inputCls}
+                              placeholder={t("purchaseOrders.colBrand")}
+                              value={lineEditForm.brand}
+                              disabled={Boolean(savingLineItemId)}
+                              onChange={(e) =>
+                                setLineEditForm((prev) =>
+                                  prev && editingLineItemId === it.id ? { ...prev, brand: e.target.value } : prev
+                                )
+                              }
+                            />
+                            <input
+                              className={inputCls}
+                              placeholder={t("purchaseOrders.colModel")}
+                              value={lineEditForm.model}
+                              disabled={Boolean(savingLineItemId)}
+                              onChange={(e) =>
+                                setLineEditForm((prev) =>
+                                  prev && editingLineItemId === it.id ? { ...prev, model: e.target.value } : prev
+                                )
+                              }
+                            />
+                            <input
+                              className={inputCls}
+                              placeholder={t("purchaseOrders.colYear")}
+                              value={lineEditForm.year}
+                              disabled={Boolean(savingLineItemId)}
+                              onChange={(e) =>
+                                setLineEditForm((prev) =>
+                                  prev && editingLineItemId === it.id ? { ...prev, year: e.target.value } : prev
+                                )
+                              }
+                            />
+                            <input
+                              className={inputCls}
+                              placeholder={t("purchaseOrders.colColor")}
+                              value={lineEditForm.color}
+                              disabled={Boolean(savingLineItemId)}
+                              onChange={(e) =>
+                                setLineEditForm((prev) =>
+                                  prev && editingLineItemId === it.id ? { ...prev, color: e.target.value } : prev
+                                )
+                              }
+                            />
+                            <input
+                              className={`${inputCls} sm:col-span-2`}
+                              placeholder={t("purchaseOrders.colGrade")}
+                              value={lineEditForm.grade}
+                              disabled={Boolean(savingLineItemId)}
+                              onChange={(e) =>
+                                setLineEditForm((prev) =>
+                                  prev && editingLineItemId === it.id ? { ...prev, grade: e.target.value } : prev
+                                )
+                              }
+                            />
+                            <input
+                              className={`${inputCls} sm:col-span-2`}
+                              placeholder={t("purchaseOrders.notes")}
+                              value={lineEditForm.notes}
+                              disabled={Boolean(savingLineItemId)}
+                              onChange={(e) =>
+                                setLineEditForm((prev) =>
+                                  prev && editingLineItemId === it.id ? { ...prev, notes: e.target.value } : prev
+                                )
+                              }
+                            />
                           </div>
-                        ) : null}
+                        ) : (
+                          <>
+                            <div className="font-medium text-app">
+                              {it.brand} {it.model}
+                              {it.year != null && it.year !== undefined ? <> {it.year}</> : null}
+                            </div>
+                            {it.color || it.grade ? (
+                              <div className="text-xs text-muted">
+                                {[it.color, it.grade].filter(Boolean).join(" · ")}
+                              </div>
+                            ) : null}
+                            {it.vin ? (
+                              <div className="text-[11px] text-muted">
+                                {t("purchaseOrders.detail.vinColon")} {it.vin}
+                              </div>
+                            ) : null}
+                          </>
+                        )}
                         {cars
                           .filter((c) => c.purchase_order_item_id === it.id)
                           .map((c) => {
@@ -755,17 +935,119 @@ export default function PurchaseOrderDetailPage() {
                             );
                           })}
                       </td>
-                      <td className="px-2 py-2 text-right">
-                        {formatNumberForLocale(locale, it.quantity, { maximumFractionDigits: 0 })}
+                      <td className="px-2 py-2 text-right align-top">
+                        {editingLineItemId === it.id && lineEditForm ? (
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            className={`${inputCls} ml-auto inline-block max-w-[5rem] text-right`}
+                            value={lineEditForm.quantity}
+                            disabled={Boolean(savingLineItemId)}
+                            onChange={(e) =>
+                              setLineEditForm((prev) =>
+                                prev && editingLineItemId === it.id ? { ...prev, quantity: e.target.value } : prev
+                              )
+                            }
+                          />
+                        ) : (
+                          formatNumberForLocale(locale, it.quantity, { maximumFractionDigits: 0 })
+                        )}
                       </td>
-                      <td className="px-2 py-2 text-right">{fmtMoney(it.unit_cost, row.currency)}</td>
-                      <td className="px-2 py-2 text-right">{fmtMoney(it.total_cost, row.currency)}</td>
-                      <td className="px-2 py-2">
-                        {inventoryLifecycleLabel(t, it.inventory_status)}
+                      <td className="px-2 py-2 text-right align-top">
+                        {editingLineItemId === it.id && lineEditForm ? (
+                          <input
+                            type="number"
+                            min={0}
+                            step="any"
+                            className={`${inputCls} ml-auto inline-block max-w-[8rem] text-right`}
+                            value={lineEditForm.unit_cost}
+                            disabled={Boolean(savingLineItemId)}
+                            onChange={(e) =>
+                              setLineEditForm((prev) =>
+                                prev && editingLineItemId === it.id ? { ...prev, unit_cost: e.target.value } : prev
+                              )
+                            }
+                          />
+                        ) : (
+                          fmtMoney(it.unit_cost, row.currency)
+                        )}
                       </td>
-                      <td className="px-2 py-2 text-right">
+                      <td className="px-2 py-2 text-right align-top">
+                        {editingLineItemId === it.id && lineEditForm
+                          ? fmtMoney(
+                              Math.max(1, Math.floor(Number(lineEditForm.quantity) || 1)) *
+                                Number(lineEditForm.unit_cost || 0),
+                              row.currency
+                            )
+                          : fmtMoney(it.total_cost, row.currency)}
+                      </td>
+                      <td className="px-2 py-2 align-top">
+                        {editingLineItemId === it.id && lineEditForm ? (
+                          <select
+                            className={inputCls}
+                            value={lineEditForm.inventory_status}
+                            disabled={Boolean(savingLineItemId)}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (!isPoLineInventoryStatus(v)) return;
+                              setLineEditForm((prev) =>
+                                prev && editingLineItemId === it.id ? { ...prev, inventory_status: v } : prev
+                              );
+                            }}
+                          >
+                            {PO_LINE_INVENTORY_STATUSES.map((s) => (
+                              <option key={s} value={s}>
+                                {poLineInventoryStatusLabel(t, s)}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          poLineInventoryStatusLabel(t, it.inventory_status)
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right align-top">
                         {formatNumberForLocale(locale, carsPerItem.get(it.id) || 0, { maximumFractionDigits: 0 })}
                       </td>
+                      {canEditPoLines ? (
+                        <td className="px-2 py-2 text-right align-top whitespace-nowrap">
+                          {editingLineItemId === it.id ? (
+                            <div className="flex flex-col items-end gap-1">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="primary"
+                                className="h-8 min-h-8 text-[11px]"
+                                isDisabled={Boolean(savingLineItemId)}
+                                onPress={() => void saveLineItemEdit()}
+                              >
+                                {savingLineItemId === it.id ? t("purchaseOrders.detail.savingLineItem") : t("purchaseOrders.detail.saveLineItem")}
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                className="h-8 min-h-8 text-[11px]"
+                                isDisabled={Boolean(savingLineItemId)}
+                                onPress={() => cancelLineItemEditUi()}
+                              >
+                                {t("purchaseOrders.detail.cancelLineItemEdit")}
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              className="h-8 min-h-8 text-[11px]"
+                              isDisabled={Boolean(savingLineItemId)}
+                              onPress={() => startLineEdit(it)}
+                            >
+                              {t("purchaseOrders.detail.editLineItem")}
+                            </Button>
+                          )}
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>

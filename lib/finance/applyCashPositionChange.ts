@@ -61,6 +61,23 @@ export async function reverseMovementOnCashPosition(
   const currency = (movement.currency || "").trim();
   const amount = Number(movement.amount || 0);
   if (!pocket || !currency || amount <= 0) return { ok: true };
+
+  const { data: rows, error } = await db
+    .from("cash_positions")
+    .select("id")
+    .eq("pocket", pocket)
+    .eq("currency", currency)
+    .limit(1);
+
+  if (error) {
+    return { ok: false, error: error.message || "Failed to read cash_positions." };
+  }
+
+  // Approval may have skipped cash when no row existed for this pocket+currency — nothing to reverse.
+  if (!rows?.[0]) {
+    return { ok: true };
+  }
+
   const t = (movement.type || "").toLowerCase();
   const reversedType = t === "in" ? "Out" : "In";
   return applyMovementToCashPosition(db, { pocket, currency, amount, type: reversedType });

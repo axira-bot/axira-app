@@ -6,6 +6,10 @@ import dynamic from "next/dynamic";
 import type { Movement } from "@/lib/types";
 import type { ReceiptPDFData } from "@/lib/pdf/pdfTypes";
 import { logActivity } from "@/lib/activity";
+import {
+  reverseMovementOnCashPosition,
+} from "@/lib/finance/applyCashPositionChange";
+import { validatePocketForCurrency } from "@/lib/finance/cashPockets";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
 import { formatDateForLocale, formatNumberForLocale, useI18n } from "@/lib/context/I18nContext";
@@ -29,7 +33,6 @@ const POCKETS_ALL = [
 ] as const;
 
 const CONVERSION_FROM_POCKETS = ["Algeria Cash", "Algeria Bank"] as const;
-const CONVERSION_RECEIVING_POCKETS = ["Dubai Cash", "Dubai Bank", "Qatar"] as const;
 
 const CURRENCIES = ["AED", "DZD", "USD", "EUR"] as const;
 const CONVERSION_TO_CURRENCIES = ["AED", "USD", "EUR"] as const;
@@ -40,6 +43,24 @@ type CashPosition = {
   amount: number | null;
   currency: string | null;
 };
+
+/** Pockets that have a cash_positions row for the given currency (and pass pocket/currency rules). */
+function pocketsHoldingCurrency(
+  cashPositions: CashPosition[],
+  currency: string
+): string[] {
+  const c = currency.trim().toUpperCase();
+  if (!c) return [];
+  const seen = new Set<string>();
+  for (const row of cashPositions) {
+    if ((row.currency || "").trim().toUpperCase() !== c) continue;
+    const pocket = (row.pocket || "").trim();
+    if (!pocket || seen.has(pocket)) continue;
+    if (validatePocketForCurrency(pocket, c) !== null) continue;
+    seen.add(pocket);
+  }
+  return [...seen].sort((a, b) => a.localeCompare(b));
+}
 
 type ConversionMeta = {
   depositedBy: string;
@@ -63,6 +84,97 @@ function parseConversionMeta(description: string | null): ConversionMeta | null 
   }
 }
 
+function isConversionApproved(legs: Movement[]): boolean {
+  const inLeg = legs.some((m) => (m.type || "").toLowerCase() === "in");
+  if (inLeg) return true;
+  for (const m of legs) {
+    const meta = parseConversionMeta(m.description ?? null);
+    if (meta?.status === "approved" || meta?.approvedAt) return true;
+  }
+  return false;
+}
+
+/** Legs whose cash_positions were updated and must be reversed before delete. */
+function conversionLegsRequiringCashReversal(legs: Movement[]): Movement[] {
+  if (!isConversionApproved(legs)) return [];
+  return legs.filter((m) => {
+    const amount = Number(m.amount || 0);
+    if (amount <= 0 || !m.pocket?.trim() || !m.currency?.trim()) return false;
+    return true;
+  });
+}
+
+function reversedPocketLabels(legs: Movement[]): string {
+  const names = new Set<string>();
+  for (const m of legs) {
+    const p = (m.pocket || "").trim();
+    if (p) names.add(p);
+  }
+  return [...names].sort((a, b) => a.localeCompare(b)).join(", ");
+}
+
+function conversionDeleteActivityDescription(
+  actorLabel: string,
+  ref: string,
+  legs: Movement[],
+  cashLegs: Movement[]
+): string {
+  const out = legs.find((m) => (m.type || "").toLowerCase() === "out");
+  const inLeg = legs.find((m) => (m.type || "").toLowerCase() === "in");
+  const meta = parseConversionMeta(out?.description ?? inLeg?.description ?? null);
+  const fromAmount = out?.amount ?? 0;
+  const fromCurrency = out?.currency ?? "DZD";
+  const toAmount = inLeg?.amount ?? meta?.actualAmount ?? meta?.expectedAmount ?? 0;
+  const toCurrency = inLeg?.currency ?? meta?.toCurrency ?? "";
+  const pockets = reversedPocketLabels(cashLegs);
+  const pocketNote = pockets ? `Cash reversed on pockets ${pockets}.` : "No pocket balances were changed.";
+  return `${actorLabel} deleted conversion ${ref} (${fromAmount} ${fromCurrency} → ${toAmount} ${toCurrency}). ${pocketNote}`;
+}
+
+function exchangeDeleteActivityDescription(
+  actorLabel: string,
+  ref: string,
+  legs: Movement[]
+): string {
+  const out = legs.find((m) => (m.type || "").toLowerCase() === "out");
+  const inLeg = legs.find((m) => (m.type || "").toLowerCase() === "in");
+  const fromAmount = out?.amount ?? 0;
+  const fromCurrency = out?.currency ?? "";
+  const toAmount = inLeg?.amount ?? 0;
+  const toCurrency = inLeg?.currency ?? "";
+  const pockets = reversedPocketLabels(legs);
+  return `${actorLabel} deleted cash exchange ${ref} (${fromAmount} ${fromCurrency} → ${toAmount} ${toCurrency}). Cash reversed on pockets ${pockets}.`;
+}
+
+async function reverseCashLegsOrAbort(
+  legs: Movement[],
+  onError: (message: string) => void
+): Promise<boolean> {
+  const reversed: Movement[] = [];
+  for (const m of legs) {
+    const rev = await reverseMovementOnCashPosition(supabase, {
+      pocket: m.pocket,
+      currency: m.currency,
+      amount: m.amount,
+      type: m.type,
+    });
+    if (!rev.ok) {
+      for (const prior of reversed) {
+        await reverseMovementOnCashPosition(supabase, {
+          pocket: prior.pocket,
+          currency: prior.currency,
+          amount: prior.amount,
+          type: prior.type,
+        });
+      }
+      onError(rev.error);
+      return false;
+    }
+    reversed.push(m);
+  }
+  return true;
+}
+
 // ---- Conversion form ----
 type ConversionFormState = {
   date: string;
@@ -72,7 +184,7 @@ type ConversionFormState = {
   amountDzd: string;
   toCurrency: (typeof CONVERSION_TO_CURRENCIES)[number];
   rate: string;
-  receivingPocket: (typeof CONVERSION_RECEIVING_POCKETS)[number];
+  receivingPocket: string;
   notes: string;
 };
 
@@ -168,7 +280,7 @@ export default function TransfersPage() {
       maximumFractionDigits: 4,
     });
 
-  const { canDelete } = useAuth();
+  const { canDelete, profile, user } = useAuth();
   const [activeTab, setActiveTab] = useState<"conversions" | "exchange">("conversions");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -328,6 +440,58 @@ export default function TransfersPage() {
     return to / from;
   }, [exchangeForm.fromAmount, exchangeForm.toAmount]);
 
+  const receivingPocketsForConversion = useMemo(
+    () => pocketsHoldingCurrency(cashPositions, conversionForm.toCurrency),
+    [cashPositions, conversionForm.toCurrency]
+  );
+
+  const fromPocketsForExchange = useMemo(
+    () => pocketsHoldingCurrency(cashPositions, exchangeForm.fromCurrency),
+    [cashPositions, exchangeForm.fromCurrency]
+  );
+
+  const toPocketsForExchange = useMemo(
+    () =>
+      pocketsHoldingCurrency(cashPositions, exchangeForm.toCurrency).filter(
+        (p) => p !== exchangeForm.fromPocket
+      ),
+    [cashPositions, exchangeForm.toCurrency, exchangeForm.fromPocket]
+  );
+
+  useEffect(() => {
+    setConversionForm((prev) => {
+      const pockets = pocketsHoldingCurrency(cashPositions, prev.toCurrency);
+      if (pockets.length === 0) {
+        return prev.receivingPocket === "" ? prev : { ...prev, receivingPocket: "" };
+      }
+      if (pockets.includes(prev.receivingPocket)) return prev;
+      return { ...prev, receivingPocket: pockets[0]! };
+    });
+  }, [cashPositions, conversionForm.toCurrency]);
+
+  useEffect(() => {
+    setExchangeForm((prev) => {
+      const fromPockets = pocketsHoldingCurrency(cashPositions, prev.fromCurrency);
+      const toPockets = pocketsHoldingCurrency(cashPositions, prev.toCurrency).filter(
+        (p) => p !== prev.fromPocket
+      );
+      let fromPocket = prev.fromPocket;
+      let toPocket = prev.toPocket;
+      if (fromPockets.length === 0) {
+        fromPocket = "";
+      } else if (!fromPockets.includes(fromPocket)) {
+        fromPocket = fromPockets[0]!;
+      }
+      if (toPockets.length === 0) {
+        toPocket = "";
+      } else if (!toPockets.includes(toPocket)) {
+        toPocket = toPockets[0]!;
+      }
+      if (fromPocket === prev.fromPocket && toPocket === prev.toPocket) return prev;
+      return { ...prev, fromPocket, toPocket };
+    });
+  }, [cashPositions, exchangeForm.fromCurrency, exchangeForm.toCurrency, exchangeForm.fromPocket]);
+
   const handleSaveConversion = async () => {
     const amountDzd = parseNum(conversionForm.amountDzd);
     const rate = parseNum(conversionForm.rate);
@@ -341,6 +505,13 @@ export default function TransfersPage() {
     }
     if (rate <= 0) {
       setError(t("transfers.rateRequired"));
+      return;
+    }
+    if (
+      !conversionForm.receivingPocket.trim() ||
+      !receivingPocketsForConversion.includes(conversionForm.receivingPocket)
+    ) {
+      setError(t("transfers.noPocketForCurrency", { currency: conversionForm.toCurrency }));
       return;
     }
     const txId = generateConversionId(conversionForm.date, conversionForm.time);
@@ -576,6 +747,20 @@ export default function TransfersPage() {
       setError(t("transfers.pocketsMustDiffer"));
       return;
     }
+    if (
+      !exchangeForm.fromPocket.trim() ||
+      !fromPocketsForExchange.includes(exchangeForm.fromPocket)
+    ) {
+      setError(t("transfers.noPocketForCurrency", { currency: exchangeForm.fromCurrency }));
+      return;
+    }
+    if (
+      !exchangeForm.toPocket.trim() ||
+      !toPocketsForExchange.includes(exchangeForm.toPocket)
+    ) {
+      setError(t("transfers.noPocketForCurrency", { currency: exchangeForm.toCurrency }));
+      return;
+    }
 
     const ref = exchangeRefId || generateExchangeId();
     setIsSaving(true);
@@ -702,9 +887,37 @@ export default function TransfersPage() {
     const legs = movements.filter(
       (m) => m.category === "Conversion" && m.reference === ref
     );
-    for (const m of legs) {
-      await supabase.from("movements").delete().eq("id", m.id);
+    const cashLegs = conversionLegsRequiringCashReversal(legs);
+    const cashOk = await reverseCashLegsOrAbort(cashLegs, (message) => {
+      setError([t("transfers.deleteConversionCashFailed"), message].filter(Boolean).join(" "));
+    });
+    if (!cashOk) {
+      setDeletingRef(null);
+      return;
     }
+    for (const m of legs) {
+      const { error: delErr } = await supabase.from("movements").delete().eq("id", m.id);
+      if (delErr) {
+        setError([t("transfers.deleteConversionFailed"), delErr.message].filter(Boolean).join(" "));
+        setDeletingRef(null);
+        await fetchAll();
+        return;
+      }
+    }
+
+    const actorLabel =
+      profile?.name?.trim() || user?.email?.trim() || t("common.emiDash");
+    const outLeg = legs.find((m) => (m.type || "").toLowerCase() === "out");
+    await logActivity({
+      action: "deleted",
+      entity: "conversion",
+      entity_id: ref,
+      description: conversionDeleteActivityDescription(actorLabel, ref, legs, cashLegs),
+      amount: outLeg?.amount ?? null,
+      currency: outLeg?.currency ?? "DZD",
+      actorName: actorLabel,
+    });
+
     setDeletingRef(null);
     await fetchAll();
   };
@@ -720,9 +933,36 @@ export default function TransfersPage() {
     const legs = movements.filter(
       (m) => m.category === "Cash Exchange" && m.reference === ref
     );
-    for (const m of legs) {
-      await supabase.from("movements").delete().eq("id", m.id);
+    const cashOk = await reverseCashLegsOrAbort(legs, (message) => {
+      setError([t("transfers.deleteExchangeCashFailed"), message].filter(Boolean).join(" "));
+    });
+    if (!cashOk) {
+      setDeletingRef(null);
+      return;
     }
+    for (const m of legs) {
+      const { error: delErr } = await supabase.from("movements").delete().eq("id", m.id);
+      if (delErr) {
+        setError([t("transfers.deleteExchangeFailed"), delErr.message].filter(Boolean).join(" "));
+        setDeletingRef(null);
+        await fetchAll();
+        return;
+      }
+    }
+
+    const actorLabel =
+      profile?.name?.trim() || user?.email?.trim() || t("common.emiDash");
+    const outLeg = legs.find((m) => (m.type || "").toLowerCase() === "out");
+    await logActivity({
+      action: "deleted",
+      entity: "cash_exchange",
+      entity_id: ref,
+      description: exchangeDeleteActivityDescription(actorLabel, ref, legs),
+      amount: outLeg?.amount != null ? -Number(outLeg.amount) : null,
+      currency: outLeg?.currency ?? null,
+      actorName: actorLabel,
+    });
+
     setDeletingRef(null);
     await fetchAll();
   };
@@ -1279,22 +1519,27 @@ export default function TransfersPage() {
               </label>
               <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">{t("transfers.receivingPocket")}</span>
-                <select
-                  value={conversionForm.receivingPocket}
-                  onChange={(e) =>
-                    updateConversionField(
-                      "receivingPocket",
-                      e.target.value as ConversionFormState["receivingPocket"]
-                    )
-                  }
-                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
-                >
-                  {CONVERSION_RECEIVING_POCKETS.map((p) => (
-                    <option key={p} value={p}>
-                      {pocketDetailLabel(t, p)}
-                    </option>
-                  ))}
-                </select>
+                {receivingPocketsForConversion.length === 0 ? (
+                  <p className="rounded-md border border-amber-700/40 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    {t("transfers.noPocketForCurrency", {
+                      currency: conversionForm.toCurrency,
+                    })}
+                  </p>
+                ) : (
+                  <select
+                    value={conversionForm.receivingPocket}
+                    onChange={(e) =>
+                      updateConversionField("receivingPocket", e.target.value)
+                    }
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  >
+                    {receivingPocketsForConversion.map((p) => (
+                      <option key={p} value={p}>
+                        {pocketDetailLabel(t, p)}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">{t("transfers.notes")}</span>
@@ -1546,22 +1791,30 @@ export default function TransfersPage() {
               </label>
               <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">{t("transfers.fromPocket")}</span>
-                <select
-                  value={exchangeForm.fromPocket}
-                  onChange={(e) =>
-                    updateExchangeField(
-                      "fromPocket",
-                      e.target.value as ExchangeFormState["fromPocket"]
-                    )
-                  }
-                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
-                >
-                  {POCKETS_ALL.map((p) => (
-                    <option key={p} value={p}>
-                      {pocketDetailLabel(t, p)}
-                    </option>
-                  ))}
-                </select>
+                {fromPocketsForExchange.length === 0 ? (
+                  <p className="rounded-md border border-amber-700/40 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    {t("transfers.noPocketForCurrency", {
+                      currency: exchangeForm.fromCurrency,
+                    })}
+                  </p>
+                ) : (
+                  <select
+                    value={exchangeForm.fromPocket}
+                    onChange={(e) =>
+                      updateExchangeField(
+                        "fromPocket",
+                        e.target.value as ExchangeFormState["fromPocket"]
+                      )
+                    }
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  >
+                    {fromPocketsForExchange.map((p) => (
+                      <option key={p} value={p}>
+                        {pocketDetailLabel(t, p)}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </label>
               <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">{t("transfers.toCurrency")}</span>
@@ -1608,24 +1861,30 @@ export default function TransfersPage() {
               </label>
               <label className="space-y-1 text-xs text-app">
                 <span className="font-semibold">{t("transfers.toPocket")}</span>
-                <select
-                  value={exchangeForm.toPocket}
-                  onChange={(e) =>
-                    updateExchangeField(
-                      "toPocket",
-                      e.target.value as ExchangeFormState["toPocket"]
-                    )
-                  }
-                  className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
-                >
-                  {POCKETS_ALL.filter((p) => p !== exchangeForm.fromPocket).map(
-                    (p) => (
+                {toPocketsForExchange.length === 0 ? (
+                  <p className="rounded-md border border-amber-700/40 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    {t("transfers.noPocketForCurrency", {
+                      currency: exchangeForm.toCurrency,
+                    })}
+                  </p>
+                ) : (
+                  <select
+                    value={exchangeForm.toPocket}
+                    onChange={(e) =>
+                      updateExchangeField(
+                        "toPocket",
+                        e.target.value as ExchangeFormState["toPocket"]
+                      )
+                    }
+                    className="w-full rounded-md border border-app bg-white px-3 py-2 text-sm text-app outline-none focus:border-[var(--color-accent)]"
+                  >
+                    {toPocketsForExchange.map((p) => (
                       <option key={p} value={p}>
                         {pocketDetailLabel(t, p)}
                       </option>
-                    )
-                  )}
-                </select>
+                    ))}
+                  </select>
+                )}
               </label>
               <label className="space-y-1 text-xs text-app sm:col-span-2">
                 <span className="font-semibold">{t("transfers.notes")}</span>

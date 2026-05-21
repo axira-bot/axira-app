@@ -134,6 +134,7 @@
     "ratePositive": "يجب أن يكون السعر رقماً موجباً.",
     "listingRateSaveFailed": "فشل حفظ سعر العرض.",
     "cashPositionUpdateFailed": "فشل تحديث مركز النقد.",
+    "cashPositionCalibrationFailed": "تعذّر تسجيل حركة المعايرة. لم يُغيّر رصيد المحفظة.",
     "pocketFallback": "محفظة",
     "saving": "جاري الحفظ…",
     "nextDueOn": "الاستحقاق التالي: {date}",
@@ -741,11 +742,14 @@
       "container": "حاوية",
       "client": "عميل",
       "conversion": "تحويل",
+      "cash_exchange": "صرف نقدي",
       "rent": "إيجار",
       "salary": "راتب",
       "payment": "دفعة",
       "employee": "موظف",
-      "debt": "دين"
+      "debt": "دين",
+      "debt_payment": "دفعة دين",
+      "cash_position": "مركز نقد"
     }
   },
   "sidebar": {
@@ -969,6 +973,7 @@
       "Maintenance": "صيانة",
       "Transfer": "تحويل",
       "OpeningBalance": "رصيد افتتاحي",
+      "Calibration": "معايرة",
       "Other": "أخرى",
       "ClientPayment": "دفعة عميل",
       "Salary": "راتب"
@@ -1434,6 +1439,7 @@
     "colModel": "الموديل",
     "colYear": "السنة",
     "colColor": "اللون",
+    "colGrade": "الفئة / الدرجة",
     "detail": {
       "loadFailed": "تعذّر تحميل أمر الشراء",
       "backToList": "العودة لأوامر الشراء",
@@ -1522,7 +1528,22 @@
       "qtyDot": "· الكمية {n}",
       "paymentMethod": {
         "bank_transfer": "تحويل بنكي"
-      }
+      },
+      "poLineInventory": {
+        "in_transit": "في الطريق",
+        "arrived": "وصل",
+        "available": "متوفر",
+        "sold": "مباع"
+      },
+      "editLineItem": "تعديل السطر",
+      "saveLineItem": "حفظ السطر",
+      "savingLineItem": "جاري الحفظ…",
+      "cancelLineItemEdit": "إلغاء",
+      "lineBrandModelRequired": "العلامة والموديل مطلوبان.",
+      "lineYearInvalid": "أدخل سنة صحيحة أو اترك الحقل فارغاً.",
+      "saveLineItemFailed": "فشل حفظ سطر الشراء",
+      "lineItemSaved": "تم تحديث السطر.",
+      "actionsShort": "إجراءات"
     },
     "statusDraft": "مسوّدة",
     "statusOrdered": "تم الطلب",
@@ -1754,7 +1775,12 @@
     "nameRequired": "الاسم مطلوب.",
     "amountPositive": "يجب أن يكون المبلغ أكبر من 0.",
     "deleteDebtConfirm": "حذف هذا السجل؟ لا يمكن التراجع.",
-    "deletePaymentConfirm": "إزالة هذا الدفع؟",
+    "deletePaymentConfirm": "إزالة هذا الدفع؟ سيتم حذف الحركة المرتبطة وعكس رصيد المحفظة.",
+    "paymentMovementFailed": "تم حفظ الدفع لكن تعذّر إنشاء الحركة. تم التراجع عن سجل الدفع.",
+    "deletePaymentFailed": "تعذّر العثور على الحركة المرتبطة.",
+    "deletePaymentCashFailed": "تعذّر عكس رصيد المحفظة. لم يُحذف شيء.",
+    "deletePaymentMovementFailed": "تم عكس الرصيد لكن فشل حذف الحركة.",
+    "deletePaymentAmbiguousMovement": "وُجدت حركات متعددة مطابقة. عالجها يدوياً قبل الحذف.",
     "paymentAmountPositive": "يجب أن يكون المبلغ أكبر من 0.",
     "paymentExceeds": "الدفعة تتجاوز المتبقي. الأقصى: {amount} {currency}",
     "selectPocket": "اختر خزينة.",
@@ -2035,6 +2061,11 @@
     "actionsMenu": "إجراءات التحويل",
     "deleteConversionConfirm": "حذف هذا التحويل؟ لا يمكن التراجع.",
     "deleteExchangeConfirm": "حذف هذا الصرف؟ ستُزال الحركتان.",
+    "deleteConversionCashFailed": "تعذّر عكس أرصدة المحافظ لهذا التحويل. لم يُحذف شيء.",
+    "deleteConversionFailed": "تم عكس الأرصدة لكن فشل حذف التحويل.",
+    "deleteExchangeCashFailed": "تعذّر عكس أرصدة المحافظ لهذا الصرف. لم يُحذف شيء.",
+    "deleteExchangeFailed": "تم عكس الأرصدة لكن فشل حذف الصرف.",
+    "noPocketForCurrency": "لا توجد محفظة تحتفظ بـ {currency} بعد. أنشئ واحدة أولاً.",
     "dateDepositedByRequired": "التاريخ واسم المودع مطلوبان.",
     "amountDzdRequired": "مبلغ DZD مطلوب وأكبر من 0.",
     "rateRequired": "السعر مطلوب وأكبر من 0.",

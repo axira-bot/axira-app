@@ -43,6 +43,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Spinner } from "@heroui/react";
 import type { Car } from "@/lib/types";
 import { logActivity } from "@/lib/activity";
+import { reverseMovementOnCashPosition } from "@/lib/finance/applyCashPositionChange";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/AuthContext";
 import {
@@ -143,11 +144,69 @@ function carLabel(c: Car): string {
   return parts.join(" ");
 }
 
+function debtPaymentMovementRef(paymentId: string): string {
+  return `debt_payment:${paymentId}`;
+}
+
+type DebtPaymentMovementRow = {
+  id: string;
+  type: string | null;
+  amount: number | null;
+  currency: string | null;
+  pocket: string | null;
+};
+
+async function findDebtPaymentMovement(
+  payment: DebtPayment,
+  debt: Debt,
+  t: TranslateFn
+): Promise<DebtPaymentMovementRow | null> {
+  const ref = debtPaymentMovementRef(payment.id);
+  const { data: byRef, error: refErr } = await supabase
+    .from("movements")
+    .select("id, type, amount, currency, pocket")
+    .eq("reference", ref)
+    .maybeSingle();
+
+  if (refErr) throw new Error(refErr.message);
+  if (byRef?.id) return byRef as DebtPaymentMovementRow;
+
+  const amount = payment.amount ?? 0;
+  const currency = payment.currency ?? "AED";
+  const pocket = payment.pocket ?? "";
+  const date = payment.date ?? "";
+  if (amount <= 0 || !pocket || !date) return null;
+
+  const isReceivable = (debt.type || "").toLowerCase() === "receivable";
+  const namePart = debt.name?.trim() || t("debts.debtFallbackName");
+  const expectedDescription = isReceivable
+    ? t("debts.movementPaymentReceivedFrom", { name: namePart })
+    : t("debts.movementPaymentPaidTo", { name: namePart });
+
+  const { data: legacyRows, error: legacyErr } = await supabase
+    .from("movements")
+    .select("id, type, amount, currency, pocket")
+    .eq("category", "Other")
+    .eq("amount", amount)
+    .eq("currency", currency)
+    .eq("pocket", pocket)
+    .eq("date", date)
+    .eq("description", expectedDescription)
+    .limit(2);
+
+  if (legacyErr) throw new Error(legacyErr.message);
+  if (!legacyRows?.length) return null;
+  if (legacyRows.length > 1) {
+    throw new Error(t("debts.deletePaymentAmbiguousMovement"));
+  }
+  return legacyRows[0] as DebtPaymentMovementRow;
+}
+
 type PayablesRow = Debt & { _isSupplier?: boolean; _carId?: string };
 
 export default function DebtsPage() {
   const { locale, t } = useI18n();
-  const { canDelete } = useAuth();
+  const { canDelete, profile, user } = useAuth();
   const [activeTab, setActiveTab] = useState<"receivables" | "payables">("receivables");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -579,23 +638,38 @@ export default function DebtsPage() {
       ? t("debts.movementPaymentReceivedFrom", { name: namePart })
       : t("debts.movementPaymentPaidTo", { name: namePart });
 
-    const { error: movementErr } = await supabase.from("movements").insert({
-      date,
-      type: isReceivable ? "In" : "Out",
-      category: "Other",
-      description: movementDescription,
-      amount,
-      currency,
-      pocket,
-      rate: null,
-      aed_equivalent: null,
-      deal_id: null,
-      payment_id: null,
-      reference: null,
-    });
+    const paymentRow = inserted as DebtPayment;
 
-    if (movementErr) {
-      setPaymentsError(movementErr.message);
+    const { data: movementRow, error: movementErr } = await supabase
+      .from("movements")
+      .insert({
+        date,
+        type: isReceivable ? "In" : "Out",
+        category: "Other",
+        description: movementDescription,
+        amount,
+        currency,
+        pocket,
+        rate: null,
+        aed_equivalent: null,
+        deal_id: null,
+        payment_id: null,
+        reference: debtPaymentMovementRef(paymentRow.id),
+      })
+      .select("id")
+      .single();
+
+    if (movementErr || !movementRow?.id) {
+      setPaymentsError(movementErr?.message ?? t("debts.paymentMovementFailed"));
+      await supabase.from("debt_payments").delete().eq("id", paymentRow.id);
+      await supabase
+        .from("debts")
+        .update({
+          amount_paid: prevPaid,
+          amount_remaining: prevRem,
+          status: viewDebt.status ?? "outstanding",
+        })
+        .eq("id", viewDebt.id);
       setIsAddingPayment(false);
       return;
     }
@@ -645,13 +719,54 @@ export default function DebtsPage() {
     const amount = payment.amount ?? 0;
     if (amount <= 0) return;
     if (!window.confirm(t("debts.deletePaymentConfirm"))) return;
+
     setDeletingPaymentId(payment.id);
+    setPaymentsError(null);
 
     const prevPaid = viewDebt.amount_paid ?? 0;
     const prevRem = viewDebt.amount_remaining ?? 0;
+    const prevStatus = viewDebt.status ?? "outstanding";
     const newPaid = Math.max(prevPaid - amount, 0);
     const newRem = prevRem + amount;
     const newStatus = newRem <= 0 ? "settled" : newPaid > 0 ? "partially_paid" : "outstanding";
+
+    const actorLabel =
+      profile?.name?.trim() || user?.email?.trim() || t("debts.debtFallbackName");
+    const debtRef = viewDebt.name?.trim() || viewDebt.id;
+    const currency = payment.currency ?? "AED";
+    const pocket = payment.pocket ?? "";
+
+    let movement: DebtPaymentMovementRow | null = null;
+    try {
+      movement = await findDebtPaymentMovement(payment, viewDebt, t);
+    } catch (err) {
+      setPaymentsError(err instanceof Error ? err.message : t("debts.deletePaymentFailed"));
+      setDeletingPaymentId(null);
+      return;
+    }
+
+    if (movement) {
+      const rev = await reverseMovementOnCashPosition(supabase, movement);
+      if (!rev.ok) {
+        setPaymentsError(
+          [t("debts.deletePaymentCashFailed"), rev.error].filter(Boolean).join(" ")
+        );
+        setDeletingPaymentId(null);
+        return;
+      }
+
+      const { error: delMoveErr } = await supabase
+        .from("movements")
+        .delete()
+        .eq("id", movement.id);
+      if (delMoveErr) {
+        setPaymentsError(
+          [t("debts.deletePaymentMovementFailed"), delMoveErr.message].filter(Boolean).join(" ")
+        );
+        setDeletingPaymentId(null);
+        return;
+      }
+    }
 
     const { error: debtUpErr } = await supabase
       .from("debts")
@@ -668,33 +783,50 @@ export default function DebtsPage() {
       return;
     }
 
-    const pocket = payment.pocket ?? "";
-    const currency = payment.currency ?? "AED";
-    if (pocket) {
-      const { data: posRow } = await supabase
-        .from("cash_positions")
-        .select("id, amount")
-        .eq("pocket", pocket)
-        .eq("currency", currency)
-        .maybeSingle();
-      if (posRow && (posRow as { id?: string }).id) {
-        const current = (posRow as { amount?: number }).amount ?? 0;
-        const newAmount = viewDebt.type === "receivable" ? current - amount : current + amount;
-        await supabase
-          .from("cash_positions")
-          .update({ amount: newAmount })
-          .eq("id", (posRow as { id: string }).id);
-      }
+    const { error: delPayErr } = await supabase
+      .from("debt_payments")
+      .delete()
+      .eq("id", payment.id);
+
+    if (delPayErr) {
+      await supabase
+        .from("debts")
+        .update({
+          amount_paid: prevPaid,
+          amount_remaining: prevRem,
+          status: prevStatus,
+        })
+        .eq("id", viewDebt.id);
+      setPaymentsError(delPayErr.message);
+      setDeletingPaymentId(null);
+      return;
     }
 
-    await supabase.from("debt_payments").delete().eq("id", payment.id);
+    const description = movement
+      ? `${actorLabel} deleted debt payment of ${amount} ${currency} on debt ${debtRef}. Cash reversed on pocket ${pocket}.`
+      : `${actorLabel} deleted debt payment of ${amount} ${currency} on debt ${debtRef}. Movement reference not found. Only debt_payments row removed. Verify pocket balances manually.`;
+
+    await logActivity({
+      action: "deleted",
+      entity: "debt_payment",
+      entity_id: payment.id,
+      description,
+      amount: movement ? (movement.type?.toLowerCase() === "in" ? -amount : amount) : null,
+      currency,
+      actorName: actorLabel,
+    });
+
     setDebtPayments((prev) => prev.filter((p) => p.id !== payment.id));
     setViewDebt((v) =>
-      v && v.id === viewDebt.id ? { ...v, amount_paid: newPaid, amount_remaining: newRem, status: newStatus } : v
+      v && v.id === viewDebt.id
+        ? { ...v, amount_paid: newPaid, amount_remaining: newRem, status: newStatus }
+        : v
     );
     setDebts((prev) =>
       prev.map((d) =>
-        d.id === viewDebt.id ? { ...d, amount_paid: newPaid, amount_remaining: newRem, status: newStatus } : d
+        d.id === viewDebt.id
+          ? { ...d, amount_paid: newPaid, amount_remaining: newRem, status: newStatus }
+          : d
       )
     );
     setDeletingPaymentId(null);

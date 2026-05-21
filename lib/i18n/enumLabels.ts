@@ -50,6 +50,16 @@ export function inventoryLifecycleLabel(t: TranslateFn, status: string | null | 
   return enumKey(t, "enums.inventoryLifecycle", status?.toUpperCase(), status ?? "");
 }
 
+/** `purchase_order_items.inventory_status`: in_transit | arrived | available | sold */
+export function poLineInventoryStatusLabel(t: TranslateFn, status: string | null | undefined): string {
+  const raw = String(status ?? "").trim();
+  if (!raw) return "";
+  const slug = raw.toLowerCase().replace(/\s+/g, "_");
+  const key = `purchaseOrders.detail.poLineInventory.${slug}`;
+  const translated = t(key);
+  return translated === key ? raw : translated;
+}
+
 export function dealLifecycleLabel(t: TranslateFn, status: string | null | undefined): string {
   return enumKey(t, "enums.dealLifecycle", status?.toUpperCase(), status ?? "");
 }

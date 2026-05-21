@@ -5,7 +5,8 @@ export type ActivityAction =
   | "updated"
   | "deleted"
   | "paid"
-  | "approved";
+  | "approved"
+  | "calibrated";
 
 export type ActivityEntity =
   | "deal"
@@ -14,11 +15,14 @@ export type ActivityEntity =
   | "container"
   | "client"
   | "conversion"
+  | "cash_exchange"
   | "rent"
   | "salary"
   | "payment"
   | "employee"
-  | "debt";
+  | "debt"
+  | "debt_payment"
+  | "cash_position";
 
 export interface LogActivityParams {
   action: ActivityAction;
@@ -28,10 +32,14 @@ export interface LogActivityParams {
   amount?: number | null;
   currency?: string | null;
   metadata?: Record<string, unknown> | null;
+  /** When set, used instead of the name resolved from the current session profile. */
+  actorName?: string | null;
 }
 
-export async function logActivity(params: LogActivityParams): Promise<void> {
-  const { action, entity, entity_id, description, amount, currency } = params;
+export async function logActivity(
+  params: LogActivityParams
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { action, entity, entity_id, description, amount, currency, actorName: actorNameParam } = params;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -51,7 +59,9 @@ export async function logActivity(params: LogActivityParams): Promise<void> {
       null;
   }
 
-  await supabase.from("activity_log").insert({
+  const resolvedActorName = actorNameParam?.trim() || actorName;
+
+  const { error } = await supabase.from("activity_log").insert({
     action,
     entity,
     entity_id: entity_id ?? null,
@@ -59,6 +69,11 @@ export async function logActivity(params: LogActivityParams): Promise<void> {
     amount: amount ?? null,
     currency: currency ?? null,
     actor_user_id: actorUserId,
-    actor_name: actorName,
+    actor_name: resolvedActorName,
   });
+
+  if (error) {
+    return { ok: false, error: error.message || "Failed to write activity log." };
+  }
+  return { ok: true };
 }

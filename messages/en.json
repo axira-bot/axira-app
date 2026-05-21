@@ -134,6 +134,7 @@
     "ratePositive": "Rate must be a positive number.",
     "listingRateSaveFailed": "Failed to save listing rate.",
     "cashPositionUpdateFailed": "Failed to update cash position.",
+    "cashPositionCalibrationFailed": "Could not record the calibration movement. The pocket balance was not changed.",
     "pocketFallback": "Pocket",
     "saving": "Saving…",
     "nextDueOn": "Next due: {date}",
@@ -741,11 +742,14 @@
       "container": "Container",
       "client": "Client",
       "conversion": "Conversion",
+      "cash_exchange": "Cash exchange",
       "rent": "Rent",
       "salary": "Salary",
       "payment": "Payment",
       "employee": "Employee",
-      "debt": "Debt"
+      "debt": "Debt",
+      "debt_payment": "Debt payment",
+      "cash_position": "Cash position"
     }
   },
   "sidebar": {
@@ -969,6 +973,7 @@
       "Maintenance": "Maintenance",
       "Transfer": "Transfer",
       "OpeningBalance": "Opening balance",
+      "Calibration": "Calibration",
       "Other": "Other",
       "ClientPayment": "Client payment",
       "Salary": "Salary"
@@ -1434,6 +1439,7 @@
     "colModel": "Model",
     "colYear": "Year",
     "colColor": "Color",
+    "colGrade": "Grade",
     "detail": {
       "loadFailed": "Failed to load PO",
       "backToList": "Back to purchase orders",
@@ -1522,7 +1528,22 @@
       "qtyDot": "· Qty {n}",
       "paymentMethod": {
         "bank_transfer": "Bank transfer"
-      }
+      },
+      "poLineInventory": {
+        "in_transit": "In transit",
+        "arrived": "Arrived",
+        "available": "Available",
+        "sold": "Sold"
+      },
+      "editLineItem": "Edit line",
+      "saveLineItem": "Save line",
+      "savingLineItem": "Saving…",
+      "cancelLineItemEdit": "Cancel",
+      "lineBrandModelRequired": "Brand and model are required.",
+      "lineYearInvalid": "Enter a valid year or leave the field empty.",
+      "saveLineItemFailed": "Failed to save line item",
+      "lineItemSaved": "Line item updated.",
+      "actionsShort": "Actions"
     },
     "statusDraft": "Draft",
     "statusOrdered": "Ordered",
@@ -1754,7 +1775,12 @@
     "nameRequired": "Name is required.",
     "amountPositive": "Amount must be greater than 0.",
     "deleteDebtConfirm": "Delete this debt record? This cannot be undone.",
-    "deletePaymentConfirm": "Remove this payment record?",
+    "deletePaymentConfirm": "Remove this payment? The linked movement will be removed and the pocket balance will be reversed.",
+    "paymentMovementFailed": "Payment was saved but the movement could not be created. The payment row was rolled back.",
+    "deletePaymentFailed": "Could not locate the linked movement.",
+    "deletePaymentCashFailed": "Could not reverse the pocket balance. Nothing was deleted.",
+    "deletePaymentMovementFailed": "Cash was reversed but deleting the movement failed.",
+    "deletePaymentAmbiguousMovement": "Multiple matching movements found. Resolve manually before deleting.",
     "paymentAmountPositive": "Amount must be greater than 0.",
     "paymentExceeds": "Payment exceeds remaining balance. Maximum: {amount} {currency}",
     "selectPocket": "Please select a pocket.",
@@ -2035,6 +2061,11 @@
     "actionsMenu": "Transfer actions",
     "deleteConversionConfirm": "Delete this conversion? This cannot be undone.",
     "deleteExchangeConfirm": "Delete this exchange? Both movements will be removed.",
+    "deleteConversionCashFailed": "Could not reverse pocket balances for this conversion. Nothing was deleted.",
+    "deleteConversionFailed": "Pocket balances were reversed but deleting the conversion failed.",
+    "deleteExchangeCashFailed": "Could not reverse pocket balances for this exchange. Nothing was deleted.",
+    "deleteExchangeFailed": "Pocket balances were reversed but deleting the exchange failed.",
+    "noPocketForCurrency": "No pocket holds {currency} yet. Create one first.",
     "dateDepositedByRequired": "Date and Deposited by are required.",
     "amountDzdRequired": "Amount DZD is required and must be greater than 0.",
     "rateRequired": "Rate is required and must be greater than 0.",

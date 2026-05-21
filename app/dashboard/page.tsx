@@ -20,6 +20,7 @@ import {
   formatNumberForLocale,
   useI18n,
 } from "@/lib/context/I18nContext";
+import { logActivity } from "@/lib/activity";
 import { carLocationLabel, movementCategoryLabel } from "@/lib/i18n/enumLabels";
 import { attachDealCoreMetrics } from "@/lib/finance/attachDealCoreMetrics";
 import { dealListSaleDzd } from "@/app/deals/dealFinanceHelpers";
@@ -98,7 +99,7 @@ function StaffBlurGate({
 }
 
 export default function DashboardPage() {
-  const { role, permissions } = useAuth();
+  const { role, permissions, profile, user } = useAuth();
   const { t, locale } = useI18n();
   const tRef = useRef(t);
   tRef.current = t;
@@ -583,7 +584,99 @@ export default function DashboardPage() {
       return;
     }
 
+    const pocketRow = cashPositions.find((p) => p.id === editingPocketId);
+    if (!pocketRow) {
+      setError(t("dashboard.cashPositionUpdateFailed"));
+      return;
+    }
+
+    const pocketName =
+      pocketRow.pocket ||
+      pocketRow.name ||
+      pocketRow.pocket_name ||
+      pocketRow.label ||
+      "";
+    const currency = (pocketRow.currency || "").trim();
+    if (!pocketName || !currency) {
+      setError(t("dashboard.cashPositionUpdateFailed"));
+      return;
+    }
+
+    const oldAmount = pocketRow.amount ?? 0;
+    const delta = value - oldAmount;
+
+    if (delta === 0) {
+      setEditingPocketId(null);
+      setEditingAmount("");
+      return;
+    }
+
     setUpdatingPocketId(editingPocketId);
+    setError(null);
+
+    const actorLabel =
+      profile?.name?.trim() || user?.email?.trim() || t("dashboard.pocketFallback");
+    const calibrationDescription = `Manual pocket adjustment by ${actorLabel}`;
+    const today = new Date().toISOString().slice(0, 10);
+    const calibRef = `CALIBRATION-${Date.now()}`;
+    const absDelta = Math.abs(delta);
+    const movementType = delta > 0 ? "In" : "Out";
+
+    const rate =
+      currency === "AED" || currency === "USD" || currency === "EUR" ? 1 : null;
+    const aedEquivalent =
+      currency === "AED" || currency === "USD" || currency === "EUR" ? absDelta : null;
+
+    const { data: insertedMovement, error: movementError } = await supabase
+      .from("movements")
+      .insert({
+        date: today,
+        type: movementType,
+        category: "Calibration",
+        description: calibrationDescription,
+        amount: absDelta,
+        currency,
+        rate,
+        aed_equivalent: aedEquivalent,
+        pocket: pocketName,
+        deal_id: null,
+        payment_id: null,
+        reference: calibRef,
+      })
+      .select("id")
+      .single();
+
+    if (movementError || !insertedMovement?.id) {
+      setError(
+        [t("dashboard.cashPositionCalibrationFailed"), movementError?.message]
+          .filter(Boolean)
+          .join(" ")
+      );
+      setUpdatingPocketId(null);
+      return;
+    }
+
+    const movementId = insertedMovement.id as string;
+
+    const auditLog = await logActivity({
+      action: "calibrated",
+      entity: "cash_position",
+      entity_id: editingPocketId,
+      description: calibrationDescription,
+      amount: delta,
+      currency,
+      actorName: actorLabel,
+    });
+    if (!auditLog.ok) {
+      await supabase.from("movements").delete().eq("id", movementId);
+      setError(
+        [t("dashboard.cashPositionCalibrationFailed"), auditLog.error]
+          .filter(Boolean)
+          .join(" ")
+      );
+      setUpdatingPocketId(null);
+      return;
+    }
 
     const { error: updateError } = await supabase
       .from("cash_positions")
@@ -591,15 +684,18 @@ export default function DashboardPage() {
       .eq("id", editingPocketId);
 
     if (updateError) {
-      setError(t("dashboard.cashPositionUpdateFailed"));
+      await supabase.from("movements").delete().eq("id", movementId);
+      setError(
+        [t("dashboard.cashPositionUpdateFailed"), updateError.message]
+          .filter(Boolean)
+          .join(" ")
+      );
       setUpdatingPocketId(null);
       return;
     }
 
     setCashPositions((prev) =>
-      prev.map((p) =>
-        p.id === editingPocketId ? { ...p, amount: value } : p
-      )
+      prev.map((p) => (p.id === editingPocketId ? { ...p, amount: value } : p))
     );
 
     setUpdatingPocketId(null);

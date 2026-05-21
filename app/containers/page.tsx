@@ -701,6 +701,7 @@ export default function ContainersPage() {
       .ilike("description", `%${containerRefStr}%`)
       .limit(1);
 
+    let shippingMovementInserted = false;
     if (!existingMovements || existingMovements.length === 0) {
       const { error: movementError } = await supabase.from("movements").insert({
         date: new Date().toISOString().slice(0, 10),
@@ -728,25 +729,30 @@ export default function ContainersPage() {
             movementError.hint,
           ]
             .filter(Boolean)
-          .join(" ")
+            .join(" ")
         );
+        setIsPayingInvoice(false);
+        return;
       }
+      shippingMovementInserted = true;
     }
 
-    // 2b. Always deduct invoice amount from selected pocket (cash_positions)
-    const { data: pocketRow } = await supabase
-      .from("cash_positions")
-      .select("id, amount")
-      .eq("pocket", payInvoiceForm.pocket)
-      .eq("currency", "AED")
-      .limit(1)
-      .maybeSingle();
-    if (pocketRow) {
-      const currentAmount = (pocketRow as { amount?: number }).amount ?? 0;
-      await supabase
+    // 2b. Deduct pocket only when a new shipping movement was recorded (avoids cash drift if insert failed)
+    if (shippingMovementInserted) {
+      const { data: pocketRow } = await supabase
         .from("cash_positions")
-        .update({ amount: currentAmount - amount })
-        .eq("id", (pocketRow as { id: string }).id);
+        .select("id, amount")
+        .eq("pocket", payInvoiceForm.pocket)
+        .eq("currency", "AED")
+        .limit(1)
+        .maybeSingle();
+      if (pocketRow) {
+        const currentAmount = (pocketRow as { amount?: number }).amount ?? 0;
+        await supabase
+          .from("cash_positions")
+          .update({ amount: currentAmount - amount })
+          .eq("id", (pocketRow as { id: string }).id);
+      }
     }
 
     // 3. Split shipping cost across cars: replace deal_expenses.shipping per linked deal

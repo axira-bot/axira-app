@@ -11,6 +11,7 @@ type CreateItem = {
   year?: number | null;
   color?: string | null;
   vin?: string | null;
+  grade?: string | null;
   quantity?: number;
   unit_cost?: number;
   notes?: string | null;
@@ -26,7 +27,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requirePoAccess({ write: true, ownerOnly: true });
+  const auth = await requirePoAccess({ write: true });
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
     const { id } = await context.params;
@@ -63,6 +64,7 @@ export async function POST(
           year: rawItem.year ?? null,
           color: rawItem.color?.trim() || null,
           vin: rawItem.vin?.trim() || null,
+          grade: rawItem.grade?.trim() || null,
           quantity,
           unit_cost: unitCost,
           total_cost: quantity * unitCost,
@@ -91,6 +93,7 @@ export async function POST(
           model: rawItem.model.trim(),
           year: rawItem.year ?? null,
           color: rawItem.color?.trim() || null,
+          grade: rawItem.grade?.trim() || null,
           vin: quantity === 1 && i === 0 ? rawItem.vin?.trim() || null : null,
           purchase_price: unitCost,
           purchase_currency: (po as { currency?: string | null }).currency || "USD",

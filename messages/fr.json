@@ -134,6 +134,7 @@
     "ratePositive": "Le taux doit être un nombre strictement positif.",
     "listingRateSaveFailed": "Échec de l'enregistrement du taux d'affichage.",
     "cashPositionUpdateFailed": "Échec de la mise à jour de la position de trésorerie.",
+    "cashPositionCalibrationFailed": "Impossible d'enregistrer le mouvement de calibration. Le solde de la poche n'a pas été modifié.",
     "pocketFallback": "Poche",
     "saving": "Enregistrement…",
     "nextDueOn": "Prochaine échéance : {date}",
@@ -741,11 +742,14 @@
       "container": "Conteneur",
       "client": "Client",
       "conversion": "Conversion",
+      "cash_exchange": "Change de devises",
       "rent": "Loyer",
       "salary": "Salaire",
       "payment": "Paiement",
       "employee": "Employé",
-      "debt": "Dette"
+      "debt": "Dette",
+      "debt_payment": "Paiement de dette",
+      "cash_position": "Position de trésorerie"
     }
   },
   "sidebar": {
@@ -969,6 +973,7 @@
       "Maintenance": "Maintenance",
       "Transfer": "Transfer",
       "OpeningBalance": "Opening balance",
+      "Calibration": "Calibration",
       "Other": "Other",
       "ClientPayment": "Client payment",
       "Salary": "Salary"
@@ -1434,6 +1439,7 @@
     "colModel": "Modèle",
     "colYear": "Année",
     "colColor": "Couleur",
+    "colGrade": "Finition / grade",
     "detail": {
       "loadFailed": "Failed to load PO",
       "backToList": "Back to purchase orders",
@@ -1522,7 +1528,22 @@
       "qtyDot": "· Qté {n}",
       "paymentMethod": {
         "bank_transfer": "Virement bancaire"
-      }
+      },
+      "poLineInventory": {
+        "in_transit": "En transit",
+        "arrived": "Arrivé",
+        "available": "Disponible",
+        "sold": "Vendu"
+      },
+      "editLineItem": "Modifier la ligne",
+      "saveLineItem": "Enregistrer la ligne",
+      "savingLineItem": "Enregistrement…",
+      "cancelLineItemEdit": "Annuler",
+      "lineBrandModelRequired": "Marque et modèle sont obligatoires.",
+      "lineYearInvalid": "Indiquez une année valide ou laissez vide.",
+      "saveLineItemFailed": "Échec de l’enregistrement de la ligne",
+      "lineItemSaved": "Ligne mise à jour.",
+      "actionsShort": "Actions"
     },
     "statusDraft": "Draft",
     "statusOrdered": "Ordered",
@@ -1754,7 +1775,12 @@
     "nameRequired": "Le nom est obligatoire.",
     "amountPositive": "Le montant doit être supérieur à 0.",
     "deleteDebtConfirm": "Supprimer cette dette ? Irréversible.",
-    "deletePaymentConfirm": "Supprimer ce paiement ?",
+    "deletePaymentConfirm": "Supprimer ce paiement ? Le mouvement lié sera supprimé et le solde de la poche inversé.",
+    "paymentMovementFailed": "Le paiement a été enregistré mais le mouvement n'a pas pu être créé. La ligne paiement a été annulée.",
+    "deletePaymentFailed": "Impossible de localiser le mouvement lié.",
+    "deletePaymentCashFailed": "Impossible d'inverser le solde de la poche. Rien n'a été supprimé.",
+    "deletePaymentMovementFailed": "Le solde a été inversé mais la suppression du mouvement a échoué.",
+    "deletePaymentAmbiguousMovement": "Plusieurs mouvements correspondent. Résolvez manuellement avant de supprimer.",
     "paymentAmountPositive": "Le montant doit être supérieur à 0.",
     "paymentExceeds": "Paiement supérieur au solde. Maximum : {amount} {currency}",
     "selectPocket": "Choisissez une poche.",
@@ -2035,6 +2061,11 @@
     "actionsMenu": "Actions transfert",
     "deleteConversionConfirm": "Supprimer cette conversion ? Irréversible.",
     "deleteExchangeConfirm": "Supprimer ce change ? Les deux mouvements seront supprimés.",
+    "deleteConversionCashFailed": "Impossible d'inverser les soldes pour cette conversion. Rien n'a été supprimé.",
+    "deleteConversionFailed": "Les soldes ont été inversés mais la suppression de la conversion a échoué.",
+    "deleteExchangeCashFailed": "Impossible d'inverser les soldes pour ce change. Rien n'a été supprimé.",
+    "deleteExchangeFailed": "Les soldes ont été inversés mais la suppression du change a échoué.",
+    "noPocketForCurrency": "Aucune poche ne détient encore de {currency}. Créez-en une d'abord.",
     "dateDepositedByRequired": "Date et déposant obligatoires.",
     "amountDzdRequired": "Montant DZD obligatoire et > 0.",
     "rateRequired": "Taux obligatoire et > 0.",
