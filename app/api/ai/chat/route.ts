@@ -107,7 +107,7 @@ function buildSystemPrompt(context: Awaited<ReturnType<typeof getBusinessContext
 
 COMPANY: Axira Trading FZE — car export from Dubai to Algeria
 OWNER: Rami
-
+TODAY'S DATE: ${new Date().toISOString().slice(0, 10)}
 CURRENT SNAPSHOT (live data):
 - Cash positions: ${JSON.stringify(context.cash)}
 - Available cars in inventory: ${context.cars?.length ?? 0} cars
