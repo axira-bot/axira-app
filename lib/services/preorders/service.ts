@@ -1,6 +1,11 @@
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { toAed } from "@/lib/finance/dealMoney";
+import {
+  assertPlausibleRateToAed,
+  enteredPurchaseCostToCostFact,
+} from "@/app/deals/dealFinanceHelpers";
+import { saleDzdRateToAedFromDzdPerAed, toAed } from "@/lib/finance/dealMoney";
+import { fetchAppRatesFromSettingsTable } from "@/lib/rates";
 import { canCreatePreorderDeal, isPreorderPrivilegedRole } from "@/lib/auth/roles";
 import type { DealLifecycleStatus } from "./types";
 import { LIFECYCLE_TRANSITIONS } from "./types";
@@ -204,14 +209,33 @@ export async function createPreorderDeal(payload: Record<string, unknown>) {
 
   const carLabel = [brand, model, year ? String(year) : null, color].filter(Boolean).join(" ");
   const saleDzd = Number(payload.sale_dzd || 0);
-  const rate = Number(payload.rate || 0);
-  const saleRateToAed = rate > 0 ? 1 / rate : null;
+  const dzdPerAed = Number(payload.rate || 0);
+  if (!(dzdPerAed > 0)) {
+    throw new Error("Sale rate (DZD per AED) is required.");
+  }
+  const saleRateToAed = saleDzdRateToAedFromDzdPerAed(dzdPerAed);
+  if (saleRateToAed == null) {
+    throw new Error("Invalid sale rate (DZD per AED).");
+  }
+  assertPlausibleRateToAed("DZD", saleRateToAed, "Sale rate");
+
   const sourceCost = Number(payload.source_cost || 0);
   const srcCur = String(payload.source_currency || "AED").toUpperCase();
   if (srcCur !== "AED" && (!Number(payload.source_rate_to_aed) || Number(payload.source_rate_to_aed) <= 0)) {
     throw new Error("source_rate_to_aed is required for non-AED source currency.");
   }
-  const costRateToAed = srcCur === "AED" ? 1 : Number(payload.source_rate_to_aed || 0);
+
+  const appRates = await fetchAppRatesFromSettingsTable(admin);
+  const costFact = enteredPurchaseCostToCostFact(
+    {
+      amount: sourceCost,
+      currency: srcCur,
+      purchaseRate: srcCur === "AED" ? 1 : Number(payload.source_rate_to_aed || 0),
+    },
+    appRates
+  );
+  assertPlausibleRateToAed(costFact.currency, costFact.rateToAed, "Cost rate");
+  const costRateToAed = costFact.rateToAed;
 
   const statusForCompatibility: "pending" | "closed" = "pending";
   const lifecycleStatus = "PRE_ORDER";

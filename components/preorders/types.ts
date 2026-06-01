@@ -21,6 +21,8 @@ export type PreorderForm = {
   sourceCurrency: "USD" | "AED";
   sourceRateToDzd: string;
   sourceRateToAed: string;
+  /** DZD per 1 AED at deal time — drives sale_rate_to_aed = 1 / this (same as stock deals). */
+  saleRateDzdPerAed: string;
   saleDzd: string;
   depositDzd: string;
   depositPocket: string;
@@ -56,6 +58,7 @@ export function emptyPreorderForm(): PreorderForm {
     sourceCurrency: "USD",
     sourceRateToDzd: "",
     sourceRateToAed: "",
+    saleRateDzdPerAed: "",
     saleDzd: "",
     depositDzd: "",
     depositPocket: "Algeria Cash",

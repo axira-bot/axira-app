@@ -15,37 +15,64 @@ export type DealExpenseRow = {
   rate_to_aed: number;
 };
 
-/** USD/EUR in inventory: normally AED per 1 foreign unit (~3.x for USD). Values ~0.2–0.35 are usually USD-per-AED by mistake — invert. */
-function normalizeUsdEurRateToAedPerUnit(currency: string, raw: number): number {
+/** USD/EUR: normally AED per 1 foreign unit (~3.x). Values ~0.2–0.35 are usually foreign-per-AED — invert. */
+export function normalizeUsdEurRateToAedPerUnit(currency: string, raw: number): number {
   const c = currency.toUpperCase();
   if (!(c === "USD" || c === "EUR") || !(raw > 0)) return raw;
   if (raw < 0.45) return 1 / raw;
   return raw;
 }
 
+const USD_EUR_RATE_MIN = 0.1;
+const USD_EUR_RATE_MAX = 50;
+const DZD_RATE_MIN = 0.001;
+const DZD_RATE_MAX = 1;
+
+/** Matches DB CHECK constraints on deals / deal_expenses rate_to_aed columns. */
+export function isPlausibleRateToAed(currency: string, rateToAed: number): boolean {
+  const c = currency.toUpperCase();
+  if (!Number.isFinite(rateToAed) || rateToAed <= 0) return false;
+  if (c === "AED") return rateToAed === 1;
+  if (c === "USD" || c === "EUR") return rateToAed >= USD_EUR_RATE_MIN && rateToAed <= USD_EUR_RATE_MAX;
+  if (c === "DZD") return rateToAed >= DZD_RATE_MIN && rateToAed <= DZD_RATE_MAX;
+  return true;
+}
+
+export function assertPlausibleRateToAed(currency: string, rateToAed: number, label = "rate"): void {
+  if (isPlausibleRateToAed(currency, rateToAed)) return;
+  const c = currency.toUpperCase();
+  if (c === "AED") {
+    throw new Error(`${label}: AED cost must use rate 1.`);
+  }
+  if (c === "USD" || c === "EUR") {
+    throw new Error(
+      `${label}: for ${c}, enter AED per 1 ${c} (typically 0.1–50, e.g. ~3.67). Values like 67 or 250 are DZD-scale and are not allowed.`
+    );
+  }
+  if (c === "DZD") {
+    throw new Error(`${label}: for DZD, rate must be AED per 1 DZD (typically 0.001–1).`);
+  }
+  throw new Error(`${label}: invalid rate for ${currency}.`);
+}
+
 type AppRatesSlice = { USD: number; DZD: number; EUR: number };
 
 /**
  * Snapshot for deal cost: amount + currency + rate_to_aed (AED per 1 unit; multiply to get AED).
- * - DZD: `purchase_rate` in inventory is DZD per 1 AED → rateToAed = 1 / purchase_rate.
- * - USD/EUR: `purchase_rate` is AED per 1 unit; small values are normalized (inverted) when likely USD/EUR per AED.
- * - Missing rate (e.g. PO-created cars): use optional `appRates` dashboard snapshot.
+ * - DZD: entered rate is DZD per 1 AED → rateToAed = 1 / rate.
+ * - USD/EUR: entered rate is AED per 1 unit (normalized); implausibly large values may be inverted once.
+ * - Missing rate: optional `appRates` dashboard snapshot.
  */
-export function carPurchaseToCostFact(
-  car: Car | null,
+export function enteredPurchaseCostToCostFact(
+  params: { amount: number; currency: string; purchaseRate?: number | null },
   appRates?: AppRatesSlice
-): {
-  amount: number;
-  currency: string;
-  rateToAed: number;
-} {
-  if (!car) return { amount: 0, currency: "AED", rateToAed: 1 };
-  const currency = (String(car.purchase_currency ?? "").trim() || "AED").toUpperCase();
-  if (currency === "AED") return { amount: car.purchase_price ?? 0, currency: "AED", rateToAed: 1 };
+): { amount: number; currency: string; rateToAed: number } {
+  const currency = (String(params.currency ?? "").trim() || "AED").toUpperCase();
+  const amount = params.amount ?? 0;
+  if (currency === "AED") return { amount, currency: "AED", rateToAed: 1 };
 
   const fx = appRates ? displayFxFromAppRates(appRates) : null;
-  const rawPr = car.purchase_rate;
-  const amount = car.purchase_price ?? 0;
+  const rawPr = params.purchaseRate;
 
   if (currency === "DZD") {
     const dzdPerAed =
@@ -65,8 +92,36 @@ export function carPurchaseToCostFact(
     else rateToAed = 0.0000001;
   } else {
     rateToAed = normalizeUsdEurRateToAedPerUnit(currency, rawPr);
+    if ((currency === "USD" || currency === "EUR") && rateToAed > USD_EUR_RATE_MAX) {
+      const inverted = normalizeUsdEurRateToAedPerUnit(currency, 1 / rawPr);
+      if (inverted >= USD_EUR_RATE_MIN && inverted <= USD_EUR_RATE_MAX) {
+        rateToAed = inverted;
+      }
+    }
   }
   return { amount, currency, rateToAed };
+}
+
+/**
+ * Stock / inventory cars — delegates to {@link enteredPurchaseCostToCostFact}.
+ */
+export function carPurchaseToCostFact(
+  car: Car | null,
+  appRates?: AppRatesSlice
+): {
+  amount: number;
+  currency: string;
+  rateToAed: number;
+} {
+  if (!car) return { amount: 0, currency: "AED", rateToAed: 1 };
+  return enteredPurchaseCostToCostFact(
+    {
+      amount: car.purchase_price ?? 0,
+      currency: car.purchase_currency ?? "AED",
+      purchaseRate: car.purchase_rate,
+    },
+    appRates
+  );
 }
 
 export function parseNumLocal(s: string): number {

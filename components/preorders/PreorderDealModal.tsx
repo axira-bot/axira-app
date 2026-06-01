@@ -8,6 +8,12 @@ import PricingBlock from "./PricingBlock";
 import PaymentBlock from "./PaymentBlock";
 import { emptyPreorderForm, type PreorderForm } from "./types";
 import { AppInputField, AppSelectField } from "@/components/ui/form-fields";
+import {
+  assertPlausibleRateToAed,
+  enteredPurchaseCostToCostFact,
+} from "@/app/deals/dealFinanceHelpers";
+import { displayFxFromAppRates } from "@/lib/finance/dealMoney";
+import { getRates } from "@/lib/rates";
 
 type Supplier = { id: string; name: string; country: string | null };
 type CatalogItem = {
@@ -51,7 +57,25 @@ export default function PreorderDealModal({
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setForm(formSeed ? { ...emptyPreorderForm(), ...formSeed } : emptyPreorderForm());
+    const base = formSeed ? { ...emptyPreorderForm(), ...formSeed } : emptyPreorderForm();
+    setForm(base);
+    if (!formSeed?.saleRateDzdPerAed?.trim() || !formSeed?.sourceRateToAed?.trim()) {
+      void getRates().then((rt) => {
+        const fx = displayFxFromAppRates(rt);
+        setForm((prev) => ({
+          ...prev,
+          saleRateDzdPerAed: prev.saleRateDzdPerAed.trim() ? prev.saleRateDzdPerAed : String(rt.DZD > 0 ? rt.DZD : ""),
+          sourceRateToAed:
+            prev.sourceCurrency === "AED"
+              ? "1"
+              : prev.sourceRateToAed.trim()
+                ? prev.sourceRateToAed
+                : fx.aedPerUsd > 0
+                  ? String(fx.aedPerUsd)
+                  : prev.sourceRateToAed,
+        }));
+      });
+    }
   }, [open, formSeed]);
 
   useEffect(() => {
@@ -104,9 +128,28 @@ export default function PreorderDealModal({
       if (!form.clientName.trim() || !form.clientPhone.trim()) {
         throw new Error("Customer name and phone are required.");
       }
-      if (!form.saleDzd.trim() || !form.sourceCost.trim() || !form.sourceRateToAed.trim() || !form.sourceRateToDzd.trim()) {
+      if (
+        !form.saleDzd.trim() ||
+        !form.saleRateDzdPerAed.trim() ||
+        !form.sourceCost.trim() ||
+        !form.sourceRateToAed.trim() ||
+        !form.sourceRateToDzd.trim()
+      ) {
         throw new Error("Pricing fields are required.");
       }
+      const saleRateDzdPerAed = Number(form.saleRateDzdPerAed);
+      if (!(saleRateDzdPerAed > 0)) {
+        throw new Error("Sale rate (DZD per AED) must be positive.");
+      }
+      const costFact = enteredPurchaseCostToCostFact(
+        {
+          amount: Number(form.sourceCost),
+          currency: form.sourceCurrency,
+          purchaseRate: form.sourceCurrency === "AED" ? 1 : Number(form.sourceRateToAed),
+        },
+        await getRates()
+      );
+      assertPlausibleRateToAed(costFact.currency, costFact.rateToAed, "Cost rate");
       if (!form.brand.trim() || !form.model.trim()) {
         throw new Error("Brand and model are required.");
       }
@@ -116,7 +159,7 @@ export default function PreorderDealModal({
         date: form.date,
         agreed_delivery_date: form.agreed_delivery_date || null,
         notes: form.notes || null,
-        rate: Number(form.sourceRateToAed),
+        rate: saleRateDzdPerAed,
         sale_dzd: Number(form.saleDzd),
         source_cost: Number(form.sourceCost),
         source_currency: form.sourceCurrency,

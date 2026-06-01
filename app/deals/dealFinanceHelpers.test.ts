@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Car } from "@/lib/types";
 import {
+  assertPlausibleRateToAed,
   carPurchaseToCostFact,
+  enteredPurchaseCostToCostFact,
   formLinesToExpenseFacts,
+  isPlausibleRateToAed,
   rateFieldFromDeal,
   rateFieldFromDealWithDashboardFallback,
   saleRateToAedFromAppRatesForDzdSale,
@@ -105,6 +108,28 @@ const baseCar = (over: Partial<Car>): Car =>
     status: "available",
     ...over,
   }) as Car;
+
+describe("enteredPurchaseCostToCostFact (pre-order cost)", () => {
+  it("normalizes USD cost rate like stock cars", () => {
+    const f = enteredPurchaseCostToCostFact({
+      amount: 7000,
+      currency: "USD",
+      purchaseRate: 3.67,
+    });
+    expect(f.rateToAed).toBeCloseTo(3.67, 5);
+  });
+
+  it("rejects DZD-scale USD rate via assertPlausibleRateToAed", () => {
+    const f = enteredPurchaseCostToCostFact({
+      amount: 7000,
+      currency: "USD",
+      purchaseRate: 250,
+    });
+    expect(f.rateToAed).toBe(250);
+    expect(isPlausibleRateToAed("USD", f.rateToAed)).toBe(false);
+    expect(() => assertPlausibleRateToAed("USD", f.rateToAed)).toThrow(/250/);
+  });
+});
 
 describe("carPurchaseToCostFact", () => {
   it("uses AED per USD and converts cost to AED", () => {

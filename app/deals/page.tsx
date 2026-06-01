@@ -795,7 +795,9 @@ export default function DealsPage() {
             sourceCost: String(cost.amount ?? 0),
             sourceCurrency: cost.currency === "AED" ? "AED" : "USD",
             sourceRateToDzd,
-            sourceRateToAed: cost.currency === "AED" ? "1" : String(dzdPerAed),
+            sourceRateToAed:
+              cost.currency === "AED" ? "1" : cost.rateToAed > 0 ? String(cost.rateToAed) : String(fx.aedPerUsd),
+            saleRateDzdPerAed: String(dzdPerAed),
             inventoryCarId: invId,
             salesCatalogEntryId: "",
             requireSupplierConfirmation: false,
@@ -838,7 +840,8 @@ export default function DealsPage() {
             sourceCost: String(est),
             sourceCurrency: "AED",
             sourceRateToDzd: String(dzdPerAed),
-            sourceRateToAed: String(dzdPerAed),
+            sourceRateToAed: "1",
+            saleRateDzdPerAed: String(dzdPerAed),
             inventoryCarId: "",
             salesCatalogEntryId: catId,
             requireSupplierConfirmation: false,
@@ -2280,7 +2283,17 @@ export default function DealsPage() {
                     return (
                       <tr key={d.id} className="border-b border-app last:border-b-0">
                         <td className="px-4 py-3 font-semibold text-app">
-                          {d.client_name || t("deals.clientDash")}
+                          <span className="inline-flex flex-wrap items-center gap-2">
+                            {d.client_name || t("deals.clientDash")}
+                            {(d as Deal).financial_migration_status === "needs_review" ? (
+                              <span
+                                title="This deal was created before rate fix — verify cost and sale rates."
+                                className="inline-flex rounded-full border border-amber-400/80 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900"
+                              >
+                                Review rates
+                              </span>
+                            ) : null}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-app">
                           {d.car_label || t("deals.clientDash")}
